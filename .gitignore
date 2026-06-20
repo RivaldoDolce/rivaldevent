@@ -39,3 +39,46 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# .gitignore
+# Expo
+.expo/
+dist/
+node_modules/
+
+# Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Build
+android/
+ios/
+web-build/
+
+# Misc
+*.patch
+*.tmp
+*.temp
+*.swp
+*.swo
+*.swn
