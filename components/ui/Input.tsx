@@ -1,3 +1,10 @@
-import React from 'react';
-import { TextInput } from 'react-native';
-export default function Input(props:any){ return <TextInput {...props} />; }
+import { View, Text } from 'react-native';
+
+// Placeholder — sera implémenté au Jalon 4 (Design System)
+export function Input() {
+  return (
+    <View>
+      <Text>Input</Text>
+    </View>
+  );
+}

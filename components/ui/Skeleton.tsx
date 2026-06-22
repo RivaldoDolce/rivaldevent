@@ -1,14 +1,6 @@
-import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View } from 'react-native';
 
-export default function Skeleton({ style }: { style?: any }) {
-  return <View style={[styles.skel, style]} />;
+// Placeholder — sera implémenté au Jalon 4 (Design System)
+export function Skeleton() {
+  return <View />;
 }
-
-const styles = StyleSheet.create({
-  skel: {
-    backgroundColor: '#e5e7eb',
-    borderRadius: 6,
-    height: 12,
-  },
-});

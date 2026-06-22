@@ -1,17 +1,10 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 
-export default function EventCard({ title }: { title: string }) {
+// Placeholder — sera implémenté au Jalon 4 (Design System)
+export function EventCard() {
   return (
-    <View style={styles.card}>
-      <View style={styles.image} />
-      <Text style={styles.title}>{title}</Text>
+    <View>
+      <Text>EventCard</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { marginBottom: 12 },
-  image: { height: 140, backgroundColor: '#ddd', borderRadius: 8 },
-  title: { marginTop: 8, fontWeight: '600' },
-});
