@@ -137,3 +137,6 @@ function getLabel(props: BadgeProps): React.ReactNode {
   }
   return props.children;
 }
+
+// Re-export pour usage externe
+export type { BadgeProps, StatusValue, BadgeVariant };
