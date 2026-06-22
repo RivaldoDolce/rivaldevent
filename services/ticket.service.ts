@@ -1,22 +1,19 @@
 /**
- * Service des billets — opérations CRUD sur la table `tickets`.
- * Placeholder partiel — sera complété au Jalon 7 (feature/tickets).
+ * Service des billets.
+ * Placeholder partiel — sera complete dans feature/tickets.
  */
 
 import { supabase } from '@/lib/supabase';
 import type { Ticket, TicketWithEvent } from '@/types';
 
 export const ticketService = {
-  /**
-   * Récupère les billets d'un acheteur (client).
-   */
   async getByBuyer(buyerId: string): Promise<TicketWithEvent[]> {
     const { data, error } = await supabase
       .from('tickets')
       .select(
         `
         *,
-        event:id (
+        event:event (
           id,
           title,
           cover_image,
@@ -34,12 +31,9 @@ export const ticketService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data ?? []) as unknown as TicketWithEvent[];
+    return ((data ?? []) as unknown as TicketWithEvent[]);
   },
 
-  /**
-   * Récupère les billets d'un événement (côté vendeur).
-   */
   async getByEvent(eventId: string): Promise<Ticket[]> {
     const { data, error } = await supabase
       .from('tickets')
@@ -48,6 +42,6 @@ export const ticketService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data ?? [];
+    return ((data ?? []) as unknown as Ticket[]);
   },
 };

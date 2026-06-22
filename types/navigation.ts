@@ -5,7 +5,8 @@
  * Ce fichier contient les types des paramètres de routes dynamiques.
  */
 
-import type { ParamList } from '@react-navigation/native';
+
+type ParamList = Record<string, unknown | undefined>;
 
 // ============================================================
 // PARAMÈTRES DES ROUTES DYNAMIQUES
@@ -43,7 +44,7 @@ export type RootStackParamList = {
   '(purchase)/event/[id]/tickets': { id: string };
   '(purchase)/payment': {
     eventId: string;
-    tiers: Array<{ tierId: string; quantity: number }>;
+    tiers: { tierId: string; quantity: number }[];
     totalAmount: number;
   };
   '(purchase)/payment/mtn': { transactionId: string };

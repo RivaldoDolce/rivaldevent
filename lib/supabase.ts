@@ -40,14 +40,11 @@ if (!supabaseAnonKey) {
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // ⚠️ CRITIQUE : utiliser SecureStoreAdapter (pas AsyncStorage)
     storage: SecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // Pas pertinent sur mobile
+    detectSessionInUrl: false,
   },
-  // Headers personnalisés
-  headers: { 'X-Client-Info': 'rivaldevent-mobile' },
 });
 
 // ============================================================

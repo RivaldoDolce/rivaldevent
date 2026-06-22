@@ -151,7 +151,7 @@ export const Input = React.memo(function Input({
           editable={editable}
           maxLength={maxLength}
           accessibilityLabel={label}
-          accessibilityState={{ invalid: !!error }}
+          accessibilityState={{ disabled: false }}
         />
 
         {iconRight && <View className="ml-sm">{iconRight}</View>}
