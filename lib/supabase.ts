@@ -46,10 +46,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false, // Pas pertinent sur mobile
   },
-  // Global fetch avec timeout (évite les requêtes qui pendent)
-  globalOptions: {
-    headers: { 'X-Client-Info': 'rivaldevent-mobile' },
-  },
+  // Headers personnalisés
+  headers: { 'X-Client-Info': 'rivaldevent-mobile' },
 });
 
 // ============================================================
