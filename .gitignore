@@ -1,84 +1,69 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Node
 node_modules/
+.pnp/
+.pnp.js
 
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+expo-env.d.ts.bak
 
-# Native
-.kotlin/
-*.orig.*
+# Build / Generated native folders
+ios/
+android/
+
+# EAS
+.easignore
+
+# Native credentials / originals
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.orig.*
 
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# .gitignore
-# Expo
-.expo/
-dist/
-node_modules/
-
-# Native
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-*.orig.*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Env
-.env
-.env.local
-.env.production
 
 # Logs
 logs/
 *.log
-npm-debug.*
-yarn-debug.*
-yarn-error.*
 
-# Build
-android/
-ios/
-web-build/
+# Env
+.env
+.env.local
+.env.*.local
+.env.production
 
-# Misc
-*.patch
-*.tmp
-*.temp
+# OS
+.DS_Store
+Thumbs.db
+*.pem
+
+# IDE
+.vscode/
+.idea/
+
+# Editor swap/temp files
 *.swp
 *.swo
 *.swn
+*.tmp
+*.temp
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# Misc
+*.patch

@@ -1,11 +1,21 @@
-import { useOfflineStore } from '../lib/offline-store';
-import { supabase } from '../lib/supabase';
+/**
+ * Service de synchronisation offline → Supabase.
+ * Placeholder — sera implémenté au Jalon 6 (feature/offline).
+ */
 
-export async function flushQueue() {
-  const { queue, clear } = useOfflineStore.getState();
-  for (const item of queue) {
-    // naive example: send to supabase
-    await supabase.from(item.table).insert(item.payload);
-  }
-  clear();
-}
+export const syncService = {
+  /**
+   * Traite la queue offline en envoyant les actions vers Supabase.
+   * Sera appelé automatiquement au retour du réseau.
+   */
+  async processQueue(): Promise<void> {
+    // TODO: implémenter au Jalon 6
+  },
+
+  /**
+   * Retry des actions échouées.
+   */
+  async retryFailed(): Promise<void> {
+    // TODO: implémenter au Jalon 6
+  },
+};
