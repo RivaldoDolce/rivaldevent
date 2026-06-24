@@ -2,30 +2,37 @@
  * Login - connexion email/password + alternatives.
  *
  * Design :
- * - Fond sand
- * - Logo utilisateur en haut
- * - Titre "Bienvenue" + sous-titre
+ * - Fond sand avec logo centré en haut
+ * - Titre "Bienvenue" serif bold + sous-titre stone
  * - Formulaire : email + password (icone oeil pour reveal)
- * - Ligne : "Se souvenir de moi" + "Mot de passe oublie"
- * - Bouton "Se connecter" terracotta
- * - Separateur "OU"
- * - Boutons : Google (outline) + Telephone (outline)
+ * - Ligne : "Se souvenir de moi" + "Mot de passe oublié"
+ * - Bouton "Se connecter" terracotta (CTA unique)
+ * - Séparateur "OU"
+ * - Boutons : Google (outline) + Téléphone (outline)
  * - Lien "Inscrivez-vous" en bas
  */
 
 import { useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
-import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight, Check } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
-import { colors, typography, spacing } from '@/lib/constants';
+import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
@@ -88,130 +95,150 @@ export default function LoginScreen() {
   }, [impact]);
 
   return (
-    <ScrollView
-      style={[styles.container, { paddingTop: insets.top + spacing.xl }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.sand }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Logo */}
-      <View style={styles.logoWrapper}>
-        <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
-      </View>
-
-      {/* Titre */}
-      <Text style={styles.title}>Bienvenue</Text>
-      <Text style={styles.subtitle}>L'élégance de vos événements commence ici.</Text>
-
-      {/* Erreur globale */}
-      {authError && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{authError}</Text>
+      <ScrollView
+        style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Logo — centré, taille raisonnable */}
+        <View style={styles.logoWrapper}>
+          <View style={styles.logoCircle}>
+            <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
+          </View>
         </View>
-      )}
 
-      {/* Formulaire */}
-      <View style={styles.form}>
-        <Controller
-          control={control}
-          name="email"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Email ou nom d'utilisateur"
-              placeholder="Ex: amadou.rivald@email.com"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.email?.message}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              iconLeft={<Mail color={colors.stone} size={20} />}
-            />
-          )}
-        />
+        {/* Titre */}
+        <Text style={styles.title}>Bienvenue</Text>
+        <Text style={styles.subtitle}>
+          L'élégance de vos événements commence ici.
+        </Text>
 
-        <Controller
-          control={control}
-          name="password"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              label="Mot de passe"
-              placeholder="••••••••"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.password?.message}
-              secureTextEntry={!showPassword}
-              iconLeft={<Lock color={colors.stone} size={20} />}
-              iconRight={
-                <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
-                  {showPassword ? (
-                    <EyeOff color={colors.stone} size={20} />
-                  ) : (
-                    <Eye color={colors.stone} size={20} />
-                  )}
-                </Pressable>
-              }
-            />
-          )}
-        />
+        {/* Erreur globale */}
+        {authError && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{authError}</Text>
+          </View>
+        )}
 
-        {/* Se souvenir de moi + Mot de passe oublie */}
-        <View style={styles.optionsRow}>
+        {/* Formulaire */}
+        <View style={styles.form}>
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Email ou Nom d'utilisateur"
+                placeholder="Ex: amadou.rivald@email.com"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.email?.message}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Mot de passe"
+                placeholder="••••••••"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.password?.message}
+                secureTextEntry={!showPassword}
+                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconRight={
+                  <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
+                    {showPassword ? (
+                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
+                    ) : (
+                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
+                    )}
+                  </Pressable>
+                }
+              />
+            )}
+          />
+
+          {/* Se souvenir de moi + Mot de passe oublié */}
+          <View style={styles.optionsRow}>
+            <Pressable
+              style={styles.checkboxWrapper}
+              onPress={() => {
+                impact('light');
+                setRememberMe(!rememberMe);
+              }}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                {rememberMe && <Check color={colors.sand} size={14} strokeWidth={3} />}
+              </View>
+              <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
+            </Pressable>
+
+            <Pressable onPress={() => logger.debug('TODO: reset password')} hitSlop={8}>
+              <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Bouton principal CTA — terracotta, pleine largeur */}
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
+          onPress={handleSubmit(onSubmit)}
+        >
+          Se connecter
+        </Button>
+
+        {/* Séparateur "OU" */}
+        <View style={styles.separator}>
+          <View style={styles.separatorLine} />
+          <Text style={styles.separatorText}>OU</Text>
+          <View style={styles.separatorLine} />
+        </View>
+
+        {/* Boutons alternatifs — outline */}
+        <View style={styles.alternatives}>
           <Pressable
-            style={styles.checkboxWrapper}
-            onPress={() => {
-              impact('light');
-              setRememberMe(!rememberMe);
-            }}
+            style={styles.alternativeButton}
+            onPress={handleGoogleLogin}
           >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-              {rememberMe && <Check color={colors.sand} size={14} strokeWidth={3} />}
-            </View>
-            <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
+            <GoogleLogo size="md" />
+            <Text style={styles.alternativeText}>Se connecter avec Google</Text>
           </Pressable>
 
-          <Pressable onPress={() => logger.debug('TODO: reset password')} hitSlop={8}>
-            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+          <Pressable
+            style={styles.alternativeButton}
+            onPress={goToPhoneLogin}
+          >
+            <Phone color={colors.onyx} size={20} strokeWidth={1.5} />
+            <Text style={styles.alternativeText}>Utiliser mon numéro</Text>
           </Pressable>
         </View>
-      </View>
 
-      {/* Bouton principal */}
-      <Button variant="primary" size="lg" fullWidth loading={isLoading} onPress={handleSubmit(onSubmit)}>
-        Se connecter
-      </Button>
-
-      {/* Separateur */}
-      <View style={styles.separator}>
-        <View style={styles.separatorLine} />
-        <Text style={styles.separatorText}>OU</Text>
-        <View style={styles.separatorLine} />
-      </View>
-
-      {/* Boutons alternatifs */}
-      <View style={styles.alternatives}>
-        <TouchableOpacity style={styles.alternativeButton} onPress={handleGoogleLogin} activeOpacity={0.7}>
-          <GoogleLogo size="md" />
-          <Text style={styles.alternativeText}>Se connecter avec Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.alternativeButton} onPress={goToPhoneLogin} activeOpacity={0.7}>
-          <Phone color={colors.onyx} size={20} />
-          <Text style={styles.alternativeText}>Utiliser mon numéro</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Lien inscription */}
-      <View style={styles.signUpWrapper}>
-        <Text style={styles.signUpText}>Vous n'avez pas de compte ? </Text>
-        <Pressable onPress={goToRegister} hitSlop={12} style={styles.signUpLinkWrapper}>
-          <Text style={styles.signUpLink}>Inscrivez-vous</Text>
-          <ArrowRight color={colors.terracotta} size={14} style={styles.signUpArrow} />
-        </Pressable>
-      </View>
-    </ScrollView>
+        {/* Lien inscription */}
+        <View style={styles.signUpWrapper}>
+          <Text style={styles.signUpText}>Vous n'avez pas de compte ? </Text>
+          <Pressable onPress={goToRegister} hitSlop={12} style={styles.signUpLinkWrapper}>
+            <Text style={styles.signUpLink}>Inscrivez-vous</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -225,27 +252,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  logo: {
+  logoCircle: {
     width: 80,
     height: 80,
+    borderRadius: 40,
+    backgroundColor: `${colors.gold}15`,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}40`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logo: {
+    width: 56,
+    height: 56,
   },
   title: {
     ...typography.h1,
     color: colors.onyx,
     textAlign: 'center',
-    fontWeight: '700',
   },
   subtitle: {
     ...typography.body,
-    color: colors.onyx,
-    opacity: 0.7,
+    color: colors.stone,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
   },
   errorBanner: {
     backgroundColor: `${colors.terracotta}15`,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -255,14 +291,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   optionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: -spacing.xs,
+    marginTop: spacing.xs,
   },
   checkboxWrapper: {
     flexDirection: 'row',
@@ -274,7 +310,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.stone,
+    borderColor: `${colors.stone}60`,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
@@ -300,29 +336,29 @@ const styles = StyleSheet.create({
   },
   separatorLine: {
     flex: 1,
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: `${colors.stone}30`,
   },
   separatorText: {
     ...typography.caption,
     color: colors.stone,
-    fontWeight: '600',
   },
   alternatives: {
     gap: spacing.sm,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   alternativeButton: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: `${colors.stone}40`,
-    borderRadius: 16,
+    borderColor: `${colors.stone}30`,
+    borderRadius: radius.lg,
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    minHeight: 48,
+    minHeight: 52,
+    backgroundColor: colors.sand,
   },
   alternativeText: {
     ...typography.body,
@@ -333,10 +369,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
   },
   signUpText: {
-    ...typography.body,
+    ...typography.bodySmall,
     color: colors.stone,
   },
   signUpLinkWrapper: {
@@ -344,12 +380,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signUpLink: {
-    ...typography.body,
+    ...typography.bodySmall,
     color: colors.terracotta,
     fontWeight: '600',
-  },
-  signUpArrow: {
-    marginLeft: spacing.xs,
-    marginTop: 2,
+    textDecorationLine: 'underline',
   },
 });

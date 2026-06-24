@@ -118,14 +118,6 @@ export const Button = React.memo(function Button({
     opacity: withTiming(disabled ? 0.5 : 1, { duration: 150 }),
   }));
 
-  // Classes NativeWind par variant
-  const variantClass = {
-    primary: 'bg-terracotta',
-    secondary: 'bg-gold',
-    outline: 'bg-transparent border border-stone',
-    ghost: 'bg-transparent',
-  }[variant];
-
   const textColor = {
     primary: colors.sand,
     secondary: colors.onyx,
@@ -133,10 +125,20 @@ export const Button = React.memo(function Button({
     ghost: colors.terracotta,
   }[variant];
 
+  // Inline backgroundColor — source de vérité (NativeWind en complément)
+  const variantBg: Record<NonNullable<ButtonProps['variant']>, string> = {
+    primary: colors.terracotta,
+    secondary: colors.gold,
+    outline: 'transparent',
+    ghost: 'transparent',
+  };
+
   const containerStyle: ViewStyle = {
     height: SIZE_HEIGHT[size],
     paddingHorizontal: SIZE_PADDING[size],
     borderRadius: radius.lg,
+    backgroundColor: variantBg[variant],
+    ...(variant === 'outline' ? { borderWidth: 1, borderColor: `${colors.stone}60` } : {}),
   };
 
   return (
@@ -151,7 +153,7 @@ export const Button = React.memo(function Button({
         containerStyle,
         fullWidth ? { width: '100%' as const } : {},
       ]}
-      className={`flex-row items-center justify-center ${variantClass}`}
+      className="flex-row items-center justify-center"
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
     >

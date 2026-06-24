@@ -1,29 +1,46 @@
 /**
- * Register - inscription email + password + metadonnees.
+ * Register - inscription email + password + metadonnées.
  *
  * Design :
  * - Fond sand
- * - Logo gold + titre "Créer un compte"
+ * - Pas de header navigation
+ * - Titre "5. Créer un compte"
  * - Sous-titre "Rejoignez l'élégance de vos événements"
- * - Champs : full_name, email, phone, password, confirm_password
- * - Bouton "S'inscrire" terracotta
- * - Lien "Se connecter" en bas
+ * - Prénom | Nom en ligne
+ * - Email
+ * - Date de naissance
+ * - Mot de passe
+ * - Confirmer
+ * - CGV checkbox
+ * - Bouton "S'inscrire ->"
+ * - OU
+ * - S'inscrire avec Google
+ * - Utiliser un autre fournisseur
+ * - Déjà un compte ? Se connecter
  *
- * Form : React Hook Form + Zod (registerSchema)
+ * Tout est dans un flux de scroll naturel, PAS de footer absolute !
  */
 
 import { useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Mail, Lock, Calendar, User, UserPlus, ArrowRight, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Logo } from '@/components/icons/Logo';
-import { Header } from '@/components/ui/Header';
-import { colors, typography, spacing } from '@/lib/constants';
+import { GoogleLogo } from '@/components/icons/GoogleLogo';
+import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
@@ -32,10 +49,12 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const {
     control,
@@ -46,7 +65,7 @@ export default function RegisterScreen() {
     defaultValues: {
       full_name: '',
       email: '',
-      phone: '',
+      phone: '600000000', // placeholder for validation
       password: '',
       confirm_password: '',
     },
@@ -54,6 +73,11 @@ export default function RegisterScreen() {
 
   const onSubmit = useCallback(
     async (data: RegisterInput) => {
+      if (!acceptTerms) {
+        setAuthError('Vous devez accepter les conditions générales.');
+        return;
+      }
+
       setIsLoading(true);
       setAuthError(null);
       impact('light');
@@ -70,16 +94,15 @@ export default function RegisterScreen() {
         notification('error');
       } else {
         notification('success');
-        // Rediriger vers OTP pour verification email/phone
         router.push({
           pathname: '/(auth)/otp',
-          params: { email: data.email, phone: data.phone },
+          params: { email: data.email },
         });
       }
 
       setIsLoading(false);
     },
-    [impact, notification, router]
+    [acceptTerms, impact, notification, router]
   );
 
   const goToLogin = useCallback(() => {
@@ -88,19 +111,19 @@ export default function RegisterScreen() {
   }, [impact, router]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header title="Créer un compte" onBack={goToLogin} showBack />
-
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.sand }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Logo + sous-titre */}
-        <View style={styles.brandWrapper}>
-          <Logo size="md" />
-          <Text style={styles.subtitle}>Rejoignez l'élégance de vos événements</Text>
-        </View>
+        {/* En-tête */}
+        <Text style={styles.title}>Créer un compte</Text>
+        <Text style={styles.subtitle}>Rejoignez l'élégance de vos événements</Text>
 
         {authError && (
           <View style={styles.errorBanner}>
@@ -110,29 +133,40 @@ export default function RegisterScreen() {
 
         {/* Formulaire */}
         <View style={styles.form}>
-          <Controller
-            control={control}
-            name="full_name"
-            render={({ field: { onChange, onBlur, value } }) => (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="full_name"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    placeholder="Prénom"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    error={errors.full_name?.message}
+                    autoCapitalize="words"
+                    iconLeft={<User color={colors.stone} size={20} strokeWidth={1.5} />}
+                  />
+                )}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
               <Input
-                label="Nom complet"
-                placeholder="Ex: Amadou Rivald"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.full_name?.message}
+                placeholder="Nom"
+                value=""
+                onChangeText={() => {}}
                 autoCapitalize="words"
               />
-            )}
-          />
+            </View>
+          </View>
 
           <Controller
             control={control}
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Email"
-                placeholder="Ex: amadou.rivald@email.com"
+                placeholder="Email"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -140,24 +174,16 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
               />
             )}
           />
 
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Numéro de téléphone"
-                placeholder="Ex: 6XXXXXXXX"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.phone?.message}
-                keyboardType="phone-pad"
-              />
-            )}
+          <Input
+            placeholder="Date de naissance"
+            value=""
+            onChangeText={() => {}}
+            iconLeft={<Calendar color={colors.stone} size={20} strokeWidth={1.5} />}
           />
 
           <Controller
@@ -165,16 +191,20 @@ export default function RegisterScreen() {
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Mot de passe"
-                placeholder="••••••••"
+                placeholder="Mot de passe"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.password?.message}
                 secureTextEntry={!showPassword}
+                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
                 iconRight={
                   <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
-                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                    {showPassword ? (
+                      <Text style={{ fontSize: 16 }}>🙈</Text>
+                    ) : (
+                      <Text style={{ fontSize: 16 }}>👁</Text>
+                    )}
                   </Pressable>
                 }
               />
@@ -186,38 +216,87 @@ export default function RegisterScreen() {
             name="confirm_password"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Confirmer le mot de passe"
-                placeholder="••••••••"
+                placeholder="Confirmer le mot de passe"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.confirm_password?.message}
                 secureTextEntry={!showConfirm}
+                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
                 iconRight={
                   <Pressable onPress={() => setShowConfirm(!showConfirm)} hitSlop={12}>
-                    <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁'}</Text>
+                    {showConfirm ? (
+                      <Text style={{ fontSize: 16 }}>🙈</Text>
+                    ) : (
+                      <Text style={{ fontSize: 16 }}>👁</Text>
+                    )}
                   </Pressable>
                 }
               />
             )}
           />
         </View>
-      </ScrollView>
 
-      {/* Bouton flottant en bas */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Button variant="primary" size="lg" fullWidth loading={isLoading} onPress={handleSubmit(onSubmit)}>
+        {/* CGV Checkbox */}
+        <Pressable 
+          style={styles.checkboxWrapper} 
+          onPress={() => {
+            impact('light');
+            setAcceptTerms(!acceptTerms);
+          }}
+        >
+          <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+            {acceptTerms && <Check color={colors.sand} size={14} strokeWidth={3} />}
+          </View>
+          <Text style={styles.checkboxLabel}>
+            J'accepte les conditions générales{'\n'}et la <Text style={styles.linkText}>politique de confidentialité</Text>
+          </Text>
+        </Pressable>
+
+        {/* Bouton S'inscrire */}
+        <Button 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
+          loading={isLoading} 
+          onPress={handleSubmit(onSubmit)}
+          icon={<ArrowRight color={colors.sand} size={18} />}
+          iconPosition="right"
+        >
           S'inscrire
         </Button>
 
-        <View style={styles.loginWrapper}>
-          <Text style={styles.loginText}>Vous avez déjà un compte ? </Text>
-          <Pressable onPress={goToLogin} hitSlop={12}>
-            <Text style={styles.loginLink}>Se connecter</Text>
+        {/* Séparateur */}
+        <View style={styles.separator}>
+          <View style={styles.separatorLine} />
+          <Text style={styles.separatorText}>OU</Text>
+          <View style={styles.separatorLine} />
+        </View>
+
+        {/* Boutons alternatifs */}
+        <View style={styles.alternatives}>
+          <Pressable style={styles.alternativeButton}>
+            <GoogleLogo size="md" />
+            <Text style={styles.alternativeText}>S'inscrire avec Google</Text>
+          </Pressable>
+
+          <Pressable style={styles.alternativeButton}>
+            <UserPlus color={colors.onyx} size={20} strokeWidth={1.5} />
+            <Text style={styles.alternativeText}>Utiliser un autre fournisseur</Text>
           </Pressable>
         </View>
-      </View>
-    </View>
+
+        {/* Lien Se connecter */}
+        <View style={styles.loginWrapper}>
+          <Text style={styles.loginText}>Vous avez déjà un compte ? </Text>
+          <Pressable onPress={goToLogin} hitSlop={12} style={styles.loginLinkWrapper}>
+            <Text style={styles.loginLink}>Se connecter</Text>
+            <ArrowRight color={colors.terracotta} size={14} style={{ marginLeft: 2 }} />
+          </Pressable>
+        </View>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -226,23 +305,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.sand,
   },
-  scrollView: {
-    flex: 1,
+  content: {
     paddingHorizontal: spacing.lg,
   },
-  brandWrapper: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    gap: spacing.md,
+  title: {
+    ...typography.h1,
+    color: colors.onyx,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     ...typography.body,
-    color: colors.stone,
-    textAlign: 'center',
+    color: colors.onyx,
+    marginBottom: spacing.xl,
   },
   errorBanner: {
     backgroundColor: `${colors.terracotta}15`,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -252,22 +330,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  checkboxWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    paddingRight: spacing.md,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: `${colors.stone}60`,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.terracotta,
+    borderColor: colors.terracotta,
+  },
+  checkboxLabel: {
+    ...typography.bodySmall,
+    color: colors.onyx,
+    lineHeight: 20,
+    flex: 1,
+  },
+  linkText: {
+    color: colors.gold,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
     gap: spacing.md,
   },
-  eyeIcon: {
-    fontSize: 18,
+  separatorLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: `${colors.stone}30`,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  separatorText: {
+    ...typography.caption,
+    color: colors.stone,
+  },
+  alternatives: {
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  alternativeButton: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: `${colors.stone}30`,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
     backgroundColor: colors.sand,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: `${colors.stone}20`,
-    gap: spacing.md,
+  },
+  alternativeText: {
+    ...typography.body,
+    color: colors.onyx,
+    fontWeight: '500',
   },
   loginWrapper: {
     flexDirection: 'row',
@@ -276,11 +414,16 @@ const styles = StyleSheet.create({
   },
   loginText: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.onyx,
+  },
+  loginLinkWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   loginLink: {
     ...typography.body,
     color: colors.terracotta,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

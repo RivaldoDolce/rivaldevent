@@ -95,20 +95,20 @@ export const Input = React.memo(function Input({
     onBlur?.();
   }, [onBlur]);
 
-  // Détermine la couleur de bordure
+  // Détermine la couleur de bordure — légère au repos, terracotta en focus/erreur
   const borderColor = error
     ? colors.terracotta
     : isFocused
       ? colors.terracotta
-      : colors.stone;
+      : `${colors.stone}40`;
 
   const containerStyle: ViewStyle = {
     borderColor,
     borderWidth: 1,
     borderRadius: radius.lg,
-    backgroundColor: editable ? colors.sand : colors.ivory,
+    backgroundColor: editable ? colors.ivory : `${colors.ivory}80`,
     paddingHorizontal: spacing.md,
-    minHeight: 48,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     opacity: editable ? 1 : 0.6,

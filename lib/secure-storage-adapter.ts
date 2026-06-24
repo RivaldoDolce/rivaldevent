@@ -10,6 +10,8 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 /**
  * Préfixe pour éviter les collisions avec d'autres apps sur le Keychain.
@@ -27,6 +29,9 @@ export const SecureStoreAdapter = {
    */
   async getItem(key: string): Promise<string | null> {
     try {
+      if (Platform.OS === 'web') {
+        return await AsyncStorage.getItem(KEY_PREFIX + key);
+      }
       return await SecureStore.getItemAsync(KEY_PREFIX + key);
     } catch (error) {
       console.error('[SecureStoreAdapter] getItem failed:', error);
@@ -48,7 +53,11 @@ export const SecureStoreAdapter = {
             'Consider splitting the value or using a different storage strategy.'
         );
       }
-      await SecureStore.setItemAsync(KEY_PREFIX + key, value);
+      if (Platform.OS === 'web') {
+        await AsyncStorage.setItem(KEY_PREFIX + key, value);
+      } else {
+        await SecureStore.setItemAsync(KEY_PREFIX + key, value);
+      }
     } catch (error) {
       console.error('[SecureStoreAdapter] setItem failed:', error);
       throw error;
@@ -60,7 +69,11 @@ export const SecureStoreAdapter = {
    */
   async removeItem(key: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(KEY_PREFIX + key);
+      if (Platform.OS === 'web') {
+        await AsyncStorage.removeItem(KEY_PREFIX + key);
+      } else {
+        await SecureStore.deleteItemAsync(KEY_PREFIX + key);
+      }
     } catch (error) {
       console.error('[SecureStoreAdapter] removeItem failed:', error);
     }

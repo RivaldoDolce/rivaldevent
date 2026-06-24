@@ -3,11 +3,11 @@
  *
  * Design :
  * - Header : Logo small + "Passer" en haut a droite
- * - Image : 40% hauteur (require @/assets/images/onboarding/slideN.png)
- * - Titre : h1 onyx gras, centre
- * - Description : body onyx opaque (lisible, PAS flou)
- * - Indicateurs : 3 points a gauche, actif terracotta
- * - Bouton : "Continuer" / "Commencer" terracotta, bas DROITE (pas pleine largeur)
+ * - Image : 40% hauteur, 90% largeur
+ * - Titre : h1 onyx gras, aligné à gauche
+ * - Description : body stone (lisible, régulier), aligné à gauche
+ * - Indicateurs : 3 points à gauche, actif terracotta
+ * - Bouton : "Continuer" / "Commencer" terracotta, bas DROITE
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -33,21 +33,21 @@ interface Slide {
 
 const SLIDES: readonly Slide[] = [
   {
-    title: 'Trouvez des événements',
+    title: 'Trouvez des\névénements',
     description:
       'Découvrez des expériences culturelles et des lieux exclusifs à travers le Cameroun.',
     illustration: require('@/assets/images/onboarding/slide1.png'),
     ctaLabel: 'Continuer',
   },
   {
-    title: 'Accédez avec votre QR Code',
+    title: 'Accédez avec\nvotre QR Code',
     description:
       'Recevez votre billet numérique instantanément. Présentez-le à l\'entrée, c\'est tout simple.',
     illustration: require('@/assets/images/onboarding/slide2.png'),
     ctaLabel: 'Continuer',
   },
   {
-    title: 'Payez par Mobile Money',
+    title: 'Payez par\nMobile Money',
     description:
       'Choisissez votre opérateur local (MTN, Orange, Moov) pour un paiement simple et sécurisé.',
     illustration: require('@/assets/images/onboarding/slide3.png'),
@@ -80,7 +80,6 @@ export default function OnboardingScreen() {
     router.replace('/(auth)/login');
   }, [impact, router]);
 
-  const isLastSlide = currentIndex === SLIDES.length - 1;
   const currentSlide = SLIDES[currentIndex];
 
   return (
@@ -109,7 +108,7 @@ export default function OnboardingScreen() {
       >
         {SLIDES.map((slide, index) => (
           <View key={index} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            {/* Image : 40% de la hauteur, coins arrondis */}
+            {/* Image : plus large (90%) pour correspondre au mockup */}
             <Image
               source={slide.illustration}
               style={styles.illustration}
@@ -118,15 +117,17 @@ export default function OnboardingScreen() {
               cachePolicy="memory-disk"
             />
 
-            {/* Texte */}
-            <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.description}>{slide.description}</Text>
+            {/* Texte : aligné à gauche */}
+            <View style={styles.textContainer}>
+              <Text style={styles.title}>{slide.title}</Text>
+              <Text style={styles.description}>{slide.description}</Text>
+            </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* Footer : indicateurs a gauche + bouton a droite */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
+      {/* Footer : indicateurs à gauche + bouton à droite */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xl }]}>
         <View style={styles.indicators}>
           {SLIDES.map((_, index) => (
             <View
@@ -139,8 +140,14 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        <Button variant="primary" size="md" onPress={handleNext} icon={<ArrowRight color={colors.sand} size={18} />} iconPosition="right">
-          {isLastSlide ? 'Commencer' : currentSlide.ctaLabel}
+        <Button
+          variant="primary"
+          size="md"
+          onPress={handleNext}
+          icon={<ArrowRight color={colors.sand} size={18} />}
+          iconPosition="right"
+        >
+          {currentSlide.ctaLabel}
         </Button>
       </View>
     </View>
@@ -169,30 +176,33 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
+    alignItems: 'center', // Centre l'image horizontalement
     paddingTop: spacing.md,
   },
   illustration: {
-    width: '70%',
-    height: '40%',
+    width: '90%',
+    height: '45%',
     borderRadius: radius.xl,
     marginBottom: spacing.xl,
+  },
+  textContainer: {
+    width: '100%',
+    paddingHorizontal: spacing.lg,
+    alignItems: 'flex-start', // Texte aligné à gauche
   },
   title: {
     ...typography.h1,
     color: colors.onyx,
-    textAlign: 'center',
     marginBottom: spacing.md,
     fontWeight: '900',
+    textAlign: 'left',
   },
   description: {
     ...typography.body,
-    color: colors.onyx,
-    textAlign: 'center',
+    color: colors.stone, // Plus lisible que onyx opacity
+    textAlign: 'left',
     lineHeight: 24,
-    opacity: 0.8,
-    fontWeight: '700',
+    fontWeight: '400', // Pas 700 pour la lisibilité
   },
   footer: {
     flexDirection: 'row',

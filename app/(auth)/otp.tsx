@@ -1,17 +1,16 @@
 /**
- * OTP - verification du code a 6 chiffres.
+ * OTP - vérification du code à 6 chiffres.
  *
  * Design :
- * - Fond sand
- * - Fleche retour en haut a gauche
- * - Titre "Vérification"
- * - Sous-titre "Entrez le code envoyé au +237 6XX XXX XXX"
- * - 6 cases de saisie (auto-focus + auto-fill SMS)
- * - Bouton "Vérifier" terracotta
- * - Countdown "Renvoyer le code dans 0:59"
- * - Lien "Je n'ai pas reçu le code"
+ * - Fond sand, pas de scroll (page fixe)
+ * - Flèche retour en haut à gauche
+ * - Titre "Entrez le code"
+ * - Sous-titre "Code envoyé au +237 6XX XXX XXX"
+ * - 6 cases compactes (largeur fixe 48px, gap 12px, centrées)
+ * - Bouton "Vérifier" terracotta pleine largeur
+ * - Countdown + lien "Renvoyer"
  *
- * Securite :
+ * Sécurité :
  * - Rate limiting (3 tentatives, lock 15 min)
  * - Auto-fill SMS (Android)
  * - Countdown 60s avant renvoi possible
@@ -23,6 +22,8 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
   type TextInputKeyPressEvent,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -50,6 +51,7 @@ export default function OtpScreen() {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
   // Countdown
   useEffect(() => {
     if (countdown <= 0) return;
@@ -120,7 +122,7 @@ export default function OtpScreen() {
 
   const handleKeyPress = useCallback(
     (index: number, event: TextInputKeyPressEvent) => {
-      // Backspace : revenir a la case precedente
+      // Backspace : revenir à la case précédente
       if (event.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
         inputRefs.current[index - 1]?.focus();
       }
@@ -152,42 +154,53 @@ export default function OtpScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header title="Vérification" onBack={() => router.back()} showBack />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Entrez le code</Text>
-        <Text style={styles.subtitle}>
-          Code envoyé au {formatPhone(params.phone)}
-          {params.email ? ` et à ${params.email}` : ''}
-        </Text>
-
-        {error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{error}</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.content}>
+          {/* Texte d'instruction */}
+          <View style={styles.textSection}>
+            <Text style={styles.title}>Entrez le code</Text>
+            <Text style={styles.subtitle}>
+              Code envoyé au {formatPhone(params.phone)}
+              {params.email ? ` et à ${params.email}` : ''}
+            </Text>
           </View>
-        )}
 
-        {/* 6 cases rectangulaires compactes */}
-        <View style={styles.otpContainer}>
-          {Array.from({ length: OTP_LENGTH }).map((_, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
-              style={[styles.otpInput, code[index] ? styles.otpInputFilled : null]}
-              value={code[index]}
-              onChangeText={(value) => handleInputChange(index, value)}
-              onKeyPress={(e) => handleKeyPress(index, e)}
-              keyboardType="number-pad"
-              maxLength={1}
-              autoFocus={index === 0}
-              accessibilityLabel={`Chiffre ${index + 1}`}
-              textContentType="oneTimeCode"
-            />
-          ))}
-        </View>
+          {/* Erreur */}
+          {error && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
-        {/* Bouton verifier - pleine largeur */}
-        <View style={styles.buttonWrapper}>
+          {/* 6 cases rectangulaires — largeur FIXE, pas de flex:1 */}
+          <View style={styles.otpContainer}>
+            {Array.from({ length: OTP_LENGTH }).map((_, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputRefs.current[index] = ref;
+                }}
+                style={[
+                  styles.otpInput,
+                  code[index] ? styles.otpInputFilled : null,
+                  error ? styles.otpInputError : null,
+                ]}
+                value={code[index]}
+                onChangeText={(value) => handleInputChange(index, value)}
+                onKeyPress={(e) => handleKeyPress(index, e)}
+                keyboardType="number-pad"
+                maxLength={1}
+                autoFocus={index === 0}
+                accessibilityLabel={`Chiffre ${index + 1}`}
+                textContentType="oneTimeCode"
+              />
+            ))}
+          </View>
+
+          {/* Bouton vérifier — pleine largeur */}
           <Button
             variant="primary"
             size="lg"
@@ -199,26 +212,29 @@ export default function OtpScreen() {
           >
             Vérifier
           </Button>
-        </View>
 
-        {/* Countdown + renvoyer */}
-        <View style={styles.resendWrapper}>
-          {countdown > 0 ? (
-            <Text style={styles.countdownText}>
-              Renvoyer le code dans 0:{countdown.toString().padStart(2, '0')} secondes
-            </Text>
-          ) : (
-            <Pressable onPress={handleResend} hitSlop={12}>
-              <Text style={styles.resendLink}>Renvoyer le code</Text>
-            </Pressable>
-          )}
-        </View>
+          {/* Countdown + renvoyer */}
+          <View style={styles.resendWrapper}>
+            {countdown > 0 ? (
+              <Text style={styles.countdownText}>
+                Renvoyer le code dans{' '}
+                <Text style={styles.countdownTimer}>
+                  0:{countdown.toString().padStart(2, '0')}
+                </Text>
+              </Text>
+            ) : (
+              <Pressable onPress={handleResend} hitSlop={12}>
+                <Text style={styles.resendLink}>Renvoyer le code</Text>
+              </Pressable>
+            )}
+          </View>
 
-        {/* Lien support */}
-        <Pressable onPress={() => impact('light')} hitSlop={12} style={styles.supportLink}>
-          <Text style={styles.supportText}>Je n'ai pas reçu le code</Text>
-        </Pressable>
-      </View>
+          {/* Lien support */}
+          <Pressable onPress={() => impact('light')} hitSlop={12} style={styles.supportLink}>
+            <Text style={styles.supportText}>Je n'ai pas reçu le code</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -228,27 +244,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.sand,
   },
+  keyboardView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
+    // Pas de scroll — tout tient sur l'écran
+  },
+  textSection: {
+    marginBottom: spacing.lg,
   },
   title: {
     ...typography.h1,
     color: colors.onyx,
     marginBottom: spacing.sm,
-    fontWeight: '700',
   },
   subtitle: {
     ...typography.body,
-    color: colors.onyx,
-    opacity: 0.7,
-    marginBottom: spacing.xl,
+    color: colors.stone,
     lineHeight: 24,
   },
   errorBanner: {
     backgroundColor: `${colors.terracotta}15`,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
@@ -257,31 +277,32 @@ const styles = StyleSheet.create({
     color: colors.terracotta,
     textAlign: 'center',
   },
+  // ── OTP Inputs ── Largeur FIXE 48px — jamais flex:1
   otpContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: spacing.xl,
-    gap: spacing.sm,
+    gap: 12,
   },
   otpInput: {
-    flex: 1,
+    width: 48,
     height: 56,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: `${colors.stone}40`,
     borderRadius: radius.md,
     backgroundColor: colors.ivory,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.onyx,
     fontFamily: 'Inter-Bold',
   },
   otpInputFilled: {
     borderColor: colors.terracotta,
-    backgroundColor: `${colors.terracotta}10`,
+    backgroundColor: `${colors.terracotta}08`,
   },
-  buttonWrapper: {
-    width: '100%',
+  otpInputError: {
+    borderColor: `${colors.terracotta}60`,
   },
   resendWrapper: {
     alignItems: 'center',
@@ -290,6 +311,10 @@ const styles = StyleSheet.create({
   countdownText: {
     ...typography.bodySmall,
     color: colors.stone,
+  },
+  countdownTimer: {
+    color: colors.terracotta,
+    fontWeight: '600',
   },
   resendLink: {
     ...typography.bodySmall,
