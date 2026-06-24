@@ -1,7 +1,13 @@
 /**
  * Onboarding - 3 slides carrousel.
  *
- * Utilise les illustrations utilisateur (assets/images/onboarding/slideN.png).
+ * Design :
+ * - Header : Logo small + "Passer" en haut a droite
+ * - Image : 40% hauteur (require @/assets/images/onboarding/slideN.png)
+ * - Titre : h1 onyx gras, centre
+ * - Description : body onyx opaque (lisible, PAS flou)
+ * - Indicateurs : 3 points a gauche, actif terracotta
+ * - Bouton : "Continuer" / "Commencer" terracotta, bas DROITE (pas pleine largeur)
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -9,6 +15,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions } from 'react
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
@@ -78,7 +85,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header avec logo + Passer */}
+      {/* Header */}
       <View style={styles.header}>
         <Logo size="sm" />
         <Pressable onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Passer">
@@ -86,7 +93,7 @@ export default function OnboardingScreen() {
         </Pressable>
       </View>
 
-      {/* Slides horizontaux */}
+      {/* Slides */}
       <ScrollView
         ref={scrollViewRef}
         horizontal
@@ -102,14 +109,23 @@ export default function OnboardingScreen() {
       >
         {SLIDES.map((slide, index) => (
           <View key={index} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <Image source={slide.illustration as number} style={styles.illustration} contentFit="cover" transition={300} />
+            {/* Image : 40% de la hauteur, coins arrondis */}
+            <Image
+              source={slide.illustration}
+              style={styles.illustration}
+              contentFit="cover"
+              transition={300}
+              cachePolicy="memory-disk"
+            />
+
+            {/* Texte */}
             <Text style={styles.title}>{slide.title}</Text>
             <Text style={styles.description}>{slide.description}</Text>
           </View>
         ))}
       </ScrollView>
 
-      {/* Footer fixe : indicateurs + bouton */}
+      {/* Footer : indicateurs a gauche + bouton a droite */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.indicators}>
           {SLIDES.map((_, index) => (
@@ -123,7 +139,7 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        <Button variant="primary" size="lg" fullWidth onPress={handleNext}>
+        <Button variant="primary" size="md" onPress={handleNext} icon={<ArrowRight color={colors.sand} size={18} />} iconPosition="right">
           {isLastSlide ? 'Commencer' : currentSlide.ctaLabel}
         </Button>
       </View>
@@ -153,13 +169,13 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
   illustration: {
-    width: '100%',
-    aspectRatio: 1,
+    width: '70%',
+    height: '40%',
     borderRadius: radius.xl,
     marginBottom: spacing.xl,
   },
@@ -168,21 +184,25 @@ const styles = StyleSheet.create({
     color: colors.onyx,
     textAlign: 'center',
     marginBottom: spacing.md,
+    fontWeight: '900',
   },
   description: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.onyx,
     textAlign: 'center',
     lineHeight: 24,
+    opacity: 0.8,
+    fontWeight: '700',
   },
   footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    gap: spacing.lg,
   },
   indicators: {
     flexDirection: 'row',
-    justifyContent: 'center',
     gap: spacing.sm,
   },
   indicator: {

@@ -20,10 +20,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
-import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight } from 'lucide-react-native';
+import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { GoogleLogo } from '@/components/icons/GoogleLogo';
 import { colors, typography, spacing } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
@@ -165,7 +166,9 @@ export default function LoginScreen() {
               setRememberMe(!rememberMe);
             }}
           >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Check color={colors.sand} size={14} strokeWidth={3} />}
+            </View>
             <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
           </Pressable>
 
@@ -190,6 +193,7 @@ export default function LoginScreen() {
       {/* Boutons alternatifs */}
       <View style={styles.alternatives}>
         <TouchableOpacity style={styles.alternativeButton} onPress={handleGoogleLogin} activeOpacity={0.7}>
+          <GoogleLogo size="md" />
           <Text style={styles.alternativeText}>Se connecter avec Google</Text>
         </TouchableOpacity>
 
@@ -202,7 +206,7 @@ export default function LoginScreen() {
       {/* Lien inscription */}
       <View style={styles.signUpWrapper}>
         <Text style={styles.signUpText}>Vous n'avez pas de compte ? </Text>
-        <Pressable onPress={goToRegister} hitSlop={12}>
+        <Pressable onPress={goToRegister} hitSlop={12} style={styles.signUpLinkWrapper}>
           <Text style={styles.signUpLink}>Inscrivez-vous</Text>
           <ArrowRight color={colors.terracotta} size={14} style={styles.signUpArrow} />
         </Pressable>
@@ -229,10 +233,12 @@ const styles = StyleSheet.create({
     ...typography.h1,
     color: colors.onyx,
     textAlign: 'center',
+    fontWeight: '700',
   },
   subtitle: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.onyx,
+    opacity: 0.7,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
@@ -264,12 +270,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
     borderWidth: 1.5,
     borderColor: colors.stone,
     backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   checkboxChecked: {
     backgroundColor: colors.terracotta,
@@ -330,6 +338,10 @@ const styles = StyleSheet.create({
   signUpText: {
     ...typography.body,
     color: colors.stone,
+  },
+  signUpLinkWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   signUpLink: {
     ...typography.body,

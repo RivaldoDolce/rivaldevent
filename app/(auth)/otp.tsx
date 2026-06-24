@@ -16,7 +16,6 @@
  * - Auto-fill SMS (Android)
  * - Countdown 60s avant renvoi possible
  */
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -28,6 +27,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/ui/Header';
@@ -50,7 +50,6 @@ export default function OtpScreen() {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
-
   // Countdown
   useEffect(() => {
     if (countdown <= 0) return;
@@ -97,8 +96,6 @@ export default function OtpScreen() {
   const handleInputChange = useCallback(
     (index: number, value: string) => {
       const digit = value.replace(/[^0-9]/g, '').slice(-1);
-      const fullCode = code.map((c, i) => (i === index ? digit : c)).join('');
-
       setCode((prev) => {
         const newCode = [...prev];
         newCode[index] = digit;
@@ -111,8 +108,11 @@ export default function OtpScreen() {
       }
 
       // Auto-submit si dernier chiffre
-      if (digit && index === OTP_LENGTH - 1 && fullCode.length === OTP_LENGTH) {
-        handleVerify(fullCode);
+      if (digit && index === OTP_LENGTH - 1) {
+        const fullCode = code.map((c, i) => (i === index ? digit : c)).join('');
+        if (fullCode.length === OTP_LENGTH) {
+          handleVerify(fullCode);
+        }
       }
     },
     [code, handleVerify]
@@ -165,7 +165,7 @@ export default function OtpScreen() {
           </View>
         )}
 
-        {/* Cases OTP */}
+        {/* 6 cases rectangulaires compactes */}
         <View style={styles.otpContainer}>
           {Array.from({ length: OTP_LENGTH }).map((_, index) => (
             <TextInput
@@ -176,25 +176,30 @@ export default function OtpScreen() {
               style={[styles.otpInput, code[index] ? styles.otpInputFilled : null]}
               value={code[index]}
               onChangeText={(value) => handleInputChange(index, value)}
-              onKeyPress={(event) => handleKeyPress(index, event)}
+              onKeyPress={(e) => handleKeyPress(index, e)}
               keyboardType="number-pad"
               maxLength={1}
               autoFocus={index === 0}
               accessibilityLabel={`Chiffre ${index + 1}`}
+              textContentType="oneTimeCode"
             />
           ))}
         </View>
 
-        {/* Bouton verifier */}
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          loading={isLoading}
-          onPress={() => handleVerify()}
-        >
-          Vérifier
-        </Button>
+        {/* Bouton verifier - pleine largeur */}
+        <View style={styles.buttonWrapper}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={isLoading}
+            onPress={() => handleVerify()}
+            icon={<ArrowRight color={colors.sand} size={18} />}
+            iconPosition="right"
+          >
+            Vérifier
+          </Button>
+        </View>
 
         {/* Countdown + renvoyer */}
         <View style={styles.resendWrapper}>
@@ -210,11 +215,7 @@ export default function OtpScreen() {
         </View>
 
         {/* Lien support */}
-        <Pressable
-          onPress={() => impact('light')}
-          hitSlop={12}
-          style={styles.supportLink}
-        >
+        <Pressable onPress={() => impact('light')} hitSlop={12} style={styles.supportLink}>
           <Text style={styles.supportText}>Je n'ai pas reçu le code</Text>
         </Pressable>
       </View>
@@ -236,10 +237,12 @@ const styles = StyleSheet.create({
     ...typography.h1,
     color: colors.onyx,
     marginBottom: spacing.sm,
+    fontWeight: '700',
   },
   subtitle: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.onyx,
+    opacity: 0.7,
     marginBottom: spacing.xl,
     lineHeight: 24,
   },
@@ -262,13 +265,13 @@ const styles = StyleSheet.create({
   },
   otpInput: {
     flex: 1,
-    aspectRatio: 0.75,
+    height: 56,
     borderWidth: 2,
     borderColor: `${colors.stone}40`,
     borderRadius: radius.md,
     backgroundColor: colors.ivory,
     textAlign: 'center',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.onyx,
     fontFamily: 'Inter-Bold',
@@ -276,6 +279,9 @@ const styles = StyleSheet.create({
   otpInputFilled: {
     borderColor: colors.terracotta,
     backgroundColor: `${colors.terracotta}10`,
+  },
+  buttonWrapper: {
+    width: '100%',
   },
   resendWrapper: {
     alignItems: 'center',
