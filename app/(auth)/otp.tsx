@@ -24,6 +24,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
   type TextInputKeyPressEvent,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -49,6 +50,13 @@ export default function OtpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const otpSpacing = spacing.sm;
+  const otpInputWidth = Math.min(
+    48,
+    Math.max(40, Math.floor((windowWidth - spacing.lg * 2 - otpSpacing * (OTP_LENGTH - 1)) / OTP_LENGTH))
+  );
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -185,6 +193,7 @@ export default function OtpScreen() {
                 }}
                 style={[
                   styles.otpInput,
+                  { width: otpInputWidth, marginRight: index < OTP_LENGTH - 1 ? otpSpacing : 0 },
                   code[index] ? styles.otpInputFilled : null,
                   error ? styles.otpInputError : null,
                 ]}
@@ -282,7 +291,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: spacing.xl,
-    gap: 12,
   },
   otpInput: {
     width: 48,

@@ -1,63 +1,88 @@
 /**
- * Splash screen - ecran de demarrage.
+ * Écran d'accueil - écran de démarrage.
  *
  * Utilise le logo utilisateur (assets/images/logo.png).
  * Fond terracotta, titre RIVALD'EVENT, baseline CURATING EXCELLENCE.
  */
 
-import { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 
 import { colors, typography, spacing } from '@/lib/constants';
 
-// Logo utilisateur - placer le fichier a assets/images/logo.png
+// Logo utilisateur - placer le fichier à assets/images/logo.png
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 
 export default function SplashScreen() {
   const router = useRouter();
 
-  const logoOpacity = useSharedValue(0);
-  const logoScale = useSharedValue(0.8);
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(20);
-  const subtitleOpacity = useSharedValue(0);
-  const baselineOpacity = useSharedValue(0);
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const baselineOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    logoOpacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
-    logoScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) });
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-    titleOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
-    titleTranslateY.value = withDelay(400, withTiming(0, { duration: 600 }));
-
-    subtitleOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
-    baselineOpacity.value = withDelay(1200, withTiming(1, { duration: 400 }));
+    Animated.sequence([
+      Animated.delay(400),
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(titleTranslateY, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(400),
+      Animated.timing(subtitleOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.delay(400),
+      Animated.timing(baselineOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     const timer = setTimeout(() => {
       router.replace('/(auth)/onboarding');
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [logoOpacity, logoScale, titleOpacity, titleTranslateY, subtitleOpacity, baselineOpacity, router]);
+  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
 
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }],
-  }));
+  const logoAnimatedStyle = {
+    opacity: logoOpacity,
+    transform: [{ scale: logoScale }],
+  };
 
-  const titleAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
-  }));
+  const titleAnimatedStyle = {
+    opacity: titleOpacity,
+    transform: [{ translateY: titleTranslateY }],
+  };
 
   return (
     <View style={styles.container}>
@@ -69,11 +94,11 @@ export default function SplashScreen() {
         <Text style={styles.title}>RIVALD'EVENT</Text>
       </Animated.View>
 
-      <Animated.View style={{ opacity: subtitleOpacity }}>
+      <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}> 
         <Text style={styles.subtitle}>LUXURY AFRICAN EVENTS</Text>
       </Animated.View>
 
-      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}>
+      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}> 
         <View style={styles.goldBar} />
         <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
       </Animated.View>
@@ -104,12 +129,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textAlign: 'center',
   },
+  subtitleWrapper: {
+    marginTop: spacing.sm,
+  },
   subtitle: {
     ...typography.bodySmall,
     color: colors.gold,
     letterSpacing: 4,
     fontWeight: '600',
-    marginTop: spacing.sm,
     textAlign: 'center',
   },
   baselineWrapper: {

@@ -1,24 +1,24 @@
 /**
- * Register - inscription email + password + metadonnées.
+ * Inscription - enregistrement email + mot de passe + métadonnées.
  *
  * Design :
- * - Fond sand
- * - Pas de header navigation
- * - Titre "5. Créer un compte"
+ * - Fond sable
+ * - Pas de header de navigation
+ * - Titre "Créer un compte"
  * - Sous-titre "Rejoignez l'élégance de vos événements"
  * - Prénom | Nom en ligne
  * - Email
  * - Date de naissance
  * - Mot de passe
- * - Confirmer
- * - CGV checkbox
+ * - Confirmer le mot de passe
+ * - Case à cocher CGV
  * - Bouton "S'inscrire ->"
  * - OU
  * - S'inscrire avec Google
  * - Utiliser un autre fournisseur
  * - Déjà un compte ? Se connecter
  *
- * Tout est dans un flux de scroll naturel, PAS de footer absolute !
+ * Tout est dans un flux de scroll naturel, SANS footer en position absolue !
  */
 
 import { useState, useCallback } from 'react';
@@ -35,10 +35,11 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, Lock, Calendar, User, UserPlus, ArrowRight, Check } from 'lucide-react-native';
+import { Mail, Lock, User, UserPlus, ArrowRight, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { DateInput } from '@/components/ui/DateInput';
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
 import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -65,7 +66,7 @@ export default function RegisterScreen() {
     defaultValues: {
       full_name: '',
       email: '',
-      phone: '600000000', // placeholder for validation
+      phone: '600000000',
       password: '',
       confirm_password: '',
     },
@@ -134,15 +135,18 @@ export default function RegisterScreen() {
         {/* Formulaire */}
         <View style={styles.form}>
           <View style={styles.row}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
               <Controller
                 control={control}
                 name="full_name"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     placeholder="Prénom"
-                    value={value}
-                    onChangeText={onChange}
+                    value={value.split(' ')[0] || ''}
+                    onChangeText={(text) => {
+                      const parts = value.split(' ');
+                      onChange(`${text} ${parts[1] || ''}`.trim());
+                    }}
                     onBlur={onBlur}
                     error={errors.full_name?.message}
                     autoCapitalize="words"
@@ -151,12 +155,22 @@ export default function RegisterScreen() {
                 )}
               />
             </View>
-            <View style={{ flex: 1 }}>
-              <Input
-                placeholder="Nom"
-                value=""
-                onChangeText={() => {}}
-                autoCapitalize="words"
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Controller
+                control={control}
+                name="full_name"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    placeholder="Nom"
+                    value={value.split(' ')[1] || ''}
+                    onChangeText={(text) => {
+                      const parts = value.split(' ');
+                      onChange(`${parts[0] || ''} ${text}`.trim());
+                    }}
+                    onBlur={onBlur}
+                    autoCapitalize="words"
+                  />
+                )}
               />
             </View>
           </View>
@@ -179,11 +193,10 @@ export default function RegisterScreen() {
             )}
           />
 
-          <Input
-            placeholder="Date de naissance"
+          <DateInput
             value=""
-            onChangeText={() => {}}
-            iconLeft={<Calendar color={colors.stone} size={20} strokeWidth={1.5} />}
+            onDateChange={() => {}}
+            placeholder="Date de naissance"
           />
 
           <Controller
@@ -330,18 +343,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
   },
   checkboxWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: spacing.xl,
-    gap: spacing.sm,
     paddingRight: spacing.md,
   },
   checkbox: {
@@ -374,7 +385,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: spacing.lg,
-    gap: spacing.md,
   },
   separatorLine: {
     flex: 1,
@@ -386,7 +396,6 @@ const styles = StyleSheet.create({
     color: colors.stone,
   },
   alternatives: {
-    gap: spacing.sm,
     marginBottom: spacing.xl,
   },
   alternativeButton: {
@@ -398,9 +407,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     minHeight: 52,
     backgroundColor: colors.sand,
+    marginBottom: spacing.sm,
   },
   alternativeText: {
     ...typography.body,

@@ -133,7 +133,7 @@ export default function LoginScreen() {
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 label="Email ou Nom d'utilisateur"
-                placeholder="Ex: amadou.rivald@email.com"
+                placeholder="Ex: rivaldocabrel@email.com"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -291,7 +291,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   optionsRow: {
@@ -303,7 +302,7 @@ const styles = StyleSheet.create({
   checkboxWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    marginRight: spacing.sm,
   },
   checkbox: {
     width: 20,
@@ -332,7 +331,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: spacing.lg,
-    gap: spacing.md,
   },
   separatorLine: {
     flex: 1,
@@ -344,7 +342,6 @@ const styles = StyleSheet.create({
     color: colors.stone,
   },
   alternatives: {
-    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   alternativeButton: {
@@ -356,9 +353,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
     minHeight: 52,
     backgroundColor: colors.sand,
+    marginBottom: spacing.sm,
   },
   alternativeText: {
     ...typography.body,

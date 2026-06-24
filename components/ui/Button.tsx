@@ -1,38 +1,51 @@
 /**
  * Bouton principal du design system.
  *
- * Règles UI/UX :
- * - 1 seul bouton primary par écran (hiérarchie violente)
- * - Press feedback : scale 0.98 + haptic light
- * - Disabled : opacité 0.5, pas de haptic
- * - Loading : spinner remplace le texte, bouton désactivé
- * - Radius 16px partout (radius.lg)
- *
- * Variants :
+ * Variantes :
  * - primary   : bg terracotta (client) — CTA principal
  * - secondary : bg gold (premium, actions vendeur)
  * - outline   : border stone, transparent — actions secondaires
  * - ghost     : texte seul, underline — liens
  *
- * Sizes :
+ * Tailles :
  * - sm : 36px de haut, padding 12px
  * - md : 48px de haut, padding 16px (défaut)
  * - lg : 56px de haut, padding 24px
  */
 
 import React, { useCallback } from 'react';
-import { Pressable, Text, ActivityIndicator, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { Pressable, Text, ActivityIndicator, Platform, type ViewStyle } from 'react-native';
+
+// Importation sécurisée de react-native-reanimated avec fallback.
+// Reanimated nécessite le plugin Babel et une construction native ; si non configuré correctement,
+// nous utilisons les styles statiques pour éviter les erreurs TurboModule.
+let AnimatedPressable: typeof Pressable = Pressable;
+let useAnimatedStyle: any = () => () => ({});
+let useSharedValue: any = () => ({ value: 1 });
+let withSpring: any = (v: any) => v;
+let withTiming: any = (v: any) => v;
+
+if (Platform.OS !== 'web') {
+  try {
+    // eslint-disable-next-line global-require
+    const ReanimatedModule = require('react-native-reanimated');
+    const Reanimated = ReanimatedModule.default ?? ReanimatedModule;
+
+    if (typeof Reanimated.createAnimatedComponent === 'function') {
+      AnimatedPressable = Reanimated.createAnimatedComponent(Pressable);
+    }
+
+    useAnimatedStyle = ReanimatedModule.useAnimatedStyle ?? (() => () => ({}));
+    useSharedValue = ReanimatedModule.useSharedValue ?? (() => ({ value: 1 }));
+    withSpring = ReanimatedModule.withSpring ?? ((value: any) => value);
+    withTiming = ReanimatedModule.withTiming ?? ((value: any) => value);
+  } catch {
+    // Reanimated non disponible ; utilisation des styles statiques
+  }
+}
 
 import { useHaptics } from '@/hooks/useHaptics';
 import { colors, spacing, radius, typography } from '@/lib/constants';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ============================================================
 // Types
@@ -94,7 +107,7 @@ export const Button = React.memo(function Button({
   const { impact } = useHaptics();
   const scale = useSharedValue(1);
 
-  // Animation au press
+  // Animation à l'appui
   const handlePressIn = useCallback(() => {
     if (disabled || loading) return;
     scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
@@ -112,7 +125,7 @@ export const Button = React.memo(function Button({
     onPress?.();
   }, [disabled, loading, onPress]);
 
-  // Style animé
+  // Style avec animation
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: withTiming(disabled ? 0.5 : 1, { duration: 150 }),
@@ -125,7 +138,7 @@ export const Button = React.memo(function Button({
     ghost: colors.terracotta,
   }[variant];
 
-  // Inline backgroundColor — source de vérité (NativeWind en complément)
+  // Couleur de fond inline — source unique de vérité (NativeWind en complément)
   const variantBg: Record<NonNullable<ButtonProps['variant']>, string> = {
     primary: colors.terracotta,
     secondary: colors.gold,
@@ -138,6 +151,8 @@ export const Button = React.memo(function Button({
     paddingHorizontal: SIZE_PADDING[size],
     borderRadius: radius.lg,
     backgroundColor: variantBg[variant],
+    justifyContent: 'center',
+    alignItems: 'center',
     ...(variant === 'outline' ? { borderWidth: 1, borderColor: `${colors.stone}60` } : {}),
   };
 
@@ -173,9 +188,10 @@ export const Button = React.memo(function Button({
                 fontSize: SIZE_FONT[size],
                 marginLeft: icon && iconPosition === 'left' ? spacing.sm : 0,
                 marginRight: icon && iconPosition === 'right' ? spacing.sm : 0,
+                textAlign: 'center',
+                textAlignVertical: 'center',
               },
             ]}
-            className={variant === 'ghost' ? 'underline' : ''}
           >
             {children}
           </Text>

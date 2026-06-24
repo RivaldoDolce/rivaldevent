@@ -112,6 +112,7 @@ export const Input = React.memo(function Input({
     flexDirection: 'row',
     alignItems: 'center',
     opacity: editable ? 1 : 0.6,
+    outlineWidth: 0,
   };
 
   const inputStyle: TextStyle = {
@@ -120,6 +121,7 @@ export const Input = React.memo(function Input({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: iconLeft ? spacing.sm : 0,
+    outlineWidth: 0,
   };
 
   return (
