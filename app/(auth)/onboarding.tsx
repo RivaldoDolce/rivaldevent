@@ -1,36 +1,26 @@
 /**
  * Onboarding - 3 slides carrousel.
  *
- * Slides :
- * 1. "Trouvez des evenements" - decouverte culturelle
- * 2. "Accedez avec votre QR Code" - billet digital
- * 3. "Payez par Mobile Money" - paiement MTN/Orange/Moov
- *
- * Design :
- * - Fond sand
- * - Illustration en haut (40% hauteur) - placeholder couleur ivory
- * - Titre + texte au centre
- * - 3 indicateurs (point actif terracotta)
- * - Bouton "Continuer" / "Commencer" terracotta (largeur pleine)
- * - Lien "Passer" en haut a droite
- *
- * Animation : slide horizontal entre slides (Reanimated).
+ * Utilise les illustrations utilisateur (assets/images/onboarding/slideN.png).
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, type ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
 import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
 interface Slide {
   readonly title: string;
   readonly description: string;
-  readonly illustrationColor: string;
+  readonly illustration: number;
   readonly ctaLabel: string;
 }
 
@@ -39,21 +29,21 @@ const SLIDES: readonly Slide[] = [
     title: 'Trouvez des événements',
     description:
       'Découvrez des expériences culturelles et des lieux exclusifs à travers le Cameroun.',
-    illustrationColor: colors.terracotta,
+    illustration: require('@/assets/images/onboarding/slide1.png'),
     ctaLabel: 'Continuer',
   },
   {
     title: 'Accédez avec votre QR Code',
     description:
       'Recevez votre billet numérique instantanément. Présentez-le à l\'entrée, c\'est tout simple.',
-    illustrationColor: colors.forest,
+    illustration: require('@/assets/images/onboarding/slide2.png'),
     ctaLabel: 'Continuer',
   },
   {
     title: 'Payez par Mobile Money',
     description:
       'Choisissez votre opérateur local (MTN, Orange, Moov) pour un paiement simple et sécurisé.',
-    illustrationColor: colors.indigo,
+    illustration: require('@/assets/images/onboarding/slide3.png'),
     ctaLabel: 'Commencer',
   },
 ];
@@ -72,10 +62,7 @@ export default function OnboardingScreen() {
     if (currentIndex < SLIDES.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-      scrollViewRef.current?.scrollTo({
-        x: nextIndex * 360, // approximatif, sera ajuste
-        animated: true,
-      });
+      scrollViewRef.current?.scrollTo({ x: nextIndex * SCREEN_WIDTH, animated: true });
     } else {
       router.replace('/(auth)/login');
     }
@@ -94,7 +81,7 @@ export default function OnboardingScreen() {
       {/* Header avec logo + Passer */}
       <View style={styles.header}>
         <Logo size="sm" />
-        <Pressable onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Passer l'introduction">
+        <Pressable onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Passer">
           <Text style={styles.skipText}>Passer</Text>
         </Pressable>
       </View>
@@ -107,27 +94,22 @@ export default function OnboardingScreen() {
         scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         onScroll={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / 360);
+          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
           if (index !== currentIndex) setCurrentIndex(index);
         }}
         scrollEventThrottle={16}
         style={styles.scrollView}
       >
         {SLIDES.map((slide, index) => (
-          <View key={index} style={styles.slide}>
-            {/* Illustration placeholder */}
-            <View style={[styles.illustration, { backgroundColor: slide.illustrationColor }]}>
-              <Logo size="md" withBackground={false} />
-            </View>
-
-            {/* Texte */}
+          <View key={index} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+            <Image source={slide.illustration as number} style={styles.illustration} contentFit="cover" transition={300} />
             <Text style={styles.title}>{slide.title}</Text>
             <Text style={styles.description}>{slide.description}</Text>
           </View>
         ))}
       </ScrollView>
 
-      {/* Indicateurs + bouton */}
+      {/* Footer fixe : indicateurs + bouton */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.indicators}>
           {SLIDES.map((_, index) => (
@@ -170,7 +152,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   slide: {
-    width: 360, // sera calcule dynamiquement si besoin
     flex: 1,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
@@ -180,8 +161,6 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: radius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: spacing.xl,
   },
   title: {
@@ -209,13 +188,13 @@ const styles = StyleSheet.create({
   indicator: {
     height: 8,
     borderRadius: 4,
-  } as ViewStyle,
+  },
   indicatorActive: {
     width: 24,
     backgroundColor: colors.terracotta,
-  } as ViewStyle,
+  },
   indicatorInactive: {
     width: 8,
     backgroundColor: `${colors.stone}40`,
-  } as ViewStyle,
+  },
 });

@@ -3,33 +3,34 @@
  *
  * Design :
  * - Fond sand
- * - Logo gold centre en haut
- * - Titre "Bienvenue" + sous-titre "L'élégance de vos événements commence ici"
- * - Formulaire : email + password (avec icone oeil pour reveal)
- * - Lien "Mot de passe oublié ?" a droite
- * - Bouton "Se connecter" terracotta (pleine largeur)
+ * - Logo utilisateur en haut
+ * - Titre "Bienvenue" + sous-titre
+ * - Formulaire : email + password (icone oeil pour reveal)
+ * - Ligne : "Se souvenir de moi" + "Mot de passe oublie"
+ * - Bouton "Se connecter" terracotta
  * - Separateur "OU"
  * - Boutons : Google (outline) + Telephone (outline)
  * - Lien "Inscrivez-vous" en bas
- *
- * Form : React Hook Form + Zod
  */
 
 import { useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Image } from 'expo-image';
+import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Logo } from '@/components/icons/Logo';
 import { colors, typography, spacing } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
 import { logger } from '@/lib/logger';
+
+const LOGO_SOURCE = require('@/assets/images/logo.png');
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function LoginScreen() {
   const { impact, notification } = useHaptics();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const {
@@ -82,14 +84,18 @@ export default function LoginScreen() {
   const handleGoogleLogin = useCallback(() => {
     impact('light');
     logger.debug('Google login (TODO: implement OAuth)');
-    // TODO: implementer OAuth Google
   }, [impact]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.xl }]}>
+    <ScrollView
+      style={[styles.container, { paddingTop: insets.top + spacing.xl }]}
+      contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Logo */}
       <View style={styles.logoWrapper}>
-        <Logo size="md" />
+        <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
       </View>
 
       {/* Titre */}
@@ -119,6 +125,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              iconLeft={<Mail color={colors.stone} size={20} />}
             />
           )}
         />
@@ -135,18 +142,37 @@ export default function LoginScreen() {
               onBlur={onBlur}
               error={errors.password?.message}
               secureTextEntry={!showPassword}
+              iconLeft={<Lock color={colors.stone} size={20} />}
               iconRight={
                 <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
-                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                  {showPassword ? (
+                    <EyeOff color={colors.stone} size={20} />
+                  ) : (
+                    <Eye color={colors.stone} size={20} />
+                  )}
                 </Pressable>
               }
             />
           )}
         />
 
-        <Pressable onPress={() => logger.debug('TODO: reset password')} hitSlop={12} style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-        </Pressable>
+        {/* Se souvenir de moi + Mot de passe oublie */}
+        <View style={styles.optionsRow}>
+          <Pressable
+            style={styles.checkboxWrapper}
+            onPress={() => {
+              impact('light');
+              setRememberMe(!rememberMe);
+            }}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+            <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
+          </Pressable>
+
+          <Pressable onPress={() => logger.debug('TODO: reset password')} hitSlop={8}>
+            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Bouton principal */}
@@ -168,18 +194,20 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.alternativeButton} onPress={goToPhoneLogin} activeOpacity={0.7}>
+          <Phone color={colors.onyx} size={20} />
           <Text style={styles.alternativeText}>Utiliser mon numéro</Text>
         </TouchableOpacity>
       </View>
 
       {/* Lien inscription */}
-      <View style={[styles.signUpWrapper, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <View style={styles.signUpWrapper}>
         <Text style={styles.signUpText}>Vous n'avez pas de compte ? </Text>
         <Pressable onPress={goToRegister} hitSlop={12}>
           <Text style={styles.signUpLink}>Inscrivez-vous</Text>
+          <ArrowRight color={colors.terracotta} size={14} style={styles.signUpArrow} />
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -192,6 +220,10 @@ const styles = StyleSheet.create({
   logoWrapper: {
     alignItems: 'center',
     marginBottom: spacing.lg,
+  },
+  logo: {
+    width: 80,
+    height: 80,
   },
   title: {
     ...typography.h1,
@@ -220,18 +252,37 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: -spacing.xs,
-    marginBottom: spacing.lg,
+  },
+  checkboxWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.stone,
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.terracotta,
+    borderColor: colors.terracotta,
+  },
+  checkboxLabel: {
+    ...typography.bodySmall,
+    color: colors.onyx,
   },
   forgotPasswordText: {
     ...typography.bodySmall,
     color: colors.terracotta,
     fontWeight: '500',
-  },
-  eyeIcon: {
-    fontSize: 18,
   },
   separator: {
     flexDirection: 'row',
@@ -254,13 +305,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   alternativeButton: {
+    flexDirection: 'row',
     borderWidth: 1,
     borderColor: `${colors.stone}40`,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
-    minHeight: 48,
     justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
   },
   alternativeText: {
     ...typography.body,
@@ -271,7 +325,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 'auto',
     paddingTop: spacing.lg,
   },
   signUpText: {
@@ -282,5 +335,9 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.terracotta,
     fontWeight: '600',
+  },
+  signUpArrow: {
+    marginLeft: spacing.xs,
+    marginTop: 2,
   },
 });

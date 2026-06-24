@@ -1,20 +1,14 @@
 /**
  * Splash screen - ecran de demarrage.
  *
- * Design :
- * - Fond terracotta plein
- * - Logo (cercle gold + 3 etoiles) centre
- * - Titre "RIVALD'EVENT" en onyx gras
- * - Sous-titre "LUXURY AFRICAN EVENTS" en gold
- * - Baseline "CURATING EXCELLENCE" en ivory/60%
- *
- * Animation : fade-in du logo + slide-up du titre, duree 1500ms.
- * Redirige vers onboarding apres 2.5s.
+ * Utilise le logo utilisateur (assets/images/logo.png).
+ * Fond terracotta, titre RIVALD'EVENT, baseline CURATING EXCELLENCE.
  */
 
 import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -23,8 +17,10 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-import { Logo } from '@/components/icons/Logo';
 import { colors, typography, spacing } from '@/lib/constants';
+
+// Logo utilisateur - placer le fichier a assets/images/logo.png
+const LOGO_SOURCE = require('@/assets/images/logo.png');
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -37,7 +33,6 @@ export default function SplashScreen() {
   const baselineOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Animation d'entree
     logoOpacity.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.ease) });
     logoScale.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) });
 
@@ -47,7 +42,6 @@ export default function SplashScreen() {
     subtitleOpacity.value = withDelay(800, withTiming(1, { duration: 500 }));
     baselineOpacity.value = withDelay(1200, withTiming(1, { duration: 400 }));
 
-    // Redirection apres 2.5s
     const timer = setTimeout(() => {
       router.replace('/(auth)/onboarding');
     }, 2500);
@@ -68,7 +62,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-        <Logo size="lg" />
+        <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
       </Animated.View>
 
       <Animated.View style={titleAnimatedStyle}>
@@ -97,6 +91,10 @@ const styles = StyleSheet.create({
   },
   logoWrapper: {
     marginBottom: spacing.xl,
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     ...typography.h1,
