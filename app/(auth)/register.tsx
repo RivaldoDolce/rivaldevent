@@ -62,11 +62,14 @@ export default function RegisterScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterInput>({
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     resolver: zodResolver(registerSchema),
     defaultValues: {
       full_name: '',
       email: '',
       phone: '600000000',
+      birth_date: '',
       password: '',
       confirm_password: '',
     },
@@ -79,16 +82,13 @@ export default function RegisterScreen() {
         return;
       }
 
+      const { birth_date, ...payload } = data;
+
       setIsLoading(true);
       setAuthError(null);
       impact('light');
 
-      const result = await authService.signUpWithEmail({
-        email: data.email,
-        password: data.password,
-        phone: data.phone,
-        full_name: data.full_name,
-      });
+      const result = await authService.signUpWithEmail(payload);
 
       if (result.error) {
         setAuthError(result.error.message);
@@ -114,12 +114,14 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.sand }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[styles.content, { flexGrow: 1, paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
         {/* En-tête */}
@@ -149,6 +151,7 @@ export default function RegisterScreen() {
                     }}
                     onBlur={onBlur}
                     error={errors.full_name?.message}
+                    isValid={!errors.full_name?.message && value.trim().length > 0}
                     autoCapitalize="words"
                     iconLeft={<User color={colors.stone} size={20} strokeWidth={1.5} />}
                   />
@@ -168,6 +171,8 @@ export default function RegisterScreen() {
                       onChange(`${parts[0] || ''} ${text}`.trim());
                     }}
                     onBlur={onBlur}
+                    error={errors.full_name?.message}
+                    isValid={!errors.full_name?.message && value.trim().length > 0}
                     autoCapitalize="words"
                   />
                 )}
@@ -185,6 +190,7 @@ export default function RegisterScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.email?.message}
+                isValid={!errors.email?.message && value.length > 0}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -193,10 +199,17 @@ export default function RegisterScreen() {
             )}
           />
 
-          <DateInput
-            value=""
-            onDateChange={() => {}}
-            placeholder="Date de naissance"
+          <Controller
+            control={control}
+            name="birth_date"
+            render={({ field: { value, onChange } }) => (
+              <DateInput
+                label="Date de naissance"
+                value={value}
+                onDateChange={onChange}
+                error={errors.birth_date?.message}
+              />
+            )}
           />
 
           <Controller
@@ -209,6 +222,7 @@ export default function RegisterScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.password?.message}
+                isValid={!errors.password?.message && value.length > 0}
                 secureTextEntry={!showPassword}
                 iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
                 iconRight={
@@ -234,6 +248,7 @@ export default function RegisterScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.confirm_password?.message}
+                isValid={!errors.confirm_password?.message && value.length > 0}
                 secureTextEntry={!showConfirm}
                 iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
                 iconRight={

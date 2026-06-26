@@ -49,6 +49,10 @@ export const registerSchema = z
       .regex(/[A-Z]/, '1 majuscule requise')
       .regex(/[0-9]/, '1 chiffre requis')
       .regex(/[!@#$%^&*(),.?":{}|<>]/, '1 caractère spécial requis'),
+    birth_date: z
+      .string()
+      .min(1, 'Date de naissance requise')
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide'),
     confirm_password: z.string().min(1, 'Confirmation requise'),
   })
   .refine((data) => data.password === data.confirm_password, {

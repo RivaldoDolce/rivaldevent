@@ -5,13 +5,15 @@
  * Pour Android/iOS : utilise une approche native (sélecteur système ou modal).
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
+  Platform,
   type ViewStyle,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
 
 import { colors, spacing, radius, typography } from '@/lib/constants';
@@ -22,6 +24,7 @@ interface DateInputProps {
   readonly label?: string;
   readonly placeholder?: string;
   readonly error?: string;
+  readonly isValid?: boolean;
   readonly testID?: string;
 }
 
@@ -51,11 +54,16 @@ export const DateInput = React.memo(function DateInput({
   label,
   placeholder = 'DD/MM/YYYY',
   error,
+  isValid,
   testID,
+  onDateChange,
 }: DateInputProps) {
-  const displayValue = value ? formatDateDisplay(value) : '';
+  const [showPicker, setShowPicker] = useState(false);
 
-  const borderColor = error ? colors.terracotta : `${colors.stone}40`;
+  const displayValue = value ? formatDateDisplay(value) : '';
+  const currentDate = value ? new Date(value) : new Date();
+
+  const borderColor = error ? colors.terracotta : isValid ? colors.forest : `${colors.stone}40`;
 
   const containerStyle: ViewStyle = {
     borderColor,
@@ -68,6 +76,17 @@ export const DateInput = React.memo(function DateInput({
     alignItems: 'center',
     justifyContent: 'space-between',
     outlineWidth: 0,
+  };
+
+  const openPicker = () => setShowPicker(true);
+
+  const handleDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    const isAndroid = Platform.OS === 'android';
+    setShowPicker(!isAndroid);
+
+    if (selectedDate) {
+      onDateChange(selectedDate.toISOString().slice(0, 10));
+    }
   };
 
   return (
@@ -84,6 +103,7 @@ export const DateInput = React.memo(function DateInput({
         testID={testID}
         style={containerStyle}
         accessibilityRole="button"
+        onPress={openPicker}
       >
         <Text
           style={[
@@ -99,6 +119,16 @@ export const DateInput = React.memo(function DateInput({
         </Text>
         <Calendar color={colors.stone} size={20} strokeWidth={1.5} />
       </Pressable>
+
+      {showPicker && (
+        <DateTimePicker
+          value={currentDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+        />
+      )}
 
       {error && (
         <Text

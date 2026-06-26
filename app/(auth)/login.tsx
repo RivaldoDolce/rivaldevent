@@ -54,6 +54,8 @@ export default function LoginScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginInput>({
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
@@ -97,12 +99,14 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.sand }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView
-        style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
-        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
+        style={styles.container}
+        contentContainerStyle={[styles.content, { flexGrow: 1, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing['2xl'] }]}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
         {/* Logo — centré, taille raisonnable */}
@@ -246,6 +250,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.sand,
+  },
+  content: {
     paddingHorizontal: spacing.lg,
   },
   logoWrapper: {
