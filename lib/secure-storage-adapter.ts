@@ -1,156 +1,174 @@
 /**
  * Adaptateur SecureStore pour Supabase Auth.
  *
- * Strategie hybride :
- * - Android/iOS : SecureStore avec chunking automatique si la valeur
- *   depasse 2000 caracteres (limite SecureStore ~2048).
- * - Web : AsyncStorage (SecureStore non disponible dans le navigateur).
+ * Probleme : SecureStore a une limite de ~2048 caracteres par item.
+ * Les JWT Supabase peuvent depasser cette limite (ex: 2314 chars).
  *
- * Les cles de chunks utilisent le separateur "_c" (valide pour SecureStore).
- * Ex: "rivaldevent.sb-auth-token" + "_cmeta", "_c0", "_c1", ...
+ * Solution : systeme de chunking transparent.
+ * - Si valeur <= CHUNK_SIZE → stockage direct (cle seule)
+ * - Si valeur > CHUNK_SIZE → decoupe en N chunks + metadata
+ *
+ * Format des cles (separateur '.' car SecureStore n'accepte que alphanum, '.', '-', '_'):
+ *   Cle directe          : rivaldevent.auth-token
+ *   Metadata chunks      : rivaldevent.auth-token.chunkmeta  → '{"c":2,"l":2314}'
+ *   Chunk 0              : rivaldevent.auth-token.chunk0
+ *   Chunk 1              : rivaldevent.auth-token.chunk1
+ *
+ * Backward compatible : si la cle directe existe (non-chunkee), on la lit directement.
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { logger } from '@/lib/logger';
 
 const KEY_PREFIX = 'rivaldevent.';
-const MAX_CHUNK_SIZE = 2000;
-const CHUNK_SEP = '_c';
+const CHUNK_SIZE = 2000; // Marge de securite sous la limite 2048
 
 const isWebSupported = Platform.OS === 'web' && typeof window !== 'undefined';
 
 type AsyncStorageModule = typeof import('@react-native-async-storage/async-storage').default;
 
-/**
- * Decoupe une valeur en chunks de MAX_CHUNK_SIZE caracteres.
- * Stocke le nombre de chunks dans une meta-cle.
- */
-function chunkValue(value: string): Record<string, string> {
-  const chunks: Record<string, string> = {};
-  const count = Math.ceil(value.length / MAX_CHUNK_SIZE);
+// ============================================================
+// Operations de bas niveau (web vs natif)
+// ============================================================
 
-  chunks[CHUNK_SEP + 'meta'] = JSON.stringify({ count });
-
-  for (let i = 0; i < count; i++) {
-    chunks[CHUNK_SEP + String(i)] = value.slice(i * MAX_CHUNK_SIZE, (i + 1) * MAX_CHUNK_SIZE);
+async function rawGet(key: string): Promise<string | null> {
+  if (isWebSupported) {
+    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
+    return await AsyncStorage.getItem(key);
   }
-
-  return chunks;
+  return await SecureStore.getItemAsync(key);
 }
 
-/**
- * Reconstruit une valeur depuis les chunks stockes.
- */
-async function assembleChunks(
-  getter: (key: string) => Promise<string | null>,
-  baseKey: string,
-): Promise<string | null> {
-  const meta = await getter(baseKey + CHUNK_SEP + 'meta');
-  if (!meta) return null;
+async function rawSet(key: string, value: string): Promise<void> {
+  if (isWebSupported) {
+    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
+    await AsyncStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+}
 
-  let parsed: { count: number };
+async function rawDelete(key: string): Promise<void> {
+  if (isWebSupported) {
+    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
+    await AsyncStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+}
+
+// ============================================================
+// Nettoyage des chunks existants pour une cle donnee
+// ============================================================
+
+async function cleanupChunks(baseKey: string): Promise<void> {
   try {
-    parsed = JSON.parse(meta);
-  } catch {
-    return null;
-  }
-
-  const parts: string[] = [];
-  for (let i = 0; i < parsed.count; i++) {
-    const part = await getter(baseKey + CHUNK_SEP + String(i));
-    if (part === null) return null;
-    parts.push(part);
-  }
-
-  return parts.join('');
-}
-
-/**
- * Supprime tous les chunks et la meta-cle.
- */
-async function removeChunks(
-  remover: (key: string) => Promise<void>,
-  getter: (key: string) => Promise<string | null>,
-  baseKey: string,
-): Promise<void> {
-  const meta = await getter(baseKey + CHUNK_SEP + 'meta');
-  if (meta) {
-    let parsed: { count: number };
-    try {
-      parsed = JSON.parse(meta);
-    } catch {
-      return;
-    }
-    for (let i = 0; i < parsed.count; i++) {
-      await remover(baseKey + CHUNK_SEP + String(i));
-    }
-    await remover(baseKey + CHUNK_SEP + 'meta');
-  }
-}
-
-/**
- * Adaptateur compatible avec l'interface `storage` de Supabase.
- */
-export const SecureStoreAdapter = {
-  async getItem(key: string): Promise<string | null> {
-    const fullKey = KEY_PREFIX + key;
-    try {
-      if (isWebSupported) {
-        const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        return await AsyncStorage.getItem(fullKey);
+    const metaStr = await rawGet(`${KEY_PREFIX}${baseKey}.chunkmeta`);
+    if (metaStr) {
+      const meta = JSON.parse(metaStr) as { c: number };
+      for (let i = 0; i < meta.c; i++) {
+        await rawDelete(`${KEY_PREFIX}${baseKey}.chunk${i}`);
       }
-      return await assembleChunks(
-        (k) => SecureStore.getItemAsync(k),
-        fullKey,
-      );
+      await rawDelete(`${KEY_PREFIX}${baseKey}.chunkmeta`);
+    }
+  } catch {
+    // Silencieux : le nettoyage est best-effort
+  }
+}
+
+// ============================================================
+// Adaptateur public (interface Supabase storage)
+// ============================================================
+
+export const SecureStoreAdapter = {
+  /**
+   * Recupere un item.
+   * Essai la cle directe d'abord, puis le format chunke.
+   */
+  async getItem(key: string): Promise<string | null> {
+    try {
+      // 1) Essai cle directe (valeur non-chunkee ou ancien format)
+      const directValue = await rawGet(KEY_PREFIX + key);
+      if (directValue !== null) {
+        return directValue;
+      }
+
+      // 2) Essai format chunke
+      const fullKey = KEY_PREFIX + key;
+      const metaStr = await rawGet(`${fullKey}.chunkmeta`);
+      if (!metaStr) {
+        return null;
+      }
+
+      const meta = JSON.parse(metaStr) as { c: number };
+      const chunks: string[] = [];
+
+      for (let i = 0; i < meta.c; i++) {
+        const chunk = await rawGet(`${fullKey}.chunk${i}`);
+        if (chunk === null) {
+          // Corruption : un chunk manque → nettoyer et retourner null
+          logger.debug('[SecureStoreAdapter] Corrupted chunk detected, cleaning up');
+          await cleanupChunks(key);
+          return null;
+        }
+        chunks.push(chunk);
+      }
+
+      return chunks.join('');
     } catch (error) {
-      console.error('[SecureStoreAdapter] getItem failed:', error);
+      logger.error('[SecureStoreAdapter] getItem failed:', error);
       return null;
     }
   },
 
+  /**
+   * Stocke un item.
+   * Si la valeur depasse CHUNK_SIZE, la decoupe en chunks + metadata.
+   */
   async setItem(key: string, value: string): Promise<void> {
-    const fullKey = KEY_PREFIX + key;
     try {
-      if (isWebSupported) {
-        const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.setItem(fullKey, value);
+      const fullKey = KEY_PREFIX + key;
+
+      // Nettoyer les anciens chunks si ils existent
+      await cleanupChunks(key);
+
+      if (value.length <= CHUNK_SIZE) {
+        // Stockage direct : pas de chunking necessaire
+        await rawSet(fullKey, value);
         return;
       }
 
-      // Supprimer les anciens chunks avant d'ecrire les nouveaux
-      await removeChunks(
-        (k) => SecureStore.deleteItemAsync(k),
-        (k) => SecureStore.getItemAsync(k),
-        fullKey,
-      );
+      // Chunking : decouper la valeur
+      const chunks: string[] = [];
+      for (let i = 0; i < value.length; i += CHUNK_SIZE) {
+        chunks.push(value.slice(i, i + CHUNK_SIZE));
+      }
 
-      // Decouper et stocker
-      const chunks = chunkValue(value);
-      for (const [suffix, data] of Object.entries(chunks)) {
-        await SecureStore.setItemAsync(fullKey + suffix, data);
+      // Stocker la metadata (nombre de chunks)
+      await rawSet(`${fullKey}.chunkmeta`, JSON.stringify({ c: chunks.length }));
+
+      // Stocker chaque chunk
+      for (let i = 0; i < chunks.length; i++) {
+        await rawSet(`${fullKey}.chunk${i}`, chunks[i]);
       }
     } catch (error) {
-      console.error('[SecureStoreAdapter] setItem failed:', error);
+      logger.error('[SecureStoreAdapter] setItem failed:', error);
       throw error;
     }
   },
 
+  /**
+   * Supprime un item (cle directe + chunks si existants).
+   */
   async removeItem(key: string): Promise<void> {
-    const fullKey = KEY_PREFIX + key;
     try {
-      if (isWebSupported) {
-        const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.removeItem(fullKey);
-        return;
-      }
-      await removeChunks(
-        (k) => SecureStore.deleteItemAsync(k),
-        (k) => SecureStore.getItemAsync(k),
-        fullKey,
-      );
+      // Supprimer la cle directe
+      await rawDelete(KEY_PREFIX + key);
+      // Supprimer les chunks si ils existent
+      await cleanupChunks(key);
     } catch (error) {
-      console.error('[SecureStoreAdapter] removeItem failed:', error);
+      logger.error('[SecureStoreAdapter] removeItem failed:', error);
     }
   },
 };

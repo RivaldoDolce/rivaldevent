@@ -16,10 +16,10 @@ interface TabConfig {
 }
 
 const TABS: readonly TabConfig[] = [
-  { name: 'home', label: 'Accueil', icon: HomeIcon },
-  { name: 'explore', label: 'Explorer', icon: ExploreIcon },
-  { name: 'tickets', label: 'Billets', icon: TicketIcon },
-  { name: 'profile', label: 'Profil', icon: ProfileIcon },
+  { name: 'home/index', label: 'Accueil', icon: HomeIcon },
+  { name: 'explore/index', label: 'Explorer', icon: ExploreIcon },
+  { name: 'tickets/index', label: 'Billets', icon: TicketIcon },
+  { name: 'profile/index', label: 'Profil', icon: ProfileIcon },
 ];
 
 const HIDDEN_TAB_ROUTES = [

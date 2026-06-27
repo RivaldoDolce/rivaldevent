@@ -15,12 +15,20 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
+import { LogBox } from 'react-native';
 // eslint-disable-next-line import/no-unresolved
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { colors } from '@/lib/constants';
+import { logger } from '@/lib/logger';
+
+// Ignorer les WARN Expo Router sur la resolution des routes index dans les tabs
+// C'est un comportement connu : Expo Router cherche "home" alors que la route est "home/index"
+LogBox.ignoreLogs([
+  /\[Layout children\]: No route named "(home|explore|tickets|profile)" exists/,
+]);
 
 // Garder le splash screen visible pendant le chargement initial
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -36,7 +44,7 @@ export default function RootLayout() {
       try {
         await initQueryClientPersistence();
       } catch (err) {
-        console.error('[RootLayout] init error:', err);
+        logger.error('[RootLayout] init error:', err);
       } finally {
         setIsReady(true);
         await SplashScreen.hideAsync();
