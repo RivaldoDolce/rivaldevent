@@ -1,71 +1,134 @@
 /**
  * Adaptateur SecureStore pour Supabase Auth.
  *
- * ⚠️ CRITIQUE : Supabase stocke le JWT dans `storage`. Par défaut, AsyncStorage
- * est utilisé — mais AsyncStorage N'EST PAS SÉCURISÉ (fichier JSON en clair).
+ * Strategie hybride :
+ * - Android/iOS : SecureStore avec chunking automatique si la valeur
+ *   depasse 2000 caracteres (limite SecureStore ~2048).
+ * - Web : AsyncStorage (SecureStore non disponible dans le navigateur).
  *
- * Cet adaptateur redirige le stockage vers expo-secure-store (Keychain iOS /
- * Keystore Android) pour respecter la règle de sécurité :
- *   "JWT stocké dans SecureStore, JAMAIS AsyncStorage"
+ * Les cles de chunks utilisent le separateur "_c" (valide pour SecureStore).
+ * Ex: "rivaldevent.sb-auth-token" + "_cmeta", "_c0", "_c1", ...
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-/**
- * Préfixe pour éviter les collisions avec d'autres apps sur le Keychain.
- */
 const KEY_PREFIX = 'rivaldevent.';
+const MAX_CHUNK_SIZE = 2000;
+const CHUNK_SEP = '_c';
 
 const isWebSupported = Platform.OS === 'web' && typeof window !== 'undefined';
 
-/**
- * Type helper for AsyncStorage (imported dynamically on web only to avoid
- * 'window is not defined' errors in React Native environments).
- */
 type AsyncStorageModule = typeof import('@react-native-async-storage/async-storage').default;
 
 /**
+ * Decoupe une valeur en chunks de MAX_CHUNK_SIZE caracteres.
+ * Stocke le nombre de chunks dans une meta-cle.
+ */
+function chunkValue(value: string): Record<string, string> {
+  const chunks: Record<string, string> = {};
+  const count = Math.ceil(value.length / MAX_CHUNK_SIZE);
+
+  chunks[CHUNK_SEP + 'meta'] = JSON.stringify({ count });
+
+  for (let i = 0; i < count; i++) {
+    chunks[CHUNK_SEP + String(i)] = value.slice(i * MAX_CHUNK_SIZE, (i + 1) * MAX_CHUNK_SIZE);
+  }
+
+  return chunks;
+}
+
+/**
+ * Reconstruit une valeur depuis les chunks stockes.
+ */
+async function assembleChunks(
+  getter: (key: string) => Promise<string | null>,
+  baseKey: string,
+): Promise<string | null> {
+  const meta = await getter(baseKey + CHUNK_SEP + 'meta');
+  if (!meta) return null;
+
+  let parsed: { count: number };
+  try {
+    parsed = JSON.parse(meta);
+  } catch {
+    return null;
+  }
+
+  const parts: string[] = [];
+  for (let i = 0; i < parsed.count; i++) {
+    const part = await getter(baseKey + CHUNK_SEP + String(i));
+    if (part === null) return null;
+    parts.push(part);
+  }
+
+  return parts.join('');
+}
+
+/**
+ * Supprime tous les chunks et la meta-cle.
+ */
+async function removeChunks(
+  remover: (key: string) => Promise<void>,
+  getter: (key: string) => Promise<string | null>,
+  baseKey: string,
+): Promise<void> {
+  const meta = await getter(baseKey + CHUNK_SEP + 'meta');
+  if (meta) {
+    let parsed: { count: number };
+    try {
+      parsed = JSON.parse(meta);
+    } catch {
+      return;
+    }
+    for (let i = 0; i < parsed.count; i++) {
+      await remover(baseKey + CHUNK_SEP + String(i));
+    }
+    await remover(baseKey + CHUNK_SEP + 'meta');
+  }
+}
+
+/**
  * Adaptateur compatible avec l'interface `storage` de Supabase.
- * Stocke les valeurs dans SecureStore (chiffré, OS-level).
  */
 export const SecureStoreAdapter = {
-  /**
-   * Récupère un item depuis SecureStore.
-   * @returns La valeur stockée, ou null si inexistante.
-   */
   async getItem(key: string): Promise<string | null> {
+    const fullKey = KEY_PREFIX + key;
     try {
       if (isWebSupported) {
         const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        return await AsyncStorage.getItem(KEY_PREFIX + key);
+        return await AsyncStorage.getItem(fullKey);
       }
-      return await SecureStore.getItemAsync(KEY_PREFIX + key);
+      return await assembleChunks(
+        (k) => SecureStore.getItemAsync(k),
+        fullKey,
+      );
     } catch (error) {
       console.error('[SecureStoreAdapter] getItem failed:', error);
       return null;
     }
   },
 
-  /**
-   * Stocke un item dans SecureStore.
-   * @throws si la valeur dépasse 2KB (limite SecureStore)
-   */
   async setItem(key: string, value: string): Promise<void> {
+    const fullKey = KEY_PREFIX + key;
     try {
-      // SecureStore a une limite de ~2KB par item.
-      // Les JWT Supabase font généralement ~1KB, donc on est large.
-      if (value.length > 2048) {
-        throw new Error(
-          `[SecureStoreAdapter] Value too large for SecureStore (${value.length} chars, max 2048). ` +
-            'Consider splitting the value or using a different storage strategy.'
-        );
-      }
       if (isWebSupported) {
         const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.setItem(KEY_PREFIX + key, value);
-      } else {
-        await SecureStore.setItemAsync(KEY_PREFIX + key, value);
+        await AsyncStorage.setItem(fullKey, value);
+        return;
+      }
+
+      // Supprimer les anciens chunks avant d'ecrire les nouveaux
+      await removeChunks(
+        (k) => SecureStore.deleteItemAsync(k),
+        (k) => SecureStore.getItemAsync(k),
+        fullKey,
+      );
+
+      // Decouper et stocker
+      const chunks = chunkValue(value);
+      for (const [suffix, data] of Object.entries(chunks)) {
+        await SecureStore.setItemAsync(fullKey + suffix, data);
       }
     } catch (error) {
       console.error('[SecureStoreAdapter] setItem failed:', error);
@@ -73,17 +136,19 @@ export const SecureStoreAdapter = {
     }
   },
 
-  /**
-   * Supprime un item de SecureStore.
-   */
   async removeItem(key: string): Promise<void> {
+    const fullKey = KEY_PREFIX + key;
     try {
       if (isWebSupported) {
         const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-        await AsyncStorage.removeItem(KEY_PREFIX + key);
-      } else {
-        await SecureStore.deleteItemAsync(KEY_PREFIX + key);
+        await AsyncStorage.removeItem(fullKey);
+        return;
       }
+      await removeChunks(
+        (k) => SecureStore.deleteItemAsync(k),
+        (k) => SecureStore.getItemAsync(k),
+        fullKey,
+      );
     } catch (error) {
       console.error('[SecureStoreAdapter] removeItem failed:', error);
     }

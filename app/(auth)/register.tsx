@@ -50,7 +50,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -90,11 +90,12 @@ export default function RegisterScreen() {
 
       const result = await authService.signUpWithEmail(payload);
 
-      if (result.error) {
-        setAuthError(result.error.message);
-        notification('error');
-      } else {
+      if (result.data) {
+        // Session obtenue directement → pas besoin d'OTP
         notification('success');
+        router.replace('/(client)/home');
+      } else {
+        // Pas de session → rediriger vers OTP (phone)
         router.push({
           pathname: '/(auth)/otp',
           params: { email: data.email },
@@ -266,8 +267,8 @@ export default function RegisterScreen() {
         </View>
 
         {/* CGV Checkbox */}
-        <Pressable 
-          style={styles.checkboxWrapper} 
+        <Pressable
+          style={styles.checkboxWrapper}
           onPress={() => {
             impact('light');
             setAcceptTerms(!acceptTerms);
@@ -282,11 +283,11 @@ export default function RegisterScreen() {
         </Pressable>
 
         {/* Bouton S'inscrire */}
-        <Button 
-          variant="primary" 
-          size="lg" 
-          fullWidth 
-          loading={isLoading} 
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
           onPress={handleSubmit(onSubmit)}
           icon={<ArrowRight color={colors.sand} size={18} />}
           iconPosition="right"

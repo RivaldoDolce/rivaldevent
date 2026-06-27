@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 import type { Profile } from '@/types';
 
 interface UseAuthReturn {
@@ -41,12 +42,12 @@ export function useAuth(): UseAuthReturn {
         .single();
 
       if (error) {
-        console.error('[useAuth] loadProfile error:', error.message);
+        logger.error('[useAuth] loadProfile error:', error.message);
         return null;
       }
       return (data as unknown as Profile) ?? null;
     } catch (err) {
-      console.error('[useAuth] loadProfile exception:', err);
+      logger.error('[useAuth] loadProfile exception:', err);
       return null;
     }
   }, []);
@@ -73,7 +74,7 @@ export function useAuth(): UseAuthReturn {
           if (mounted) setProfile(p);
         }
       } catch (err) {
-        console.error('[useAuth] init error:', err);
+        logger.error('[useAuth] init error:', err);
       } finally {
         if (mounted) setIsLoading(false);
       }

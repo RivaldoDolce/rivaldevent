@@ -15,6 +15,7 @@
  * - JWT dans SecureStore (via lib/supabase.ts)
  * - Rate limiting OTP cote UI (3 tentatives max, lock 15 min)
  * - Pas de logs sensibles (logger.sensitive)
+ * - Messages d'erreur conviviaux pour le client
  */
 
 import { supabase } from '@/lib/supabase';
@@ -38,6 +39,57 @@ const LOCK_DURATION_MS = APP_CONFIG.OTP_LOCK_MINUTES * 60 * 1000;
 let otpAttempts = 0;
 let otpLockedUntil: number | null = null;
 
+// ============================================================
+// Mapping des erreurs techniques vers des messages conviviaux
+// ============================================================
+
+const FRIENDLY_ERRORS: Record<string, string> = {
+  'Invalid login credentials': 'Email ou mot de passe incorrect.',
+  'User already registered': 'Cet email est deja utilise. Connectez-vous plutot.',
+  'Email not confirmed': 'Veuillez confirmer votre email avant de vous connecter.',
+  'Too many requests': 'Trop de tentatives. Patientez quelques instants.',
+  'Password should be at least 8 characters.': 'Le mot de passe doit contenir au moins 8 caracteres.',
+  'Unable to validate email address: invalid format': 'Format d\'email invalide.',
+  'Network request failed': 'Pas de connexion internet. Verifiez votre reseau.',
+  'Invalid credentials': 'Email ou mot de passe incorrect.',
+  'Signup requires a valid password': 'Le mot de passe ne respecte pas les regles requises.',
+};
+
+function toFriendlyError(error: { name?: string; message: string }): string {
+  // 1. Chercher une correspondance exacte sur le message
+  if (FRIENDLY_ERRORS[error.message]) {
+    return FRIENDLY_ERRORS[error.message];
+  }
+
+  // 2. Chercher par mot-cle
+  const msg = error.message.toLowerCase();
+  if (msg.includes('network') || msg.includes('connection') || msg.includes('timeout')) {
+    return 'Pas de connexion internet. Verifiez votre reseau.';
+  }
+  if (msg.includes('already registered') || msg.includes('already exists')) {
+    return 'Cet email est deja utilise. Connectez-vous plutot.';
+  }
+  if (msg.includes('invalid') && msg.includes('email')) {
+    return 'Format d\'email invalide.';
+  }
+  if (msg.includes('invalid') && msg.includes('password')) {
+    return 'Email ou mot de passe incorrect.';
+  }
+  if (msg.includes('rate limit') || msg.includes('too many')) {
+    return 'Trop de tentatives. Patientez quelques instants.';
+  }
+  if (msg.includes('securestore') || msg.includes('storage')) {
+    return 'Une erreur de stockage est survenue. Redemarrez l\'application.';
+  }
+
+  // 3. Fallback generique
+  return 'Une erreur est survenue. Veuillez reessayer.';
+}
+
+// ============================================================
+// Service
+// ============================================================
+
 export const authService = {
   /**
    * Connexion avec email + mot de passe.
@@ -51,7 +103,7 @@ export const authService = {
 
       if (error) {
         logger.warn('signInWithEmail failed:', error.message);
-        return { data: null, error: { code: error.name, message: error.message } };
+        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
       }
 
       logger.debug('signInWithEmail success');
@@ -60,7 +112,7 @@ export const authService = {
       logger.error('signInWithEmail exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue' },
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
       };
     }
   },
@@ -85,7 +137,7 @@ export const authService = {
 
       if (error) {
         logger.warn('signUpWithEmail failed:', error.message);
-        return { data: null, error: { code: error.name, message: error.message } };
+        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
       }
 
       logger.debug('signUpWithEmail success');
@@ -94,7 +146,7 @@ export const authService = {
       logger.error('signUpWithEmail exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue' },
+        error: { code: 'unknown', message: 'Une erreur est survenue lors de l\'inscription.' },
       };
     }
   },
@@ -109,7 +161,7 @@ export const authService = {
         data: null,
         error: {
           code: 'locked',
-          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
         },
       };
     }
@@ -121,7 +173,7 @@ export const authService = {
 
       if (error) {
         logger.warn('signInWithPhone failed:', error.message);
-        return { data: null, error: { code: error.name, message: error.message } };
+        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
       }
 
       resetOtpAttempts();
@@ -131,7 +183,7 @@ export const authService = {
       logger.error('signInWithPhone exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue' },
+        error: { code: 'unknown', message: 'Impossible d\'envoyer le code. Verifiez votre numero.' },
       };
     }
   },
@@ -141,14 +193,14 @@ export const authService = {
    * Applique le rate limiting : 3 tentatives max, puis lock 15 min.
    */
   async verifyOtp(
-    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }
+    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' },
   ): Promise<AuthResult> {
     if (isOtpLocked()) {
       return {
         data: null,
         error: {
           code: 'locked',
-          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
         },
       };
     }
@@ -196,7 +248,7 @@ export const authService = {
           lockOtp();
         }
 
-        return { data: null, error: { code: error.name, message: error.message } };
+        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
       }
 
       resetOtpAttempts();
@@ -206,7 +258,7 @@ export const authService = {
       logger.error('verifyOtp exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue' },
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
       };
     }
   },
@@ -220,7 +272,7 @@ export const authService = {
         data: null,
         error: {
           code: 'locked',
-          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
         },
       };
     }
@@ -251,7 +303,7 @@ export const authService = {
 
       if (error) {
         logger.warn('resetPassword failed:', error.message);
-        return { data: null, error: { code: error.name, message: error.message } };
+        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
       }
 
       logger.debug('resetPassword email sent');
@@ -260,7 +312,7 @@ export const authService = {
       logger.error('resetPassword exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue' },
+        error: { code: 'unknown', message: 'Impossible d\'envoyer l\'email. Reessayez.' },
       };
     }
   },
