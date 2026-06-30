@@ -37,6 +37,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
 import { logger } from '@/lib/logger';
+import { useAppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 
@@ -44,6 +45,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -73,12 +75,21 @@ export default function LoginScreen() {
         notification('error');
       } else {
         notification('success');
-        router.replace('/(client)/home');
+        // Verifier le mode pour rediriger vers le bon layout
+        if (!result.data?.user?.id) {
+          setAuthError('Une erreur est survenue. Veuillez reessayer.');
+          notification('error');
+          return;
+        }
+        const mode = await authService.getUserMode(result.data.user.id);
+        const isSeller = mode?.isSeller ?? false;
+        initializeFromProfile(isSeller);
+        router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
       }
 
       setIsLoading(false);
     },
-    [impact, notification, router]
+    [impact, notification, router, initializeFromProfile]
   );
 
   const goToRegister = useCallback(() => {

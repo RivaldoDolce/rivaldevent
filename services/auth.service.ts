@@ -6,16 +6,20 @@
  * - signUpWithEmail : inscription (cree user + profile via trigger)
  * - signInWithPhone : envoie OTP SMS
  * - verifyOtp : verifie le code OTP (SMS ou email)
- * - signInWithGoogle : OAuth Google
  * - signOut : deconnexion + clear storage
  * - resetPassword : email de reset
  * - resendOtp : renvoi OTP avec rate limiting
+ * - getUserMode : recupere is_seller du profil (pour redirect apres login)
+ * - toggleSellerMode : change is_seller dans le profil (switch acheteur/vendeur)
  *
  * Securite :
  * - JWT dans SecureStore (via lib/supabase.ts)
  * - Rate limiting OTP cote UI (3 tentatives max, lock 15 min)
  * - Pas de logs sensibles (logger.sensitive)
- * - Messages d'erreur conviviaux pour le client
+ *
+ * UX :
+ * - Toutes les erreurs retournees au client sont en francais
+ * - Les erreurs attendues sont loguees en debug (pas d'overlay Expo Go)
  */
 
 import { supabase } from '@/lib/supabase';
@@ -35,60 +39,47 @@ type AuthResult = ApiResponse<Session | OtpDeliveryResult>;
 const MAX_OTP_ATTEMPTS = APP_CONFIG.OTP_MAX_ATTEMPTS;
 const LOCK_DURATION_MS = APP_CONFIG.OTP_LOCK_MINUTES * 60 * 1000;
 
-// Etat du rate limiting OTP (en memoire, non persistant)
 let otpAttempts = 0;
 let otpLockedUntil: number | null = null;
 
 // ============================================================
-// Mapping des erreurs techniques vers des messages conviviaux
+// Mapping erreurs Supabase -> messages utilisateurs (francais)
 // ============================================================
 
-const FRIENDLY_ERRORS: Record<string, string> = {
-  'Invalid login credentials': 'Email ou mot de passe incorrect.',
-  'User already registered': 'Cet email est deja utilise. Connectez-vous plutot.',
-  'Email not confirmed': 'Veuillez confirmer votre email avant de vous connecter.',
-  'Too many requests': 'Trop de tentatives. Patientez quelques instants.',
-  'Password should be at least 8 characters.': 'Le mot de passe doit contenir au moins 8 caracteres.',
-  'Unable to validate email address: invalid format': 'Format d\'email invalide.',
-  'Network request failed': 'Pas de connexion internet. Verifiez votre reseau.',
-  'Invalid credentials': 'Email ou mot de passe incorrect.',
-  'Signup requires a valid password': 'Le mot de passe ne respecte pas les regles requises.',
+const AUTH_ERROR_MAP: Record<string, string> = {
+  'Invalid login credentials': 'Email ou mot de passe incorrect',
+  'Invalid email or password': 'Email ou mot de passe incorrect',
+  'Email not confirmed': 'Veuillez confirmer votre email avant de vous connecter',
+  'User already registered': 'Cet email est deja utilise. Connectez-vous ou utilisez un autre email.',
+  'To signup, please provide your email': 'Veuillez saisir une adresse email valide',
+  'Network request failed': 'Verifiez votre connexion internet et reessayez',
+  'Failed to fetch': 'Verifiez votre connexion internet et reessayez',
+  'NetworkError': 'Verifiez votre connexion internet et reessayez',
+  'Timeout': 'La connexion a pris trop de temps. Reessayez.',
+  'Token has expired or is invalid': 'Le code a expire. Demandez un nouveau code.',
+  'Invalid OTP': 'Code invalide. Verifiez et reessayez.',
+  'OTP has expired': 'Le code a expire. Demandez un nouveau code.',
+  'Password should be at least 6 characters.': 'Le mot de passe doit contenir au moins 6 caracteres',
+  'Password is too short': 'Le mot de passe est trop court (minimum 6 caracteres)',
+  'Unable to validate email address: invalid format': 'Adresse email invalide',
+  'Invalid email': 'Adresse email invalide',
+  'Rate limit exceeded': 'Trop de tentatives. Reessayez dans quelques instants.',
+  'For security purposes, you can only request this once every': 'Trop de demandes. Patientez avant de reessayer.',
+  'Phone verification is required': 'La verification par telephone est requise',
+  'Invalid phone number': 'Numero de telephone invalide',
 };
 
-function toFriendlyError(error: { name?: string; message: string }): string {
-  // 1. Chercher une correspondance exacte sur le message
-  if (FRIENDLY_ERRORS[error.message]) {
-    return FRIENDLY_ERRORS[error.message];
+function toFriendlyMessage(rawMessage: string): string {
+  if (AUTH_ERROR_MAP[rawMessage]) {
+    return AUTH_ERROR_MAP[rawMessage];
   }
-
-  // 2. Chercher par mot-cle
-  const msg = error.message.toLowerCase();
-  if (msg.includes('network') || msg.includes('connection') || msg.includes('timeout')) {
-    return 'Pas de connexion internet. Verifiez votre reseau.';
+  for (const [pattern, friendly] of Object.entries(AUTH_ERROR_MAP)) {
+    if (rawMessage.toLowerCase().includes(pattern.toLowerCase())) {
+      return friendly;
+    }
   }
-  if (msg.includes('already registered') || msg.includes('already exists')) {
-    return 'Cet email est deja utilise. Connectez-vous plutot.';
-  }
-  if (msg.includes('invalid') && msg.includes('email')) {
-    return 'Format d\'email invalide.';
-  }
-  if (msg.includes('invalid') && msg.includes('password')) {
-    return 'Email ou mot de passe incorrect.';
-  }
-  if (msg.includes('rate limit') || msg.includes('too many')) {
-    return 'Trop de tentatives. Patientez quelques instants.';
-  }
-  if (msg.includes('securestore') || msg.includes('storage')) {
-    return 'Une erreur de stockage est survenue. Redemarrez l\'application.';
-  }
-
-  // 3. Fallback generique
   return 'Une erreur est survenue. Veuillez reessayer.';
 }
-
-// ============================================================
-// Service
-// ============================================================
 
 export const authService = {
   /**
@@ -102,8 +93,11 @@ export const authService = {
       });
 
       if (error) {
-        logger.warn('signInWithEmail failed:', error.message);
-        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
+        logger.debug('signInWithEmail failed:', error.message);
+        return {
+          data: null,
+          error: { code: error.name, message: toFriendlyMessage(error.message) },
+        };
       }
 
       logger.debug('signInWithEmail success');
@@ -118,8 +112,9 @@ export const authService = {
   },
 
   /**
-   * Inscription avec email + mot de passe + metadonnees (full_name, phone).
+   * Inscription avec email + mot de passe + metadonnees.
    * Le trigger handle_new_user cree automatiquement le profil.
+   * is_seller est passe dans les metadata pour initialiser le mode.
    */
   async signUpWithEmail(payload: RegisterRequest): Promise<AuthResult> {
     try {
@@ -131,13 +126,17 @@ export const authService = {
           data: {
             full_name: payload.full_name,
             phone: payload.phone,
+            is_seller: payload.is_seller ?? false,
           },
         },
       });
 
       if (error) {
-        logger.warn('signUpWithEmail failed:', error.message);
-        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
+        logger.debug('signUpWithEmail failed:', error.message);
+        return {
+          data: null,
+          error: { code: error.name, message: toFriendlyMessage(error.message) },
+        };
       }
 
       logger.debug('signUpWithEmail success');
@@ -146,14 +145,13 @@ export const authService = {
       logger.error('signUpWithEmail exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue lors de l\'inscription.' },
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
       };
     }
   },
 
   /**
    * Envoie un OTP SMS au numero de telephone.
-   * Format : 6XXXXXXXX (sans +237, on l'ajoute).
    */
   async signInWithPhone(phone: string): Promise<AuthResult> {
     if (isOtpLocked()) {
@@ -172,8 +170,11 @@ export const authService = {
       });
 
       if (error) {
-        logger.warn('signInWithPhone failed:', error.message);
-        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
+        logger.debug('signInWithPhone failed:', error.message);
+        return {
+          data: null,
+          error: { code: error.name, message: toFriendlyMessage(error.message) },
+        };
       }
 
       resetOtpAttempts();
@@ -183,17 +184,16 @@ export const authService = {
       logger.error('signInWithPhone exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Impossible d\'envoyer le code. Verifiez votre numero.' },
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
       };
     }
   },
 
   /**
    * Verifie un code OTP (SMS ou email).
-   * Applique le rate limiting : 3 tentatives max, puis lock 15 min.
    */
   async verifyOtp(
-    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' },
+    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }
   ): Promise<AuthResult> {
     if (isOtpLocked()) {
       return {
@@ -217,12 +217,7 @@ export const authService = {
             error: { code: 'missing_identifier', message: 'Numero requis' },
           };
         }
-
-        verificationParams = {
-          phone: `+237${params.phone}`,
-          token: params.token,
-          type: 'sms',
-        };
+        verificationParams = { phone: `+237${params.phone}`, token: params.token, type: 'sms' };
       } else {
         if (!params.email) {
           return {
@@ -230,25 +225,23 @@ export const authService = {
             error: { code: 'missing_identifier', message: 'Email requis' },
           };
         }
-
-        verificationParams = {
-          email: params.email,
-          token: params.token,
-          type: 'email',
-        };
+        verificationParams = { email: params.email, token: params.token, type: 'email' };
       }
 
       const { data, error } = await supabase.auth.verifyOtp(verificationParams);
 
       if (error) {
         incrementOtpAttempts();
-        logger.warn('verifyOtp failed:', error.message, `attempts=${otpAttempts}`);
+        logger.debug('verifyOtp failed:', error.message, `attempts=${otpAttempts}`);
 
         if (otpAttempts >= MAX_OTP_ATTEMPTS) {
           lockOtp();
         }
 
-        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
+        return {
+          data: null,
+          error: { code: error.name, message: toFriendlyMessage(error.message) },
+        };
       }
 
       resetOtpAttempts();
@@ -263,9 +256,6 @@ export const authService = {
     }
   },
 
-  /**
-   * Renvoie l'OTP (apres rate limiting).
-   */
   async resendOtp(phone: string): Promise<AuthResult> {
     if (isOtpLocked()) {
       return {
@@ -276,13 +266,9 @@ export const authService = {
         },
       };
     }
-
     return this.signInWithPhone(phone);
   },
 
-  /**
-   * Deconnexion + clear storage.
-   */
   async signOut(): Promise<void> {
     try {
       await supabase.auth.signOut();
@@ -292,9 +278,6 @@ export const authService = {
     }
   },
 
-  /**
-   * Envoie un email de reinitialisation de mot de passe.
-   */
   async resetPassword(email: string): Promise<AuthResult> {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -302,8 +285,11 @@ export const authService = {
       });
 
       if (error) {
-        logger.warn('resetPassword failed:', error.message);
-        return { data: null, error: { code: error.name, message: toFriendlyError(error) } };
+        logger.debug('resetPassword failed:', error.message);
+        return {
+          data: null,
+          error: { code: error.name, message: toFriendlyMessage(error.message) },
+        };
       }
 
       logger.debug('resetPassword email sent');
@@ -312,20 +298,70 @@ export const authService = {
       logger.error('resetPassword exception:', err);
       return {
         data: null,
-        error: { code: 'unknown', message: 'Impossible d\'envoyer l\'email. Reessayez.' },
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
       };
     }
   },
 
-  /**
-   * Retourne l'etat du rate limiting OTP (pour l'UI).
-   */
   getOtpStatus(): { attempts: number; locked: boolean; lockedUntil: number | null } {
     return {
       attempts: otpAttempts,
       locked: isOtpLocked(),
       lockedUntil: otpLockedUntil,
     };
+  },
+
+  // ============================================================
+  // MODE VENDEUR / ACHETEUR
+  // ============================================================
+
+  /**
+   * Recupere le mode (is_seller) d'un utilisateur.
+   * Utilise apres le login pour rediriger vers le bon layout.
+   */
+  async getUserMode(userId: string): Promise<{ isSeller: boolean } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        logger.debug('getUserMode failed:', error.message);
+        return null;
+      }
+
+      const row = data as Record<string, unknown> | null;
+      return { isSeller: (row?.is_seller as boolean) ?? false };
+    } catch (err) {
+      logger.error('getUserMode exception:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Bascule le mode acheteur/vendeur dans le profil.
+   * Appele par le segmented control du profil.
+   */
+  async toggleSellerMode(userId: string, isSeller: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_seller: isSeller } as never)
+        .eq('id', userId);
+
+      if (error) {
+        logger.debug('toggleSellerMode failed:', error.message);
+        return false;
+      }
+
+      logger.debug('toggleSellerMode success:', isSeller ? 'seller' : 'buyer');
+      return true;
+    } catch (err) {
+      logger.error('toggleSellerMode exception:', err);
+      return false;
+    }
   },
 };
 
@@ -349,7 +385,7 @@ function incrementOtpAttempts(): void {
 
 function lockOtp(): void {
   otpLockedUntil = Date.now() + LOCK_DURATION_MS;
-  logger.warn(`OTP locked for ${APP_CONFIG.OTP_LOCK_MINUTES} minutes`);
+  logger.debug(`OTP locked for ${APP_CONFIG.OTP_LOCK_MINUTES} minutes`);
 }
 
 function resetOtpAttempts(): void {

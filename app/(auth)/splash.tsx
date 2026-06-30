@@ -1,8 +1,11 @@
 /**
- * Écran d'accueil - écran de démarrage.
+ * Ecran d'accueil - ecran de demarrage.
  *
  * Utilise le logo utilisateur (assets/images/logo.png).
  * Fond terracotta, titre RIVALD'EVENT, baseline CURATING EXCELLENCE.
+ *
+ * Apres l'animation : verifie la session et redirige vers
+ * le bon layout selon is_seller.
  */
 
 import { useEffect, useRef } from 'react';
@@ -11,12 +14,15 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 
 import { colors, typography, spacing } from '@/lib/constants';
+import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
+import { useAppMode } from '@/stores/app-mode';
 
-// Logo utilisateur - placer le fichier à assets/images/logo.png
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -68,11 +74,36 @@ export default function SplashScreen() {
     ]).start();
 
     const timer = setTimeout(() => {
-      router.replace('/(auth)/onboarding');
+      navigateAfterSplash();
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  const navigateAfterSplash = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        const row = profile as Record<string, unknown> | null;
+        const isSeller = (row?.is_seller as boolean) ?? false;
+        initializeFromProfile(isSeller);
+        router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    } catch (err) {
+      logger.error('[Splash] navigate error:', err);
+      router.replace('/(auth)/onboarding');
+    }
+  };
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,

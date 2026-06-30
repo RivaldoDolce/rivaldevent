@@ -110,6 +110,8 @@ export const ROUTES = {
   SWITCH_SELLER: '/(client)/profile/switch-seller',
 
   // Seller
+  SELLER_HOME: '/(seller)/home',
+  SELLER_PROFILE: '/(seller)/profile',
   SELLER_DASHBOARD: '/(seller)/sell',
   SELLER_CREATE_STEP1: '/(seller)/sell/create/step1',
   SELLER_CREATE_STEP2: '/(seller)/sell/create/step2',

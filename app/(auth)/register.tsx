@@ -45,17 +45,20 @@ import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
+import { useAppMode } from '@/stores/app-mode';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
-
+  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   const {
     control,
@@ -82,20 +85,25 @@ export default function RegisterScreen() {
         return;
       }
 
-      const { birth_date, ...payload } = data;
+      const { birth_date: _birth_date, ...payload } = data;
 
       setIsLoading(true);
       setAuthError(null);
       impact('light');
 
-      const result = await authService.signUpWithEmail(payload);
+      const result = await authService.signUpWithEmail({ ...payload, is_seller: isOrganizer });
 
-      if (result.data) {
-        // Session obtenue directement → pas besoin d'OTP
+      if (result.error) {
+        setAuthError(result.error.message);
+        notification('error');
+      } else if (result.data && 'access_token' in result.data) {
+        // Session obtenue directement (confirm email desactive)
         notification('success');
-        router.replace('/(client)/home');
+        initializeFromProfile(isOrganizer);
+        router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
       } else {
-        // Pas de session → rediriger vers OTP (phone)
+        // Pas de session (confirm email active) → OTP
+        notification('success');
         router.push({
           pathname: '/(auth)/otp',
           params: { email: data.email },
@@ -104,7 +112,7 @@ export default function RegisterScreen() {
 
       setIsLoading(false);
     },
-    [acceptTerms, impact, notification, router]
+    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile]
   );
 
   const goToLogin = useCallback(() => {
@@ -267,8 +275,8 @@ export default function RegisterScreen() {
         </View>
 
         {/* CGV Checkbox */}
-        <Pressable
-          style={styles.checkboxWrapper}
+        <Pressable 
+          style={styles.checkboxWrapper} 
           onPress={() => {
             impact('light');
             setAcceptTerms(!acceptTerms);
@@ -282,12 +290,28 @@ export default function RegisterScreen() {
           </Text>
         </Pressable>
 
+        {/* Checkbox organisateur */}
+        <Pressable 
+          style={styles.checkboxWrapper} 
+          onPress={() => {
+            impact('light');
+            setIsOrganizer(!isOrganizer);
+          }}
+        >
+          <View style={[styles.checkbox, isOrganizer && styles.checkboxOrganizerChecked]}>
+            {isOrganizer && <Check color={colors.sand} size={14} strokeWidth={3} />}
+          </View>
+          <Text style={styles.checkboxLabel}>
+            Je souhaite creer et vendre{'\n'}des evenements sur Rivald'event
+          </Text>
+        </Pressable>
+
         {/* Bouton S'inscrire */}
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          loading={isLoading}
+        <Button 
+          variant="primary" 
+          size="lg" 
+          fullWidth 
+          loading={isLoading} 
           onPress={handleSubmit(onSubmit)}
           icon={<ArrowRight color={colors.sand} size={18} />}
           iconPosition="right"
@@ -385,6 +409,10 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: colors.terracotta,
     borderColor: colors.terracotta,
+  },
+  checkboxOrganizerChecked: {
+    backgroundColor: colors.forest,
+    borderColor: colors.forest,
   },
   checkboxLabel: {
     ...typography.bodySmall,
