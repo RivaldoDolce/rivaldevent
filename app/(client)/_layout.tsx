@@ -7,7 +7,10 @@
  *   - L'affichage fiable des icones
  *   - L'ordre des onglets (Profil TOUJOURS en dernier)
  *
- * Plus besoin de calculer insets/tabBarHeight ici : TabBar.tsx s'en charge.
+ * Noms de route Expo Router :
+ *   Les ecrans sont dans des dossiers (home/index.tsx)
+ *   donc les noms de route sont "home/index", "explore/index", etc.
+ *   Tabs.Screen name DOIT matcher le chemin reel du fichier.
  */
 
 import { Tabs } from 'expo-router';
@@ -24,20 +27,27 @@ interface TabConfig {
   readonly name: string;
   readonly label: string;
   readonly icon: IconComponent;
+  /**
+   * Cle logique pour la TabBar custom.
+   * Permet de mapper "home/index" -> "home" pour l'affichage.
+   * Si non renseigne, utilise le dernier segment du name.
+   */
+  readonly tabKey?: string;
 }
 
 // Ordre garanti : Profil TOUJOURS en dernier
 const TABS: readonly TabConfig[] = [
-  { name: 'home', label: 'Accueil', icon: HomeIcon },
-  { name: 'explore', label: 'Explorer', icon: ExploreIcon },
-  { name: 'tickets', label: 'Billets', icon: TicketIcon },
-  { name: 'profile', label: 'Profil', icon: ProfileIcon },
+  { name: 'home/index', label: 'Accueil', icon: HomeIcon, tabKey: 'home' },
+  { name: 'explore/index', label: 'Explorer', icon: ExploreIcon, tabKey: 'explore' },
+  { name: 'tickets/index', label: 'Billets', icon: TicketIcon, tabKey: 'tickets' },
+  { name: 'profile/index', label: 'Profil', icon: ProfileIcon, tabKey: 'profile' },
 ];
 
+// Routes imbriquees a cacher de la tab bar
+// Seulement les routes qui EXISTENT reellement dans le filesystem
 const HIDDEN_TAB_ROUTES = [
   'home/[id]',
   'tickets/[id]',
-  'explore/venues',
   'explore/venues/index',
   'explore/venues/[id]',
   'profile/switch-seller',
@@ -51,13 +61,16 @@ export default function ClientLayout() {
         <TabBar
           state={props.state}
           mode="client"
-          tabs={TABS.map((t) => ({ key: t.name, label: t.label, icon: t.icon }))}
+          tabs={TABS.map((t) => ({
+            key: t.tabKey ?? t.name.split('/').pop() ?? t.name,
+            label: t.label,
+            icon: t.icon,
+          }))}
           onTabPress={(routeName) => props.navigation.navigate(routeName)}
         />
       )}
       screenOptions={{
         headerShown: false,
-        // Plus besoin de tabBarStyle/height/paddingBottom : TabBar.tsx gere tout
       }}
     >
       {TABS.map((tab) => (

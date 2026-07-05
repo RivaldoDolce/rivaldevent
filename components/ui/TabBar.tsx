@@ -9,6 +9,12 @@
  *
  * Utilise Animated de react-native (PAS reanimated)
  * pour eviter l'erreur TurboModule au lancement.
+ *
+ * Rendu des onglets :
+ *   On itere sur le tableau tabs (4-5 onglets definis dans le layout),
+ *   PAS sur state.routes (qui contient aussi les routes cachees comme
+ *   home/[id], explore/venues/[id], etc.).
+ *   Cela evite les doublons dans la tab bar.
  */
 
 import React, { useRef } from 'react';
@@ -168,20 +174,56 @@ export function TabBar({ state, mode = 'client', tabs, onTabPress }: TabBarProps
     height: 68 + Math.max(insets.bottom, 0),
   };
 
+  /**
+   * Determine si un tab est focus en comparant avec la route active.
+   * state.index pointe vers la route active dans state.routes.
+   * On cherche la route active et on verifie si elle correspond au tab.
+   */
+  const activeRoute = state.routes[state.index];
+
+  const isTabFocused = (tabKey: string): boolean => {
+    if (!activeRoute) return false;
+    if (activeRoute.name === tabKey) return true;
+    if (activeRoute.name.startsWith(tabKey + '/')) return true;
+    return false;
+  };
+
+  /**
+   * Trouve le nom de route complet dans state.routes pour un tab donne.
+   * Necessaire car onTabPress doit naviguer vers la route complete (ex: "home/index")
+   * et non juste la cle logique (ex: "home").
+   */
+  const findRouteNameForTab = (tabKey: string): string | undefined => {
+    // Priorite : route exacte, puis route avec /index, puis premiere route fille
+    const exact = state.routes.find((r) => r.name === tabKey);
+    if (exact) return exact.name;
+
+    const indexRoute = state.routes.find((r) => r.name === `${tabKey}/index`);
+    if (indexRoute) return indexRoute.name;
+
+    const childRoute = state.routes.find((r) => r.name.startsWith(tabKey + '/'));
+    if (childRoute) return childRoute.name;
+
+    return tabKey;
+  };
+
+  // On itere sur TABS (4-5 onglets), pas sur state.routes (9+ routes)
   return (
     <View style={containerStyle}>
-      {state.routes.map((route, index) => {
-        const tab = tabs.find((t) => t.key === route.name);
-        if (!tab) return null;
-
-        const isFocused = state.index === index;
+      {tabs.map((tab) => {
+        const focused = isTabFocused(tab.key);
+        const routeName = findRouteNameForTab(tab.key);
 
         return (
           <TabItem
-            key={route.key}
+            key={tab.key}
             tab={tab}
-            isFocused={isFocused}
-            onPress={() => onTabPress(route.name, route.key)}
+            isFocused={focused}
+            onPress={() => {
+              if (routeName) {
+                onTabPress(routeName, tab.key);
+              }
+            }}
             activeColor={activeColor}
             inactiveColor={inactiveColor}
           />
