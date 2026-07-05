@@ -1,3 +1,9 @@
+/*
+ * Babel configuration.
+  
+  Si reanimated doit etre reintroduit plus tard (development build),
+  il DOIT etre le DERNIER plugin de la liste.
+ */
 module.exports = function (api) {
   api.cache(true);
   return {
@@ -5,8 +11,7 @@ module.exports = function (api) {
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
     ],
     plugins: [
-      // Reanimated plugin DOIT etre en DERNIER
-      'react-native-reanimated/plugin',
+      // PLUS DE plugin reanimated — cause crash TurboModule
     ],
   };
 };

@@ -4,47 +4,70 @@
  * Initialise tous les providers globaux :
  * - QueryClientProvider (TanStack Query)
  * - SafeAreaProvider (insets)
- * - GestureHandlerRootView (requise par @gorhom/bottom-sheet)
  * - StatusBar (style auto, bg sand)
+ *
+ * GestureHandlerRootView a ete retire car @gorhom/bottom-sheet
+ * (qui en dependait) a ete remplace par une implementation native.
+ * react-native-gesture-handler reste en dependance pour un
+ * eventuel usage futur mais n'est plus wrappe ici.
  *
  * Redirige vers (auth)/splash au demarrage.
  */
 
+import { LogBox } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { LogBox } from 'react-native';
 // eslint-disable-next-line import/no-unresolved
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
-import { colors } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { colors } from '@/lib/constants';
 
-// Ignorer les WARN Expo Router sur la resolution des routes index dans les tabs
-// C'est un comportement connu : Expo Router cherche "home" alors que la route est "home/index"
+// ============================================================
+// Couche 1 : LogBox — filtre les warnings Expo Router
+// ============================================================
 LogBox.ignoreLogs([
-  /\[Layout children\]: No route named "(home|explore|tickets|profile)" exists/,
+  '[Layout children]',
+  'Unable to resolve manifest assets',
 ]);
 
-// Garder le splash screen visible pendant le chargement initial
+// ============================================================
+// Couche 2 : Override console.error pour supprimer les erreurs
+// reseau internes (non declenchees par l'utilisateur).
+// Les erreurs utilisateur sont gerees par l'UI (toast/alert).
+// ============================================================
+const _originalConsoleError = console.error;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+console.error = (...args: any[]) => {
+  const message = args.map((a: unknown) => (typeof a === 'string' ? a : '')).join(' ');
+  if (
+    message.includes('Network request failed') ||
+    message.includes('AuthRetryableFetchError') ||
+    message.includes('fetch.umd.js')
+  ) {
+    return;
+  }
+  _originalConsoleError.apply(console, args);
+};
+
 SplashScreen.preventAutoHideAsync().catch(() => {
-  // Silent fail : peut arriver si le splash est deja masque
+  // Silent fail
 });
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
 
-  // Initialisation async (fonts, persistence query client, etc.)
   useEffect(() => {
     const init = async () => {
       try {
         await initQueryClientPersistence();
       } catch (err) {
-        logger.error('[RootLayout] init error:', err);
+        logger.debug('[RootLayout] init error:', err);
       } finally {
         setIsReady(true);
         await SplashScreen.hideAsync();
@@ -61,21 +84,19 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <StatusBar style="dark" backgroundColor={colors.sand} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.sand },
-            }}
-          >
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(client)" />
-            <Stack.Screen name="(seller)" />
-            <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
-          </Stack>
-        </GestureHandlerRootView>
+        <StatusBar style="dark" backgroundColor={colors.sand} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.sand },
+          }}
+        >
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(client)" />
+          <Stack.Screen name="(seller)" />
+          <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
+        </Stack>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

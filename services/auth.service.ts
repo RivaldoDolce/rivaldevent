@@ -6,20 +6,16 @@
  * - signUpWithEmail : inscription (cree user + profile via trigger)
  * - signInWithPhone : envoie OTP SMS
  * - verifyOtp : verifie le code OTP (SMS ou email)
+ * - getUserMode : recupere le mode (buyer/seller) depuis le profil
+ * - toggleSellerMode : bascule le mode vendeur
  * - signOut : deconnexion + clear storage
  * - resetPassword : email de reset
  * - resendOtp : renvoi OTP avec rate limiting
- * - getUserMode : recupere is_seller du profil (pour redirect apres login)
- * - toggleSellerMode : change is_seller dans le profil (switch acheteur/vendeur)
  *
  * Securite :
  * - JWT dans SecureStore (via lib/supabase.ts)
  * - Rate limiting OTP cote UI (3 tentatives max, lock 15 min)
  * - Pas de logs sensibles (logger.sensitive)
- *
- * UX :
- * - Toutes les erreurs retournees au client sont en francais
- * - Les erreurs attendues sont loguees en debug (pas d'overlay Expo Go)
  */
 
 import { supabase } from '@/lib/supabase';
@@ -43,331 +39,22 @@ let otpAttempts = 0;
 let otpLockedUntil: number | null = null;
 
 // ============================================================
-// Mapping erreurs Supabase -> messages utilisateurs (francais)
+// Helpers
 // ============================================================
 
-const AUTH_ERROR_MAP: Record<string, string> = {
-  'Invalid login credentials': 'Email ou mot de passe incorrect',
-  'Invalid email or password': 'Email ou mot de passe incorrect',
-  'Email not confirmed': 'Veuillez confirmer votre email avant de vous connecter',
-  'User already registered': 'Cet email est deja utilise. Connectez-vous ou utilisez un autre email.',
-  'To signup, please provide your email': 'Veuillez saisir une adresse email valide',
-  'Network request failed': 'Verifiez votre connexion internet et reessayez',
-  'Failed to fetch': 'Verifiez votre connexion internet et reessayez',
-  'NetworkError': 'Verifiez votre connexion internet et reessayez',
-  'Timeout': 'La connexion a pris trop de temps. Reessayez.',
-  'Token has expired or is invalid': 'Le code a expire. Demandez un nouveau code.',
-  'Invalid OTP': 'Code invalide. Verifiez et reessayez.',
-  'OTP has expired': 'Le code a expire. Demandez un nouveau code.',
-  'Password should be at least 6 characters.': 'Le mot de passe doit contenir au moins 6 caracteres',
-  'Password is too short': 'Le mot de passe est trop court (minimum 6 caracteres)',
-  'Unable to validate email address: invalid format': 'Adresse email invalide',
-  'Invalid email': 'Adresse email invalide',
-  'Rate limit exceeded': 'Trop de tentatives. Reessayez dans quelques instants.',
-  'For security purposes, you can only request this once every': 'Trop de demandes. Patientez avant de reessayer.',
-  'Phone verification is required': 'La verification par telephone est requise',
-  'Invalid phone number': 'Numero de telephone invalide',
-};
-
-function toFriendlyMessage(rawMessage: string): string {
-  if (AUTH_ERROR_MAP[rawMessage]) {
-    return AUTH_ERROR_MAP[rawMessage];
-  }
-  for (const [pattern, friendly] of Object.entries(AUTH_ERROR_MAP)) {
-    if (rawMessage.toLowerCase().includes(pattern.toLowerCase())) {
-      return friendly;
-    }
-  }
-  return 'Une erreur est survenue. Veuillez reessayer.';
+function isOfflineError(error: { message?: string; name?: string }): boolean {
+  return (
+    error.message?.includes('Network request failed') === true ||
+    error.name === 'AuthRetryableFetchError'
+  );
 }
 
-export const authService = {
-  /**
-   * Connexion avec email + mot de passe.
-   */
-  async signInWithEmail(email: string, password: string): Promise<AuthResult> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        logger.debug('signInWithEmail failed:', error.message);
-        return {
-          data: null,
-          error: { code: error.name, message: toFriendlyMessage(error.message) },
-        };
-      }
-
-      logger.debug('signInWithEmail success');
-      return { data: data.session, error: null };
-    } catch (err) {
-      logger.error('signInWithEmail exception:', err);
-      return {
-        data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
-      };
-    }
-  },
-
-  /**
-   * Inscription avec email + mot de passe + metadonnees.
-   * Le trigger handle_new_user cree automatiquement le profil.
-   * is_seller est passe dans les metadata pour initialiser le mode.
-   */
-  async signUpWithEmail(payload: RegisterRequest): Promise<AuthResult> {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: payload.email,
-        password: payload.password,
-        phone: `+237${payload.phone}`,
-        options: {
-          data: {
-            full_name: payload.full_name,
-            phone: payload.phone,
-            is_seller: payload.is_seller ?? false,
-          },
-        },
-      });
-
-      if (error) {
-        logger.debug('signUpWithEmail failed:', error.message);
-        return {
-          data: null,
-          error: { code: error.name, message: toFriendlyMessage(error.message) },
-        };
-      }
-
-      logger.debug('signUpWithEmail success');
-      return { data: data.session, error: null };
-    } catch (err) {
-      logger.error('signUpWithEmail exception:', err);
-      return {
-        data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
-      };
-    }
-  },
-
-  /**
-   * Envoie un OTP SMS au numero de telephone.
-   */
-  async signInWithPhone(phone: string): Promise<AuthResult> {
-    if (isOtpLocked()) {
-      return {
-        data: null,
-        error: {
-          code: 'locked',
-          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
-        },
-      };
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        phone: `+237${phone}`,
-      });
-
-      if (error) {
-        logger.debug('signInWithPhone failed:', error.message);
-        return {
-          data: null,
-          error: { code: error.name, message: toFriendlyMessage(error.message) },
-        };
-      }
-
-      resetOtpAttempts();
-      logger.debug('signInWithPhone OTP sent');
-      return { data, error: null };
-    } catch (err) {
-      logger.error('signInWithPhone exception:', err);
-      return {
-        data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
-      };
-    }
-  },
-
-  /**
-   * Verifie un code OTP (SMS ou email).
-   */
-  async verifyOtp(
-    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }
-  ): Promise<AuthResult> {
-    if (isOtpLocked()) {
-      return {
-        data: null,
-        error: {
-          code: 'locked',
-          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
-        },
-      };
-    }
-
-    try {
-      let verificationParams:
-        | { readonly phone: string; readonly token: string; readonly type: 'sms' }
-        | { readonly email: string; readonly token: string; readonly type: 'email' };
-
-      if (params.type === 'sms') {
-        if (!params.phone) {
-          return {
-            data: null,
-            error: { code: 'missing_identifier', message: 'Numero requis' },
-          };
-        }
-        verificationParams = { phone: `+237${params.phone}`, token: params.token, type: 'sms' };
-      } else {
-        if (!params.email) {
-          return {
-            data: null,
-            error: { code: 'missing_identifier', message: 'Email requis' },
-          };
-        }
-        verificationParams = { email: params.email, token: params.token, type: 'email' };
-      }
-
-      const { data, error } = await supabase.auth.verifyOtp(verificationParams);
-
-      if (error) {
-        incrementOtpAttempts();
-        logger.debug('verifyOtp failed:', error.message, `attempts=${otpAttempts}`);
-
-        if (otpAttempts >= MAX_OTP_ATTEMPTS) {
-          lockOtp();
-        }
-
-        return {
-          data: null,
-          error: { code: error.name, message: toFriendlyMessage(error.message) },
-        };
-      }
-
-      resetOtpAttempts();
-      logger.debug('verifyOtp success');
-      return { data: data.session, error: null };
-    } catch (err) {
-      logger.error('verifyOtp exception:', err);
-      return {
-        data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
-      };
-    }
-  },
-
-  async resendOtp(phone: string): Promise<AuthResult> {
-    if (isOtpLocked()) {
-      return {
-        data: null,
-        error: {
-          code: 'locked',
-          message: `Trop de tentatives. Reessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
-        },
-      };
-    }
-    return this.signInWithPhone(phone);
-  },
-
-  async signOut(): Promise<void> {
-    try {
-      await supabase.auth.signOut();
-      logger.debug('signOut success');
-    } catch (err) {
-      logger.error('signOut exception:', err);
-    }
-  },
-
-  async resetPassword(email: string): Promise<AuthResult> {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'rivaldevent://reset-password',
-      });
-
-      if (error) {
-        logger.debug('resetPassword failed:', error.message);
-        return {
-          data: null,
-          error: { code: error.name, message: toFriendlyMessage(error.message) },
-        };
-      }
-
-      logger.debug('resetPassword email sent');
-      return { data: null, error: null };
-    } catch (err) {
-      logger.error('resetPassword exception:', err);
-      return {
-        data: null,
-        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez reessayer.' },
-      };
-    }
-  },
-
-  getOtpStatus(): { attempts: number; locked: boolean; lockedUntil: number | null } {
-    return {
-      attempts: otpAttempts,
-      locked: isOtpLocked(),
-      lockedUntil: otpLockedUntil,
-    };
-  },
-
-  // ============================================================
-  // MODE VENDEUR / ACHETEUR
-  // ============================================================
-
-  /**
-   * Recupere le mode (is_seller) d'un utilisateur.
-   * Utilise apres le login pour rediriger vers le bon layout.
-   */
-  async getUserMode(userId: string): Promise<{ isSeller: boolean } | null> {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        logger.debug('getUserMode failed:', error.message);
-        return null;
-      }
-
-      const row = data as Record<string, unknown> | null;
-      return { isSeller: (row?.is_seller as boolean) ?? false };
-    } catch (err) {
-      logger.error('getUserMode exception:', err);
-      return null;
-    }
-  },
-
-  /**
-   * Bascule le mode acheteur/vendeur dans le profil.
-   * Appele par le segmented control du profil.
-   */
-  async toggleSellerMode(userId: string, isSeller: boolean): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_seller: isSeller } as never)
-        .eq('id', userId);
-
-      if (error) {
-        logger.debug('toggleSellerMode failed:', error.message);
-        return false;
-      }
-
-      logger.debug('toggleSellerMode success:', isSeller ? 'seller' : 'buyer');
-      return true;
-    } catch (err) {
-      logger.error('toggleSellerMode exception:', err);
-      return false;
-    }
-  },
-};
-
-// ============================================================
-// Helpers internes (rate limiting)
-// ============================================================
+function offlineError(): { readonly code: string; readonly message: string } {
+  return {
+    code: 'network',
+    message: 'Pas de connexion internet. Vérifiez votre connexion et réessayez.',
+  };
+}
 
 function isOtpLocked(): boolean {
   if (otpLockedUntil === null) return false;
@@ -392,3 +79,328 @@ function resetOtpAttempts(): void {
   otpAttempts = 0;
   otpLockedUntil = null;
 }
+
+// ============================================================
+// Service
+// ============================================================
+
+export const authService = {
+  /**
+   * Connexion avec email + mot de passe.
+   */
+  async signInWithEmail(email: string, password: string): Promise<AuthResult> {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (isOfflineError(error)) {
+          return { data: null, error: offlineError() };
+        }
+        logger.debug('signInWithEmail failed:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      logger.debug('signInWithEmail success');
+      return { data: data.session, error: null };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err : null;
+      if (errMsg && isOfflineError(errMsg)) {
+        return { data: null, error: offlineError() };
+      }
+      logger.debug('signInWithEmail exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
+   * Inscription avec email + mot de passe + metadonnees.
+   */
+  async signUpWithEmail(payload: RegisterRequest): Promise<AuthResult> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: payload.email,
+        password: payload.password,
+        phone: `+237${payload.phone}`,
+        options: {
+          data: {
+            full_name: payload.full_name,
+            phone: payload.phone,
+          },
+        },
+      });
+
+      if (error) {
+        if (isOfflineError(error)) {
+          return { data: null, error: offlineError() };
+        }
+        logger.debug('signUpWithEmail failed:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      logger.debug('signUpWithEmail success');
+      return { data: data.session, error: null };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err : null;
+      if (errMsg && isOfflineError(errMsg)) {
+        return { data: null, error: offlineError() };
+      }
+      logger.debug('signUpWithEmail exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
+   * Envoie un OTP SMS au numero de telephone.
+   */
+  async signInWithPhone(phone: string): Promise<AuthResult> {
+    if (isOtpLocked()) {
+      return {
+        data: null,
+        error: {
+          code: 'locked',
+          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+        },
+      };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOtp({
+        phone: `+237${phone}`,
+      });
+
+      if (error) {
+        if (isOfflineError(error)) {
+          return { data: null, error: offlineError() };
+        }
+        logger.debug('signInWithPhone failed:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      resetOtpAttempts();
+      logger.debug('signInWithPhone OTP sent');
+      return { data, error: null };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err : null;
+      if (errMsg && isOfflineError(errMsg)) {
+        return { data: null, error: offlineError() };
+      }
+      logger.debug('signInWithPhone exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
+   * Verifie un code OTP (SMS ou email).
+   */
+  async verifyOtp(
+    params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }
+  ): Promise<AuthResult> {
+    if (isOtpLocked()) {
+      return {
+        data: null,
+        error: {
+          code: 'locked',
+          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+        },
+      };
+    }
+
+    try {
+      let verificationParams:
+        | { readonly phone: string; readonly token: string; readonly type: 'sms' }
+        | { readonly email: string; readonly token: string; readonly type: 'email' };
+
+      if (params.type === 'sms') {
+        if (!params.phone) {
+          return {
+            data: null,
+            error: { code: 'missing_identifier', message: 'Numero requis' },
+          };
+        }
+
+        verificationParams = {
+          phone: `+237${params.phone}`,
+          token: params.token,
+          type: 'sms',
+        };
+      } else {
+        if (!params.email) {
+          return {
+            data: null,
+            error: { code: 'missing_identifier', message: 'Email requis' },
+          };
+        }
+
+        verificationParams = {
+          email: params.email,
+          token: params.token,
+          type: 'email',
+        };
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp(verificationParams);
+
+      if (error) {
+        incrementOtpAttempts();
+        if (isOfflineError(error)) {
+          return { data: null, error: offlineError() };
+        }
+        logger.debug('verifyOtp failed:', error.message, `attempts=${otpAttempts}`);
+
+        if (otpAttempts >= MAX_OTP_ATTEMPTS) {
+          lockOtp();
+        }
+
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      resetOtpAttempts();
+      logger.debug('verifyOtp success');
+      return { data: data.session, error: null };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err : null;
+      if (errMsg && isOfflineError(errMsg)) {
+        return { data: null, error: offlineError() };
+      }
+      logger.debug('verifyOtp exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
+   * Recupere le mode (buyer/seller) depuis le profil utilisateur.
+   * Utilise .select('*') pour eviter le type 'never' de Supabase.
+   */
+  async getUserMode(userId: string): Promise<{ isSeller: boolean } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        logger.debug('getUserMode: profile not found');
+        return null;
+      }
+
+      const profile = data as Record<string, unknown>;
+      return { isSeller: (profile.is_seller as boolean) ?? false };
+    } catch (err) {
+      logger.debug('getUserMode error:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Bascule le mode vendeur dans le profil.
+   * Utilise 'as never' car le type Database stub a Views: Record<string, never>.
+   * Retourne true si succes, false si erreur.
+   */
+  async toggleSellerMode(userId: string, isSeller: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_seller: isSeller } as never)
+        .eq('id', userId);
+      
+      if (error) {
+        logger.debug('toggleSellerMode error:', error);
+        return false;
+      }
+      
+      logger.debug('toggleSellerMode success');
+      return true;
+    } catch (err) {
+      logger.debug('toggleSellerMode error:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Renvoie l'OTP (apres rate limiting).
+   */
+  async resendOtp(phone: string): Promise<AuthResult> {
+    if (isOtpLocked()) {
+      return {
+        data: null,
+        error: {
+          code: 'locked',
+          message: `Trop de tentatives. Réessayez dans ${APP_CONFIG.OTP_LOCK_MINUTES} minutes.`,
+        },
+      };
+    }
+
+    return this.signInWithPhone(phone);
+  },
+
+  /**
+   * Deconnexion + clear storage.
+   */
+  async signOut(): Promise<void> {
+    try {
+      await supabase.auth.signOut();
+      logger.debug('signOut success');
+    } catch (err) {
+      logger.debug('signOut exception:', err);
+    }
+  },
+
+  /**
+   * Envoie un email de reinitialisation de mot de passe.
+   */
+  async resetPassword(email: string): Promise<AuthResult> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'rivaldevent://reset-password',
+      });
+
+      if (error) {
+        if (isOfflineError(error)) {
+          return { data: null, error: offlineError() };
+        }
+        logger.debug('resetPassword failed:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      logger.debug('resetPassword email sent');
+      return { data: null, error: null };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err : null;
+      if (errMsg && isOfflineError(errMsg)) {
+        return { data: null, error: offlineError() };
+      }
+      logger.debug('resetPassword exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
+   * Retourne l'etat du rate limiting OTP (pour l'UI).
+   */
+  getOtpStatus(): { attempts: number; locked: boolean; lockedUntil: number | null } {
+    return {
+      attempts: otpAttempts,
+      locked: isOtpLocked(),
+      lockedUntil: otpLockedUntil,
+    };
+  },
+};

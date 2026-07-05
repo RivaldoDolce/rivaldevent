@@ -5,7 +5,9 @@
  * - Animation shimmer de gauche a droite, duree 1.5s, loop infinie
  * - Couleur : bg ivory, shimmer white a 30% opacity
  * - A utiliser pour TOUT chargement de donnees
- * - Reanimated v3 (UI thread, 120fps)
+ *
+ * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
+ * Conformement au handoff section 8.6.
  *
  * Usage :
  * <Skeleton width="100%" height={200} />         // Card image
@@ -13,15 +15,8 @@
  * <Skeleton width={120} height={16} radius={8} />// Badge
  */
 
-import React from 'react';
-import { View, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Animated, type ViewStyle } from 'react-native';
 
 import { colors } from '@/lib/constants';
 
@@ -48,37 +43,43 @@ export const Skeleton = React.memo(function Skeleton({
   style,
   testID,
 }: SkeletonProps) {
-  // Position du shimmer (0 = gauche, 1 = droite)
-  const shimmer = useSharedValue(0);
+  // ── Animation shimmer avec Animated natif (pas reanimated) ──
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
-  // Lancer l'animation au mount
-  React.useEffect(() => {
-    shimmer.value = withRepeat(
-      withTiming(1, {
-        duration: 1500,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1, // infinite
-      true // reverse
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
     );
-  }, [shimmer]);
+    animation.start();
+    return () => animation.stop();
+  }, [shimmerAnim]);
 
-  // Style du shimmer (degrade blanc translucide)
-  const shimmerStyle = useAnimatedStyle(() => {
-    const opacity = shimmer.value * 0.3;
-    return {
-      opacity,
-    };
+  // Le shimmer est un overlay blanc dont l'opacite pulsee
+  // entre 0 et 0.3 pour simuler l'effet de lumiere
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.3],
   });
 
   const containerStyle: ViewStyle = {
-  width: width as ViewStyle['width'],
-  height,
-  borderRadius: radius,
-  backgroundColor: colors.ivory,
-  overflow: 'hidden',
-  ...style,
-};
+    width: width as ViewStyle['width'],
+    height,
+    borderRadius: radius,
+    backgroundColor: colors.ivory,
+    overflow: 'hidden',
+    ...style,
+  };
 
   const overlayStyle: ViewStyle = {
     position: 'absolute',
@@ -91,7 +92,7 @@ export const Skeleton = React.memo(function Skeleton({
 
   return (
     <View testID={testID} style={containerStyle}>
-      <Animated.View style={[overlayStyle, shimmerStyle]} />
+      <Animated.View style={[overlayStyle, { opacity: shimmerOpacity }]} />
     </View>
   );
 });

@@ -15,160 +15,110 @@
  *   Chunk 1              : rivaldevent.auth-token.chunk1
  *
  * Backward compatible : si la cle directe existe (non-chunkee), on la lit directement.
+
+ * JWT stocké dans expo-secure-store (Keychain iOS / Keystore Android).
+ * Les erreurs sont silencieuses (operations internes, pas déclenchées par l'utilisateur).
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { logger } from '@/lib/logger';
 
 const KEY_PREFIX = 'rivaldevent.';
-const CHUNK_SIZE = 2000; // Marge de securite sous la limite 2048
+const CHUNK_SIZE = 2000;
 
 const isWebSupported = Platform.OS === 'web' && typeof window !== 'undefined';
 
 type AsyncStorageModule = typeof import('@react-native-async-storage/async-storage').default;
 
-// ============================================================
-// Operations de bas niveau (web vs natif)
-// ============================================================
-
-async function rawGet(key: string): Promise<string | null> {
-  if (isWebSupported) {
-    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-    return await AsyncStorage.getItem(key);
-  }
-  return await SecureStore.getItemAsync(key);
-}
-
-async function rawSet(key: string, value: string): Promise<void> {
-  if (isWebSupported) {
-    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-    await AsyncStorage.setItem(key, value);
-  } else {
-    await SecureStore.setItemAsync(key, value);
-  }
-}
-
-async function rawDelete(key: string): Promise<void> {
-  if (isWebSupported) {
-    const AsyncStorage: AsyncStorageModule = (await import('@react-native-async-storage/async-storage')).default;
-    await AsyncStorage.removeItem(key);
-  } else {
-    await SecureStore.deleteItemAsync(key);
-  }
-}
-
-// ============================================================
-// Nettoyage des chunks existants pour une cle donnee
-// ============================================================
-
-async function cleanupChunks(baseKey: string): Promise<void> {
+function webStorage(): AsyncStorageModule | null {
+  if (!isWebSupported) return null;
   try {
-    const metaStr = await rawGet(`${KEY_PREFIX}${baseKey}.chunkmeta`);
-    if (metaStr) {
-      const meta = JSON.parse(metaStr) as { c: number };
-      for (let i = 0; i < meta.c; i++) {
-        await rawDelete(`${KEY_PREFIX}${baseKey}.chunk${i}`);
-      }
-      await rawDelete(`${KEY_PREFIX}${baseKey}.chunkmeta`);
-    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@react-native-async-storage/async-storage').default;
   } catch {
-    // Silencieux : le nettoyage est best-effort
+    return null;
   }
 }
-
-// ============================================================
-// Adaptateur public (interface Supabase storage)
-// ============================================================
 
 export const SecureStoreAdapter = {
-  /**
-   * Recupere un item.
-   * Essai la cle directe d'abord, puis le format chunke.
-   */
   async getItem(key: string): Promise<string | null> {
     try {
-      // 1) Essai cle directe (valeur non-chunkee ou ancien format)
-      const directValue = await rawGet(KEY_PREFIX + key);
-      if (directValue !== null) {
-        return directValue;
-      }
+      const raw = await this._read(KEY_PREFIX + key);
+      if (raw === null) return null;
 
-      // 2) Essai format chunke
-      const fullKey = KEY_PREFIX + key;
-      const metaStr = await rawGet(`${fullKey}.chunkmeta`);
-      if (!metaStr) {
-        return null;
-      }
+      // Valeur chunkée : réassembler
+      if (raw.startsWith('chunked:')) {
+        const count = parseInt(raw.split(':')[1], 10);
+        if (Number.isNaN(count) || count < 1) return null;
 
-      const meta = JSON.parse(metaStr) as { c: number };
-      const chunks: string[] = [];
-
-      for (let i = 0; i < meta.c; i++) {
-        const chunk = await rawGet(`${fullKey}.chunk${i}`);
-        if (chunk === null) {
-          // Corruption : un chunk manque → nettoyer et retourner null
-          logger.debug('[SecureStoreAdapter] Corrupted chunk detected, cleaning up');
-          await cleanupChunks(key);
-          return null;
+        const chunks: string[] = [];
+        for (let i = 0; i < count; i++) {
+          const chunk = await this._read(`${KEY_PREFIX}${key}.chunk.${i}`);
+          if (chunk === null) return null;
+          chunks.push(chunk);
         }
-        chunks.push(chunk);
+        return chunks.join('');
       }
 
-      return chunks.join('');
-    } catch (error) {
-      logger.error('[SecureStoreAdapter] getItem failed:', error);
+      return raw;
+    } catch {
       return null;
     }
   },
 
-  /**
-   * Stocke un item.
-   * Si la valeur depasse CHUNK_SIZE, la decoupe en chunks + metadata.
-   */
   async setItem(key: string, value: string): Promise<void> {
-    try {
-      const fullKey = KEY_PREFIX + key;
+    if (value.length <= CHUNK_SIZE) {
+      await this._write(KEY_PREFIX + key, value);
+      return;
+    }
 
-      // Nettoyer les anciens chunks si ils existent
-      await cleanupChunks(key);
+    // Découper en chunks
+    const chunks: string[] = [];
+    for (let i = 0; i < value.length; i += CHUNK_SIZE) {
+      chunks.push(value.slice(i, i + CHUNK_SIZE));
+    }
 
-      if (value.length <= CHUNK_SIZE) {
-        // Stockage direct : pas de chunking necessaire
-        await rawSet(fullKey, value);
-        return;
-      }
-
-      // Chunking : decouper la valeur
-      const chunks: string[] = [];
-      for (let i = 0; i < value.length; i += CHUNK_SIZE) {
-        chunks.push(value.slice(i, i + CHUNK_SIZE));
-      }
-
-      // Stocker la metadata (nombre de chunks)
-      await rawSet(`${fullKey}.chunkmeta`, JSON.stringify({ c: chunks.length }));
-
-      // Stocker chaque chunk
-      for (let i = 0; i < chunks.length; i++) {
-        await rawSet(`${fullKey}.chunk${i}`, chunks[i]);
-      }
-    } catch (error) {
-      logger.error('[SecureStoreAdapter] setItem failed:', error);
-      throw error;
+    // Stocker le marqueur + chaque chunk
+    await this._write(KEY_PREFIX + key, `chunked:${chunks.length}`);
+    for (let i = 0; i < chunks.length; i++) {
+      await this._write(`${KEY_PREFIX}${key}.chunk.${i}`, chunks[i]);
     }
   },
 
-  /**
-   * Supprime un item (cle directe + chunks si existants).
-   */
   async removeItem(key: string): Promise<void> {
     try {
-      // Supprimer la cle directe
-      await rawDelete(KEY_PREFIX + key);
-      // Supprimer les chunks si ils existent
-      await cleanupChunks(key);
-    } catch (error) {
-      logger.error('[SecureStoreAdapter] removeItem failed:', error);
+      const raw = await this._read(KEY_PREFIX + key);
+      if (raw?.startsWith('chunked:')) {
+        const count = parseInt(raw.split(':')[1], 10);
+        if (!Number.isNaN(count) && count > 0) {
+          for (let i = 0; i < count; i++) {
+            await this._delete(`${KEY_PREFIX}${key}.chunk.${i}`);
+          }
+        }
+      }
+      await this._delete(KEY_PREFIX + key);
+    } catch {
+      // Silencieux : operation interne
     }
+  },
+
+  // --- Primitives ---
+
+  async _read(key: string): Promise<string | null> {
+    const web = webStorage();
+    if (web) return web.getItem(key);
+    return SecureStore.getItemAsync(key);
+  },
+
+  async _write(key: string, value: string): Promise<void> {
+    const web = webStorage();
+    if (web) { await web.setItem(key, value); return; }
+    await SecureStore.setItemAsync(key, value);
+  },
+
+  async _delete(key: string): Promise<void> {
+    const web = webStorage();
+    if (web) { await web.removeItem(key); return; }
+    await SecureStore.deleteItemAsync(key);
   },
 };

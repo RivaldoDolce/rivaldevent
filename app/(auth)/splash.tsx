@@ -1,28 +1,59 @@
 /**
  * Ecran d'accueil - ecran de demarrage.
  *
- * Utilise le logo utilisateur (assets/images/logo.png).
- * Fond terracotta, titre RIVALD'EVENT, baseline CURATING EXCELLENCE.
+ * Design :
+ * - Fond terracotta, logo anime, titre RIVALD'EVENT
+ * - Baseline CURATING EXCELLENCE en bas
  *
- * Apres l'animation : verifie la session et redirige vers
- * le bon layout selon is_seller.
+ * Logique :
+ * - Animation 2s + getSession() en PARALLELE
+ * - Des que les 2 sont prets, on navigue
+ * - Pas de fetch profil ici (useAuth s'en charge en arriere-plan)
+ * - Si session : home (buyer par defaut, useAuth corrigera si vendeur)
+ * - Si pas de session : onboarding
+ */
+
+/**
+ * Ecran de demarrage.
+ *
+ * Offline-first : ZERO appel reseau.
+ * - Verifie uniquement si un token existe dans SecureStore (lecture locale)
+ * - Animation 2s puis navigation
+ * - Si token en local : home (buyer par defaut)
+ * - Si pas de token : onboarding
  */
 
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import * as SecureStore from 'expo-secure-store';
 
 import { colors, typography, spacing } from '@/lib/constants';
-import { supabase } from '@/lib/supabase';
-import { logger } from '@/lib/logger';
-import { useAppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
+const ANIMATION_DURATION = 2000;
+
+/**
+ * Construit la clé SecureStore où Supabase stocke le token.
+ * Format : rivaldevent.sb-<projectRef>-auth-token
+ * Identique à la logique interne de GoTrue + notre prefixe SecureStoreAdapter.
+ */
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const projectRef = supabaseUrl.replace(/^https?:\/\//, '').split('.')[0];
+const AUTH_TOKEN_KEY = `rivaldevent.sb-${projectRef}-auth-token`;
+
+async function hasLocalSession(): Promise<boolean> {
+  try {
+    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+    return token !== null;
+  } catch {
+    return false;
+  }
+}
 
 export default function SplashScreen() {
   const router = useRouter();
-  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -32,78 +63,72 @@ export default function SplashScreen() {
   const baselineOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let cancelled = false;
+
+    // 1. Animation
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
       Animated.timing(logoScale, {
         toValue: 1,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }),
-    ]).start();
-
-    Animated.sequence([
-      Animated.delay(400),
-      Animated.parallel([
-        Animated.timing(titleOpacity, {
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.parallel([
+          Animated.timing(titleOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(titleTranslateY, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(200),
+        Animated.timing(subtitleOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
-        Animated.timing(titleTranslateY, {
-          toValue: 0,
-          duration: 600,
+        Animated.delay(200),
+        Animated.timing(baselineOpacity, {
+          toValue: 1,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]),
-      Animated.delay(400),
-      Animated.timing(subtitleOpacity, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.delay(400),
-      Animated.timing(baselineOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
     ]).start();
 
-    const timer = setTimeout(() => {
-      navigateAfterSplash();
-    }, 2500);
+    // 2. Check local ONLY (SecureStore, pas de reseau)
+    const sessionCheck = hasLocalSession();
 
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+    // 3. Naviguer apres l'animation
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
 
-  const navigateAfterSplash = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const hasSession = await sessionCheck;
 
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+      if (cancelled) return;
 
-        const row = profile as Record<string, unknown> | null;
-        const isSeller = (row?.is_seller as boolean) ?? false;
-        initializeFromProfile(isSeller);
-        router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
+      if (hasSession) {
+        router.replace('/(client)/home');
       } else {
         router.replace('/(auth)/onboarding');
       }
-    } catch (err) {
-      logger.error('[Splash] navigate error:', err);
-      router.replace('/(auth)/onboarding');
-    }
-  };
+    }, ANIMATION_DURATION);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,
@@ -122,14 +147,14 @@ export default function SplashScreen() {
       </Animated.View>
 
       <Animated.View style={titleAnimatedStyle}>
-        <Text style={styles.title}>RIVALD'EVENT</Text>
+        <Text style={styles.title}>RIVALD&apos;EVENT</Text>
       </Animated.View>
 
-      <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}> 
+      <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}>
         <Text style={styles.subtitle}>LUXURY AFRICAN EVENTS</Text>
       </Animated.View>
 
-      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}> 
+      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}>
         <View style={styles.goldBar} />
         <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
       </Animated.View>

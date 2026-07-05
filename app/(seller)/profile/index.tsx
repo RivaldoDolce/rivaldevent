@@ -100,7 +100,7 @@ export default function SellerProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.sand }}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top, paddingBottom: 80 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Segmented Control */}

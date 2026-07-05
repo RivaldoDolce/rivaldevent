@@ -1,6 +1,16 @@
-import { Tabs } from 'expo-router';
+/**
+ * Layout du mode Client.
+ *
+ * Utilise le composant TabBar personnalise qui gere :
+ *   - Les safe areas (useSafeAreaInsets dans TabBar.tsx)
+ *   - La hauteur dynamique de la barre
+ *   - L'affichage fiable des icones
+ *   - L'ordre des onglets (Profil TOUJOURS en dernier)
+ *
+ * Plus besoin de calculer insets/tabBarHeight ici : TabBar.tsx s'en charge.
+ */
 
-import { colors } from '@/lib/constants';
+import { Tabs } from 'expo-router';
 import {
   HomeIcon,
   ExploreIcon,
@@ -8,6 +18,7 @@ import {
   ProfileIcon,
   type IconComponent,
 } from '@/components/icons/TabIcons';
+import { TabBar } from '@/components/ui/TabBar';
 
 interface TabConfig {
   readonly name: string;
@@ -15,11 +26,12 @@ interface TabConfig {
   readonly icon: IconComponent;
 }
 
+// Ordre garanti : Profil TOUJOURS en dernier
 const TABS: readonly TabConfig[] = [
-  { name: 'home/index', label: 'Accueil', icon: HomeIcon },
-  { name: 'explore/index', label: 'Explorer', icon: ExploreIcon },
-  { name: 'tickets/index', label: 'Billets', icon: TicketIcon },
-  { name: 'profile/index', label: 'Profil', icon: ProfileIcon },
+  { name: 'home', label: 'Accueil', icon: HomeIcon },
+  { name: 'explore', label: 'Explorer', icon: ExploreIcon },
+  { name: 'tickets', label: 'Billets', icon: TicketIcon },
+  { name: 'profile', label: 'Profil', icon: ProfileIcon },
 ];
 
 const HIDDEN_TAB_ROUTES = [
@@ -34,22 +46,18 @@ const HIDDEN_TAB_ROUTES = [
 export default function ClientLayout() {
   return (
     <Tabs
+      // TabBar personnalisee : icones, ordre, safe areas tout est gere
+      tabBar={(props) => (
+        <TabBar
+          state={props.state}
+          mode="client"
+          tabs={TABS.map((t) => ({ key: t.name, label: t.label, icon: t.icon }))}
+          onTabPress={(routeName) => props.navigation.navigate(routeName)}
+        />
+      )}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.terracotta,
-        tabBarInactiveTintColor: colors.stone,
-        tabBarStyle: {
-          backgroundColor: colors.sand,
-          borderTopWidth: 1,
-          borderTopColor: `${colors.stone}33`,
-          paddingBottom: 8,
-          paddingTop: 4,
-          height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
+        // Plus besoin de tabBarStyle/height/paddingBottom : TabBar.tsx gere tout
       }}
     >
       {TABS.map((tab) => (

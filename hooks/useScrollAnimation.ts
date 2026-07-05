@@ -1,37 +1,34 @@
 /**
  * Hook pour les animations de scroll (parallax, header collapse, sticky tabs).
  *
- * Utilise useAnimatedScrollHandler de Reanimated v3 (UI thread, 120fps iOS).
- * Jamais de Animated.event ou de JS-thread scroll handler.
+ * Utilise Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
+ * Conformement au handoff section 8.6 : "ne PAS en ajouter de nouveau".
+ *
+ * @example
+ * const { scrollY, onScroll } = useScrollAnimation();
+ * <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16}>
  */
 
-import { useAnimatedScrollHandler, useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { useRef } from 'react';
+import { Animated, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 interface ScrollAnimationOptions {
   readonly onScroll?: (offsetY: number) => void;
   readonly threshold?: number;
 }
 
-
-/**
- * Retourne un scrollHandler compatible avec Animated.ScrollView / FlashList.
- * Le handler tourne 100% sur le UI thread.
- *
- * @example
- * const { scrollHandler, scrollY } = useScrollAnimation();
- * <Animated.ScrollView onScroll={scrollHandler} scrollEventThrottle={16}>
- */
 export function useScrollAnimation(_options?: ScrollAnimationOptions) {
-  const scrollY = useSharedValue(0);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
+  const onScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: true,
+      listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        _options?.onScroll?.(event.nativeEvent.contentOffset.y);
+      },
+    }
+  );
 
-  return { scrollHandler, scrollY };
+  return { scrollY, onScroll };
 }
-
-// Re-export pour usage externe
-export type { SharedValue };
