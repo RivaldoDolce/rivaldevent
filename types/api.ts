@@ -65,6 +65,7 @@ export interface RegisterRequest {
   readonly password: string;
   readonly phone: string;
   readonly full_name: string;
+  readonly is_seller?: boolean;
 }
 
 export interface PhoneLoginRequest {
@@ -86,10 +87,10 @@ export interface PaymentInitiateRequest {
   readonly encrypted_phone: string;
   readonly amount: number;
   readonly event_id: string;
-  readonly ticket_tiers: Array<{
+  readonly ticket_tiers: {
     readonly tier_id: string;
     readonly quantity: number;
-  }>;
+  }[];
   readonly idempotency_key: string;
 }
 
@@ -156,13 +157,13 @@ export interface CreateEventRequest {
   readonly end_date?: string;
   readonly cover_image?: string;
   readonly images?: string[];
-  readonly tiers: Array<{
+  readonly tiers: {
     readonly name: string;
     readonly price: number;
     readonly quantity_total: number;
     readonly description?: string;
     readonly benefits?: string[];
-  }>;
+  }[];
 }
 
 export interface CreateEventResponse {
@@ -198,11 +199,11 @@ export interface SyncActionResult {
 }
 
 export interface SyncBatchRequest {
-  readonly actions: Array<{
+  readonly actions: {
     readonly id: string;
     readonly type: string;
     readonly payload: Record<string, unknown>;
-  }>;
+  }[];
 }
 
 export interface SyncBatchResponse {

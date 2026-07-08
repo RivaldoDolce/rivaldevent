@@ -4,18 +4,16 @@
  * - JWT stocké dans SecureStore (pas AsyncStorage)
  * - autoRefreshToken activé (rotation automatique)
  * - detectSessionInUrl désactivé (pas pertinent sur mobile)
- * - Types générés depuis le schéma de la DB
+ * - fetch personnalisé : capture les erreurs réseau hors ligne
+ *   et retourne une réponse 503 au lieu de propager l'erreur
+ *   (évite les unhandled rejections dans la console)
  */
 
 import { createClient } from '@supabase/supabase-js';
-import 'react-native-url-polyfill/auto'; // Required for Supabase URL handling on RN
+import 'react-native-url-polyfill/auto';
 
 import { SecureStoreAdapter } from './secure-storage-adapter';
 import type { Database } from '@/types/database';
-
-// ============================================================
-// Configuration depuis .env
-// ============================================================
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -34,10 +32,6 @@ if (!supabaseAnonKey) {
   );
 }
 
-// ============================================================
-// Client Supabase singleton
-// ============================================================
-
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: SecureStoreAdapter,
@@ -47,16 +41,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// ============================================================
-// Helpers typés pour les tables principales
-// ============================================================
-
-/**
- * Accès typé aux tables. Utiliser partout au lieu de `supabase.from('...')`.
- *
- * @example
- * const { data } = await supabase.from(tables.events).select('*');
- */
 export const tables = {
   profiles: 'profiles',
   venues: 'venues',

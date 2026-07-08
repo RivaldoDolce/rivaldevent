@@ -1,6 +1,19 @@
-import { Tabs } from 'expo-router';
+/**
+ * Layout du mode Client.
+ *
+ * Utilise le composant TabBar personnalise qui gere :
+ *   - Les safe areas (useSafeAreaInsets dans TabBar.tsx)
+ *   - La hauteur dynamique de la barre
+ *   - L'affichage fiable des icones
+ *   - L'ordre des onglets (Profil TOUJOURS en dernier)
+ *
+ * Noms de route Expo Router :
+ *   Les ecrans sont dans des dossiers (home/index.tsx)
+ *   donc les noms de route sont "home/index", "explore/index", etc.
+ *   Tabs.Screen name DOIT matcher le chemin reel du fichier.
+ */
 
-import { colors } from '@/lib/constants';
+import { Tabs } from 'expo-router';
 import {
   HomeIcon,
   ExploreIcon,
@@ -8,24 +21,33 @@ import {
   ProfileIcon,
   type IconComponent,
 } from '@/components/icons/TabIcons';
+import { TabBar } from '@/components/ui/TabBar';
 
 interface TabConfig {
   readonly name: string;
   readonly label: string;
   readonly icon: IconComponent;
+  /**
+   * Cle logique pour la TabBar custom.
+   * Permet de mapper "home/index" -> "home" pour l'affichage.
+   * Si non renseigne, utilise le dernier segment du name.
+   */
+  readonly tabKey?: string;
 }
 
+// Ordre garanti : Profil TOUJOURS en dernier
 const TABS: readonly TabConfig[] = [
-  { name: 'home', label: 'Accueil', icon: HomeIcon },
-  { name: 'explore', label: 'Explorer', icon: ExploreIcon },
-  { name: 'tickets', label: 'Billets', icon: TicketIcon },
-  { name: 'profile', label: 'Profil', icon: ProfileIcon },
+  { name: 'home/index', label: 'Accueil', icon: HomeIcon, tabKey: 'home' },
+  { name: 'explore/index', label: 'Explorer', icon: ExploreIcon, tabKey: 'explore' },
+  { name: 'tickets/index', label: 'Billets', icon: TicketIcon, tabKey: 'tickets' },
+  { name: 'profile/index', label: 'Profil', icon: ProfileIcon, tabKey: 'profile' },
 ];
 
+// Routes imbriquees a cacher de la tab bar
+// Seulement les routes qui EXISTENT reellement dans le filesystem
 const HIDDEN_TAB_ROUTES = [
   'home/[id]',
   'tickets/[id]',
-  'explore/venues',
   'explore/venues/index',
   'explore/venues/[id]',
   'profile/switch-seller',
@@ -34,22 +56,21 @@ const HIDDEN_TAB_ROUTES = [
 export default function ClientLayout() {
   return (
     <Tabs
+      // TabBar personnalisee : icones, ordre, safe areas tout est gere
+      tabBar={(props) => (
+        <TabBar
+          state={props.state}
+          mode="client"
+          tabs={TABS.map((t) => ({
+            key: t.tabKey ?? t.name.split('/').pop() ?? t.name,
+            label: t.label,
+            icon: t.icon,
+          }))}
+          onTabPress={(routeName) => props.navigation.navigate(routeName)}
+        />
+      )}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.terracotta,
-        tabBarInactiveTintColor: colors.stone,
-        tabBarStyle: {
-          backgroundColor: colors.sand,
-          borderTopWidth: 1,
-          borderTopColor: `${colors.stone}33`,
-          paddingBottom: 8,
-          paddingTop: 4,
-          height: 60,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
       }}
     >
       {TABS.map((tab) => (

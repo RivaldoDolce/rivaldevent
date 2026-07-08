@@ -4,22 +4,24 @@
  * Wrapper autour de Supabase Auth avec :
  * - Session reactive (se met a jour automatiquement)
  * - Listener onChange (token refresh, logout)
- * - Methodes login, register, logout, verifyOtp
  * - Profil utilisateur (depuis la table profiles)
+ * - Synchronisation avec le store app-mode (Zustand)
  *
- * Le state est gere via Supabase Auth listener (pas de Zustand) car
- * Supabase maintient deja le state en interne + SecureStore.
+ * Le state auth est gere via Supabase Auth listener.
+ * Le mode (acheteur/vendeur) est synchronise dans le store Zustand.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
+import { useAppMode } from '@/stores/app-mode';
 import type { Profile } from '@/types';
 
 interface UseAuthReturn {
   readonly session: Session | null;
-  readonly user: User | null;
+  readonly user: Session['user'] | null;
   readonly profile: Profile | null;
   readonly isLoading: boolean;
   readonly isAuthenticated: boolean;
@@ -30,9 +32,9 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
-  // Charger le profil depuis la table profiles
-    const loadProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+  const loadProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -41,12 +43,14 @@ export function useAuth(): UseAuthReturn {
         .single();
 
       if (error) {
-        console.error('[useAuth] loadProfile error:', error.message);
+        logger.error('[useAuth] loadProfile error:', error.message);
         return null;
       }
-      return (data as unknown as Profile) ?? null;
+
+      const p = (data as unknown as Profile) ?? null;
+      return p;
     } catch (err) {
-      console.error('[useAuth] loadProfile exception:', err);
+      logger.error('[useAuth] loadProfile exception:', err);
       return null;
     }
   }, []);
@@ -57,7 +61,6 @@ export function useAuth(): UseAuthReturn {
     setProfile(p);
   }, [session, loadProfile]);
 
-  // Init : recuperer la session existante + listener
   useEffect(() => {
     let mounted = true;
 
@@ -70,10 +73,15 @@ export function useAuth(): UseAuthReturn {
 
         if (existingSession?.user?.id) {
           const p = await loadProfile(existingSession.user.id);
-          if (mounted) setProfile(p);
+          if (mounted) {
+            setProfile(p);
+            if (p) {
+              initializeFromProfile(p.is_seller);
+            }
+          }
         }
       } catch (err) {
-        console.error('[useAuth] init error:', err);
+        logger.error('[useAuth] init error:', err);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -81,7 +89,6 @@ export function useAuth(): UseAuthReturn {
 
     init();
 
-    // Listener pour les changements de session (login, logout, refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
         if (!mounted) return;
@@ -89,7 +96,12 @@ export function useAuth(): UseAuthReturn {
 
         if (newSession?.user?.id) {
           const p = await loadProfile(newSession.user.id);
-          if (mounted) setProfile(p);
+          if (mounted) {
+            setProfile(p);
+            if (p) {
+              initializeFromProfile(p.is_seller);
+            }
+          }
         } else {
           if (mounted) setProfile(null);
         }
@@ -100,7 +112,7 @@ export function useAuth(): UseAuthReturn {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [loadProfile, initializeFromProfile]);
 
   return {
     session,

@@ -1,38 +1,26 @@
 /**
  * Bouton principal du design system.
  *
- * Règles UI/UX :
- * - 1 seul bouton primary par écran (hiérarchie violente)
- * - Press feedback : scale 0.98 + haptic light
- * - Disabled : opacité 0.5, pas de haptic
- * - Loading : spinner remplace le texte, bouton désactivé
- * - Radius 16px partout (radius.lg)
- *
- * Variants :
+ * Variantes :
  * - primary   : bg terracotta (client) — CTA principal
  * - secondary : bg gold (premium, actions vendeur)
  * - outline   : border stone, transparent — actions secondaires
  * - ghost     : texte seul, underline — liens
  *
- * Sizes :
+ * Tailles :
  * - sm : 36px de haut, padding 12px
- * - md : 48px de haut, padding 16px (défaut)
+ * - md : 48px de haut, padding 16px (defaut)
  * - lg : 56px de haut, padding 24px
+ *
+ * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
+ * Conformement au handoff section 8.6 : "ne PAS en ajouter de nouveau".
  */
 
-import React, { useCallback } from 'react';
-import { Pressable, Text, ActivityIndicator, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useCallback, useRef } from 'react';
+import { Pressable, Text, ActivityIndicator, Animated, type ViewStyle } from 'react-native';
 
 import { useHaptics } from '@/hooks/useHaptics';
 import { colors, spacing, radius, typography } from '@/lib/constants';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ============================================================
 // Types
@@ -92,39 +80,56 @@ export const Button = React.memo(function Button({
   testID,
 }: ButtonProps) {
   const { impact } = useHaptics();
-  const scale = useSharedValue(1);
 
-  // Animation au press
+  // ── Animations avec Animated natif (pas reanimated) ──
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(disabled ? 0.5 : 1)).current;
+
   const handlePressIn = useCallback(() => {
     if (disabled || loading) return;
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      damping: 15,
+      stiffness: 300,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(opacityAnim, {
+      toValue: 0.8,
+      duration: 100,
+      useNativeDriver: true,
+    }).start();
     impact('light');
     onPressIn?.();
-  }, [disabled, loading, scale, impact, onPressIn]);
+  }, [disabled, loading, scaleAnim, opacityAnim, impact, onPressIn]);
 
   const handlePressOut = useCallback(() => {
     if (disabled || loading) return;
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, [disabled, loading, scale]);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      damping: 15,
+      stiffness: 300,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(opacityAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [disabled, loading, scaleAnim, opacityAnim]);
 
   const handlePress = useCallback(() => {
     if (disabled || loading) return;
     onPress?.();
   }, [disabled, loading, onPress]);
 
-  // Style animé
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: withTiming(disabled ? 0.5 : 1, { duration: 150 }),
-  }));
-
-  // Classes NativeWind par variant
-  const variantClass = {
-    primary: 'bg-terracotta',
-    secondary: 'bg-gold',
-    outline: 'bg-transparent border border-stone',
-    ghost: 'bg-transparent',
-  }[variant];
+  // Mise a jour de l'opacite si disabled change
+  React.useEffect(() => {
+    Animated.timing(opacityAnim, {
+      toValue: disabled ? 0.5 : 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [disabled, opacityAnim]);
 
   const textColor = {
     primary: colors.sand,
@@ -133,59 +138,77 @@ export const Button = React.memo(function Button({
     ghost: colors.terracotta,
   }[variant];
 
+  const variantBg: Record<NonNullable<ButtonProps['variant']>, string> = {
+    primary: colors.terracotta,
+    secondary: colors.gold,
+    outline: 'transparent',
+    ghost: 'transparent',
+  };
+
   const containerStyle: ViewStyle = {
     height: SIZE_HEIGHT[size],
     paddingHorizontal: SIZE_PADDING[size],
     borderRadius: radius.lg,
+    backgroundColor: variantBg[variant],
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(variant === 'outline' ? { borderWidth: 1, borderColor: `${colors.stone}60` } : {}),
   };
 
   return (
-    <AnimatedPressable
-      testID={testID}
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || loading}
+    <Animated.View
       style={[
-        animatedStyle,
         containerStyle,
         fullWidth ? { width: '100%' as const } : {},
+        {
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        },
       ]}
-      className={`flex-row items-center justify-center ${variantClass}`}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading }}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={textColor}
-          size={size === 'sm' ? 'small' : 'small'}
-        />
-      ) : (
-        <>
-          {icon && iconPosition === 'left' && <IconWrapper>{icon}</IconWrapper>}
-          <Text
-            style={[
-              typography.button,
-              {
-                color: textColor,
-                fontSize: SIZE_FONT[size],
-                marginLeft: icon && iconPosition === 'left' ? spacing.sm : 0,
-                marginRight: icon && iconPosition === 'right' ? spacing.sm : 0,
-              },
-            ]}
-            className={variant === 'ghost' ? 'underline' : ''}
-          >
-            {children}
-          </Text>
-          {icon && iconPosition === 'right' && <IconWrapper>{icon}</IconWrapper>}
-        </>
-      )}
-    </AnimatedPressable>
+      <Pressable
+        testID={testID}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: disabled || loading }}
+      >
+        {loading ? (
+          <ActivityIndicator
+            color={textColor}
+            size={size === 'sm' ? 'small' : 'small'}
+          />
+        ) : (
+          <>
+            {icon && iconPosition === 'left' && <IconWrapper>{icon}</IconWrapper>}
+            <Text
+              style={[
+                typography.button,
+                {
+                  color: textColor,
+                  fontSize: SIZE_FONT[size],
+                  marginLeft: icon && iconPosition === 'left' ? spacing.sm : 0,
+                  marginRight: icon && iconPosition === 'right' ? spacing.sm : 0,
+                  textAlign: 'center',
+                  textAlignVertical: 'center',
+                },
+              ]}
+            >
+              {children}
+            </Text>
+            {icon && iconPosition === 'right' && <IconWrapper>{icon}</IconWrapper>}
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 });
 
 // ============================================================
-// Sous-composant : wrapper d'icône
+// Sous-composant : wrapper d'icone
 // ============================================================
 
 function IconWrapper({ children }: { readonly children: React.ReactNode }) {

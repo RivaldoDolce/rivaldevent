@@ -1,30 +1,26 @@
 /**
  * Card du design system.
  *
- * Règles UI/UX :
- * - radius 16px par défaut
+ * Regles UI/UX :
+ * - radius 16px par defaut
  * - 4 variants : default, elevated, outlined, featured
  * - Padding 16-24px selon le contenu
  * - Press feedback optionnel (scale 0.97 + shadow increase)
+ *
+ * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
+ * Conformement au handoff section 8.6.
  *
  * Variants :
  * - default  : bg ivory, shadow-sm
  * - elevated : bg sand, shadow-md (cards mises en avant)
  * - outlined : bg transparent, border 1px stone
- * - featured : bg terracotta à 5%, border-left 4px terracotta (événement à la une)
+ * - featured : bg terracotta a 5%, border-left 4px terracotta (evenement a la une)
  */
 
-import React, { useCallback } from 'react';
-import { Pressable, View, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import React, { useCallback, useRef } from 'react';
+import { Pressable, View, Animated, type ViewStyle } from 'react-native';
 
 import { colors, radius, spacing } from '@/lib/constants';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ============================================================
 // Types
@@ -78,21 +74,28 @@ export const Card = React.memo(function Card({
   fullWidth = true,
   testID,
 }: CardProps) {
-  const scale = useSharedValue(1);
+  // ── Animation avec Animated natif (pas reanimated) ──
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
-  }, [onPress, scale]);
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      damping: 15,
+      stiffness: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [onPress, scaleAnim]);
 
   const handlePressOut = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, [onPress, scale]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      damping: 15,
+      stiffness: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [onPress, scaleAnim]);
 
   // Style selon le variant
   const getVariantStyle = (): ViewStyle => {
@@ -144,15 +147,21 @@ export const Card = React.memo(function Card({
   }
 
   return (
-    <AnimatedPressable
-      testID={testID}
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[containerStyle, animatedStyle]}
-      accessibilityRole="button"
+    <Animated.View
+      style={[
+        containerStyle,
+        { transform: [{ scale: scaleAnim }] },
+      ]}
     >
-      {children}
-    </AnimatedPressable>
+      <Pressable
+        testID={testID}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="button"
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
   );
 });

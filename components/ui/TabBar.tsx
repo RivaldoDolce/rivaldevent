@@ -2,21 +2,27 @@
  * Tab Bar custom pour Expo Router.
  * - Mode Client (4 onglets) : actif terracotta
  * - Mode Vendeur (5 onglets) : actif forest, onglet Vendre gold surleve
+ *
+ * Safe areas : utilise useSafeAreaInsets() pour ne JAMAIS
+ * s'incruster dans la barre de navigation du telephone.
+ * La hauteur totale = 68 + insets.bottom.
+ *
+ * Utilise Animated de react-native (PAS reanimated)
+ * pour eviter l'erreur TurboModule au lancement.
+ *
+ * Rendu des onglets :
+ *   On itere sur le tableau tabs (4-5 onglets definis dans le layout),
+ *   PAS sur state.routes (qui contient aussi les routes cachees comme
+ *   home/[id], explore/venues/[id], etc.).
+ *   Cela evite les doublons dans la tab bar.
  */
 
-import React from 'react';
-import { Pressable, View, Text, type ViewStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  type SharedValue,
-} from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import { Pressable, View, Text, Animated, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useHaptics } from '@/hooks/useHaptics';
 import { colors, spacing, typography } from '@/lib/constants';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // ============================================================
 // Types
@@ -38,7 +44,7 @@ interface TabItemProps {
 }
 
 // ============================================================
-// TabItem (composant separer pour respecter les rules of hooks)
+// TabItem (composant separe pour respecter les rules of hooks)
 // ============================================================
 
 function TabItem({
@@ -49,21 +55,27 @@ function TabItem({
   inactiveColor,
 }: TabItemProps) {
   const { impact } = useHaptics();
-  const scale = useSharedValue(1);
+
+  // Animation avec Animated natif (pas reanimated)
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const Icon = tab.icon;
   const isSpecial = tab.isSpecial === true;
 
-  const animatedIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15 });
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      damping: 15,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15 });
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      damping: 15,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePress = () => {
@@ -91,7 +103,7 @@ function TabItem({
 
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <AnimatedPressable
+      <Pressable
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -107,7 +119,7 @@ function TabItem({
         accessibilityState={isFocused ? { selected: true } : {}}
         accessibilityLabel={tab.label}
       >
-        <Animated.View style={animatedIconStyle}>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <Icon color={labelColor} size={24} />
         </Animated.View>
         <Text
@@ -123,7 +135,7 @@ function TabItem({
         >
           {tab.label}
         </Text>
-      </AnimatedPressable>
+      </Pressable>
     </View>
   );
 }
@@ -143,6 +155,9 @@ interface TabBarProps {
 }
 
 export function TabBar({ state, mode = 'client', tabs, onTabPress }: TabBarProps) {
+  // Safe area insets : empeche tout chevauchement avec la barre systeme
+  const insets = useSafeAreaInsets();
+
   const activeColor = mode === 'seller' ? colors.forest : colors.terracotta;
   const inactiveColor = colors.stone;
 
@@ -151,25 +166,64 @@ export function TabBar({ state, mode = 'client', tabs, onTabPress }: TabBarProps
     backgroundColor: colors.sand,
     borderTopWidth: 1,
     borderTopColor: `${colors.stone}33`,
-    paddingBottom: spacing.sm + 4,
-    paddingTop: spacing.xs,
+    // Safe area : paddingBottom respecte toujours la barre de navigation du telephone
+    paddingBottom: Math.max(insets.bottom, 12),
+    paddingTop: 8,
     paddingHorizontal: spacing.xs,
+    // Hauteur totale : contenu (68) + inset bottom pour ne jamais s'incruster
+    height: 68 + Math.max(insets.bottom, 0),
   };
 
+  /**
+   * Determine si un tab est focus en comparant avec la route active.
+   * state.index pointe vers la route active dans state.routes.
+   * On cherche la route active et on verifie si elle correspond au tab.
+   */
+  const activeRoute = state.routes[state.index];
+
+  const isTabFocused = (tabKey: string): boolean => {
+    if (!activeRoute) return false;
+    if (activeRoute.name === tabKey) return true;
+    if (activeRoute.name.startsWith(tabKey + '/')) return true;
+    return false;
+  };
+
+  /**
+   * Trouve le nom de route complet dans state.routes pour un tab donne.
+   * Necessaire car onTabPress doit naviguer vers la route complete (ex: "home/index")
+   * et non juste la cle logique (ex: "home").
+   */
+  const findRouteNameForTab = (tabKey: string): string | undefined => {
+    // Priorite : route exacte, puis route avec /index, puis premiere route fille
+    const exact = state.routes.find((r) => r.name === tabKey);
+    if (exact) return exact.name;
+
+    const indexRoute = state.routes.find((r) => r.name === `${tabKey}/index`);
+    if (indexRoute) return indexRoute.name;
+
+    const childRoute = state.routes.find((r) => r.name.startsWith(tabKey + '/'));
+    if (childRoute) return childRoute.name;
+
+    return tabKey;
+  };
+
+  // On itere sur TABS (4-5 onglets), pas sur state.routes (9+ routes)
   return (
     <View style={containerStyle}>
-      {state.routes.map((route, index) => {
-        const tab = tabs.find((t) => t.key === route.name);
-        if (!tab) return null;
-
-        const isFocused = state.index === index;
+      {tabs.map((tab) => {
+        const focused = isTabFocused(tab.key);
+        const routeName = findRouteNameForTab(tab.key);
 
         return (
           <TabItem
-            key={route.key}
+            key={tab.key}
             tab={tab}
-            isFocused={isFocused}
-            onPress={() => onTabPress(route.name, route.key)}
+            isFocused={focused}
+            onPress={() => {
+              if (routeName) {
+                onTabPress(routeName, tab.key);
+              }
+            }}
             activeColor={activeColor}
             inactiveColor={inactiveColor}
           />
@@ -180,4 +234,4 @@ export function TabBar({ state, mode = 'client', tabs, onTabPress }: TabBarProps
 }
 
 // Re-export
-export type { TabConfig, SharedValue };
+export type { TabConfig };

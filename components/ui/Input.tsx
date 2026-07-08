@@ -48,6 +48,7 @@ interface InputProps {
   readonly onFocus?: () => void;
   readonly placeholder?: string;
   readonly error?: string;
+  readonly isValid?: boolean;
   readonly helperText?: string;
   readonly iconLeft?: React.ReactNode;
   readonly iconRight?: React.ReactNode;
@@ -72,6 +73,7 @@ export const Input = React.memo(function Input({
   onFocus,
   placeholder,
   error,
+  isValid,
   helperText,
   iconLeft,
   iconRight,
@@ -95,23 +97,26 @@ export const Input = React.memo(function Input({
     onBlur?.();
   }, [onBlur]);
 
-  // Détermine la couleur de bordure
+  // Détermine la couleur de bordure — légère au repos, terracotta en focus/erreur
   const borderColor = error
     ? colors.terracotta
-    : isFocused
-      ? colors.terracotta
-      : colors.stone;
+    : isValid
+      ? colors.forest
+      : isFocused
+        ? colors.terracotta
+        : `${colors.stone}40`;
 
   const containerStyle: ViewStyle = {
     borderColor,
     borderWidth: 1,
     borderRadius: radius.lg,
-    backgroundColor: editable ? colors.sand : colors.ivory,
+    backgroundColor: editable ? colors.ivory : `${colors.ivory}80`,
     paddingHorizontal: spacing.md,
-    minHeight: 48,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     opacity: editable ? 1 : 0.6,
+    outlineWidth: 0,
   };
 
   const inputStyle: TextStyle = {
@@ -120,6 +125,7 @@ export const Input = React.memo(function Input({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: iconLeft ? spacing.sm : 0,
+    outlineWidth: 0,
   };
 
   return (

@@ -1,42 +1,163 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
-
-import { colors, typography, spacing, radius } from '@/lib/constants';
+/**
+ * Ecran d'accueil - ecran de demarrage.
+ *
+ * Design :
+ * - Fond terracotta, logo anime, titre RIVALD'EVENT
+ * - Baseline CURATING EXCELLENCE en bas
+ *
+ * Logique :
+ * - Animation 2s + getSession() en PARALLELE
+ * - Des que les 2 sont prets, on navigue
+ * - Pas de fetch profil ici (useAuth s'en charge en arriere-plan)
+ * - Si session : home (buyer par defaut, useAuth corrigera si vendeur)
+ * - Si pas de session : onboarding
+ */
 
 /**
- * SPLASH TEMPORAIRE - pour tester la navigation.
- * Sera remplace par un splash reel avec logo + animation dans feature/auth.
+ * Ecran de demarrage.
+ *
+ * Offline-first : ZERO appel reseau.
+ * - Verifie uniquement si un token existe dans SecureStore (lecture locale)
+ * - Animation 2s puis navigation
+ * - Si token en local : home (buyer par defaut)
+ * - Si pas de token : onboarding
  */
-export default function Splash() {
+
+import { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import * as SecureStore from 'expo-secure-store';
+
+import { colors, typography, spacing } from '@/lib/constants';
+
+const LOGO_SOURCE = require('@/assets/images/logo.png');
+const ANIMATION_DURATION = 2000;
+
+/**
+ * Construit la clé SecureStore où Supabase stocke le token.
+ * Format : rivaldevent.sb-<projectRef>-auth-token
+ * Identique à la logique interne de GoTrue + notre prefixe SecureStoreAdapter.
+ */
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const projectRef = supabaseUrl.replace(/^https?:\/\//, '').split('.')[0];
+const AUTH_TOKEN_KEY = `rivaldevent.sb-${projectRef}-auth-token`;
+
+async function hasLocalSession(): Promise<boolean> {
+  try {
+    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+    return token !== null;
+  } catch {
+    return false;
+  }
+}
+
+export default function SplashScreen() {
+  const router = useRouter();
+
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const baselineOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // 1. Animation
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.parallel([
+          Animated.timing(titleOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(titleTranslateY, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(200),
+        Animated.timing(subtitleOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.delay(200),
+        Animated.timing(baselineOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    // 2. Check local ONLY (SecureStore, pas de reseau)
+    const sessionCheck = hasLocalSession();
+
+    // 3. Naviguer apres l'animation
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+
+      const hasSession = await sessionCheck;
+
+      if (cancelled) return;
+
+      if (hasSession) {
+        router.replace('/(client)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    }, ANIMATION_DURATION);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
+
+  const logoAnimatedStyle = {
+    opacity: logoOpacity,
+    transform: [{ scale: logoScale }],
+  };
+
+  const titleAnimatedStyle = {
+    opacity: titleOpacity,
+    transform: [{ translateY: titleTranslateY }],
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Rivald'event</Text>
-      <Text style={styles.subtitle}>Splash temporaire</Text>
+      <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
+        <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
+      </Animated.View>
 
-      <View style={styles.buttons}>
-        <Pressable
-          style={styles.button}
-          onPress={() => router.replace('/(client)/home')}
-        >
-          <Text style={styles.buttonText}>Mode Client (4 onglets)</Text>
-        </Pressable>
+      <Animated.View style={titleAnimatedStyle}>
+        <Text style={styles.title}>RIVALD&apos;EVENT</Text>
+      </Animated.View>
 
-        <Pressable
-          style={[styles.button, { backgroundColor: colors.forest }]}
-          onPress={() => router.replace('/(seller)/home')}
-        >
-          <Text style={styles.buttonText}>Mode Vendeur (5 onglets)</Text>
-        </Pressable>
+      <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}>
+        <Text style={styles.subtitle}>LUXURY AFRICAN EVENTS</Text>
+      </Animated.View>
 
-        <Pressable
-          style={[styles.button, styles.outlineButton]}
-          onPress={() => router.push('/(auth)/login')}
-        >
-          <Text style={[styles.buttonText, { color: colors.terracotta }]}>
-            Aller au Login
-          </Text>
-        </Pressable>
-      </View>
+      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}>
+        <View style={styles.goldBar} />
+        <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -44,41 +165,51 @@ export default function Splash() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
-    justifyContent: 'center',
+    backgroundColor: colors.terracotta,
     alignItems: 'center',
-    padding: spacing.xl,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  logoWrapper: {
+    marginBottom: spacing.xl,
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     ...typography.h1,
-    color: colors.terracotta,
-    marginBottom: spacing.sm,
+    fontSize: 36,
+    color: colors.onyx,
+    letterSpacing: 2,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  subtitleWrapper: {
+    marginTop: spacing.sm,
   },
   subtitle: {
-    ...typography.body,
-    color: colors.stone,
-    marginBottom: spacing['2xl'],
+    ...typography.bodySmall,
+    color: colors.gold,
+    letterSpacing: 4,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  buttons: {
-    width: '100%',
-    gap: spacing.md,
-  },
-  button: {
-    backgroundColor: colors.terracotta,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
+  baselineWrapper: {
+    position: 'absolute',
+    bottom: spacing['3xl'],
     alignItems: 'center',
-    minHeight: 48,
-    justifyContent: 'center',
   },
-  outlineButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.terracotta,
+  goldBar: {
+    width: 40,
+    height: 2,
+    backgroundColor: colors.gold,
+    marginBottom: spacing.sm,
   },
-  buttonText: {
-    ...typography.button,
-    color: colors.sand,
+  baseline: {
+    ...typography.caption,
+    color: `${colors.ivory}99`,
+    letterSpacing: 3,
+    fontStyle: 'italic',
   },
 });
