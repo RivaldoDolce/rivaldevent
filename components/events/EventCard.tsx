@@ -130,10 +130,16 @@ export const EventCard = React.memo(function EventCard({
     onReserve?.();
   }, [impact, onReserve]);
 
-  // -- Format price --
-  const formattedPrice = price >= 1000
-    ? `${(price / 1000).toFixed(0)} ${price % 1000 !== 0 ? (price % 1000).toString().padStart(3, '0') : ''} ${currency}`.trim()
-    : `${price} ${currency}`;
+  // -- Format price (formatage africain : 5 000 FCFA, 15 000 FCFA) --
+  const formattedPrice = React.useMemo(() => {
+    const absPrice = Math.abs(price);
+    if (absPrice >= 1000) {
+      // Separateur de milliers style francais : espace insécable
+      const formatted = absPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
+      return `${price < 0 ? '-' : ''}${formatted} ${currency}`;
+    }
+    return `${price} ${currency}`;
+  }, [price, currency]);
 
   // -- Styles --
   const cardStyle: ViewStyle = {

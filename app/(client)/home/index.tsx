@@ -5,15 +5,16 @@
  * 1. Header : Logo "Rivald'event" (gauche) + Avatar profil (droite)
  * 2. Barre de recherche : Search icon + placeholder + SlidersHorizontal
  * 3. Categories : chips horizontaux scrollables (Tous, Concerts, Festivals...)
- * 4. Section "Evenements a proximite" : cartes verticales full-width
- * 5. Section "Lieux a decouvrir" : cartes horizontales 200px
+ * 4. Section "A la une" : carrousel plein ecran d'evenements tendance
+ * 5. Section "Evenements a proximite" : cartes verticales full-width
+ * 6. Section "Lieux a decouvrir" : cartes horizontales 200px
  *
  * Design "Minimalisme Africain Camerounais" :
  * - Fond sand (#F7F4ED)
  * - Cartes blanches, ombre subtile, radius 16px
  * - CTA terracotta, texte blanc
- * - Hiérarchie violente (1 seul point focal par section)
- * - Alternance aéré/dense
+ * - Hierarchie violente (1 seul point focal par section)
+ * - Alternance aere/dense
  *
  * Conventions :
  * - expo-image pour les images
@@ -45,6 +46,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
 import { EventCard } from '@/components/events/EventCard';
+import { FeaturedCarousel } from '@/components/events/FeaturedCarousel';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { useRouter } from 'expo-router';
 
@@ -76,6 +78,17 @@ interface MockVenue {
   readonly badge: string | null;
 }
 
+interface FeaturedEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly image: string;
+  readonly date: string;
+  readonly location: string;
+  readonly category: string;
+  readonly price: number;
+  readonly currency: string;
+}
+
 // ============================================================
 // Donnees mock
 // ============================================================
@@ -89,6 +102,39 @@ const CATEGORIES = [
   { id: 'theatre', label: 'Theatre' },
   { id: 'galas', label: 'Galas' },
 ] as const;
+
+const MOCK_FEATURED: readonly FeaturedEvent[] = [
+  {
+    id: 'feat-1',
+    title: 'Soiree Afrobeats Yaounde',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
+    date: '12 Juil.',
+    location: 'Palais des Sports, Yaounde',
+    category: 'Concerts',
+    price: 5000,
+    currency: 'FCFA',
+  },
+  {
+    id: 'feat-2',
+    title: 'Festival Culturel Nguon 2026',
+    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
+    date: '25 Juil.',
+    location: 'Centre Culturel, Douala',
+    category: 'Festivals',
+    price: 2000,
+    currency: 'FCFA',
+  },
+  {
+    id: 'feat-3',
+    title: 'Gala de Charite 2026',
+    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800',
+    date: '02 Sept.',
+    location: 'Hilton Yaounde',
+    category: 'Galas',
+    price: 50000,
+    currency: 'FCFA',
+  },
+];
 
 const MOCK_EVENTS: readonly MockEvent[] = [
   {
@@ -182,8 +228,8 @@ const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     id: '2',
-    name: 'Canal Olympia',
-    image: 'https://images.unsplash.com/photo-1473226238621-d2d7a4a6fff2?w=400',
+    name: 'Suna \' a Home Bonapriso',
+    image: 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/509004353.jpg?k=e299286e7a5328538faeffe4d7cd874f2cc4c31f498228afc0f15e5d70f7d501&o=',
     location: 'Bonapriso, Douala',
     rating: 4.5,
     badge: null,
@@ -258,6 +304,14 @@ export default function HomeScreen() {
     impact('light');
     router.push(ROUTES.PROFILE);
   }, [impact, router]);
+
+  const handleFeaturedPress = useCallback((eventId: string) => {
+    router.push(`/(client)/home/${eventId}`);
+  }, [router]);
+
+  const handleFeaturedReserve = useCallback((eventId: string) => {
+    router.push(`/(purchase)/event/${eventId}/tickets`);
+  }, [router]);
 
   // -- Filtrer les evenements par categorie active --
   const filteredEvents = activeCategory === 'all'
@@ -461,7 +515,35 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* ============================================
-            4. SECTION "EVENEMENTS A PROXIMITE"
+            4. SECTION "A LA UNE" - Carrousel tendance
+            ============================================ */}
+        <View style={sectionHeaderStyle}>
+          <Text style={sectionTitleStyle}>A la une</Text>
+          <Pressable
+            onPress={() => {
+              impact('light');
+              router.push(ROUTES.EXPLORE);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Voir tous les evenements tendance"
+          >
+            <Text style={seeAllTextStyle}>Voir tout</Text>
+          </Pressable>
+        </View>
+
+        <FeaturedCarousel
+          events={MOCK_FEATURED}
+          onPress={handleFeaturedPress}
+          onReserve={handleFeaturedReserve}
+          testID="featured-carousel"
+        />
+
+        {/* Espacement entre carrousel et evenements a proximite */}
+        <View style={sectionSpacingStyle} />
+
+        {/* ============================================
+            5. SECTION "EVENEMENTS A PROXIMITE"
             ============================================ */}
         <View style={sectionHeaderStyle}>
           <Text style={sectionTitleStyle}>Evenements a proximite</Text>
@@ -507,7 +589,7 @@ export default function HomeScreen() {
         <View style={sectionSpacingStyle} />
 
         {/* ============================================
-            5. SECTION "LIEUX A DECOUVRIR"
+            6. SECTION "LIEUX A DECOUVRIR"
             ============================================ */}
         <View style={sectionHeaderStyle}>
           <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
