@@ -11,9 +11,15 @@
  *   Les ecrans sont dans des dossiers (home/index.tsx)
  *   donc les noms de route sont "home/index", "explore/index", etc.
  *   Tabs.Screen name DOIT matcher le chemin reel du fichier.
+ *
+ * Corrections vs version precedente :
+ *   - Retrait de la prop onTabPress (inexistante sur TabBar)
+ *   - Navigation geree nativement par BottomTabBarProps
+ *   - Icones passees comme composants (pas comme ReactNode)
  */
 
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   HomeIcon,
   ExploreIcon,
@@ -21,7 +27,7 @@ import {
   ProfileIcon,
   type IconComponent,
 } from '@/components/icons/TabIcons';
-import { TabBar } from '@/components/ui/TabBar';
+import TabBar from '@/components/ui/TabBar';
 
 interface TabConfig {
   readonly name: string;
@@ -54,19 +60,21 @@ const HIDDEN_TAB_ROUTES = [
 ] as const;
 
 export default function ClientLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
-      // TabBar personnalisee : icones, ordre, safe areas tout est gere
       tabBar={(props) => (
         <TabBar
           state={props.state}
-          mode="client"
+          navigation={props.navigation}
+          descriptors={props.descriptors}
+          insets={insets}
           tabs={TABS.map((t) => ({
             key: t.tabKey ?? t.name.split('/').pop() ?? t.name,
             label: t.label,
             icon: t.icon,
           }))}
-          onTabPress={(routeName) => props.navigation.navigate(routeName)}
         />
       )}
       screenOptions={{
