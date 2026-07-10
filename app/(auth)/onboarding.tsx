@@ -19,7 +19,7 @@ import { ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { colors, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -167,9 +167,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   skipText: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.stone,
-    fontWeight: '500',
+    letterSpacing: 0.3,
   },
   scrollView: {
     flex: 1,
@@ -191,18 +193,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start', // Texte aligné à gauche
   },
   title: {
-    ...typography.h1,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 32,
+    lineHeight: 42,
     color: colors.onyx,
     marginBottom: spacing.md,
-    fontWeight: '900',
+    letterSpacing: -0.5,
     textAlign: 'left',
   },
   description: {
-    ...typography.body,
-    color: colors.stone, // Plus lisible que onyx opacity
+    fontFamily: 'Inter-Regular',
+    fontSize: 16,
+    lineHeight: 26,
+    color: colors.stone,
     textAlign: 'left',
-    lineHeight: 24,
-    fontWeight: '400', // Pas 700 pour la lisibilité
+    letterSpacing: 0.2,
   },
   footer: {
     flexDirection: 'row',

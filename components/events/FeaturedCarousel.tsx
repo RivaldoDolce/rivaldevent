@@ -45,7 +45,7 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 
-import { colors, spacing, radii, typography } from '@/lib/constants';
+import { colors, spacing, radii } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -224,9 +224,11 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   };
 
   const trendingBadgeTextStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-Bold',
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.onyx,
-    fontWeight: '700',
+    letterSpacing: 0.5,
   };
 
   const categoryBadgeStyle: ViewStyle = {
@@ -238,9 +240,11 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   };
 
   const categoryBadgeTextStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.white,
-    fontWeight: '600',
+    letterSpacing: 0.3,
   };
 
   const contentOverlayStyle: ViewStyle = {
@@ -267,7 +271,9 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   };
 
   const infoTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
     color: 'rgba(255,255,255,0.85)',
     marginLeft: spacing.xs,
   };
@@ -293,9 +299,10 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   };
 
   const reserveTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.white,
-    fontWeight: '600',
   };
 
   const dotsContainerStyle: ViewStyle = {

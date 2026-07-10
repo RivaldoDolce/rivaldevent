@@ -25,7 +25,7 @@ import {
 import { Image } from 'expo-image';
 import { MapPin, Star } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows, typography } from '@/lib/constants';
+import { colors, spacing, radii, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -117,9 +117,11 @@ export const VenueCard = React.memo(function VenueCard({
   };
 
   const badgeTextStyle: TextStyle = {
-    ...typography.overline,
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    lineHeight: 14,
     color: colors.onyx,
-    fontWeight: '700',
+    letterSpacing: 0.8,
   };
 
   const contentStyle: ViewStyle = {
@@ -127,9 +129,11 @@ export const VenueCard = React.memo(function VenueCard({
   };
 
   const nameStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text,
-    fontWeight: '600',
+    letterSpacing: -0.1,
     marginBottom: spacing.xs / 2,
   };
 
@@ -140,9 +144,10 @@ export const VenueCard = React.memo(function VenueCard({
   };
 
   const ratingTextStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.onyx,
-    fontWeight: '600',
     marginLeft: spacing.xs / 2,
   };
 
@@ -152,7 +157,9 @@ export const VenueCard = React.memo(function VenueCard({
   };
 
   const locationTextStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.stone,
     marginLeft: spacing.xs / 2,
     flex: 1,

@@ -30,7 +30,7 @@ import {
   Clock,
 } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows, typography } from '@/lib/constants';
+import { colors, spacing, radii, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -190,8 +190,11 @@ export const EventCard = React.memo(function EventCard({
   };
 
   const titleStyle: TextStyle = {
-    ...typography.bodySemiBold,
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 17,
+    lineHeight: 23,
     color: colors.text,
+    letterSpacing: -0.2,
     marginBottom: spacing.xs,
   };
 
@@ -202,7 +205,9 @@ export const EventCard = React.memo(function EventCard({
   };
 
   const detailTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.stone,
     marginLeft: spacing.xs,
   };
@@ -215,7 +220,9 @@ export const EventCard = React.memo(function EventCard({
   };
 
   const organizerNameStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.stone,
     marginLeft: spacing.sm,
   };
@@ -231,14 +238,17 @@ export const EventCard = React.memo(function EventCard({
   };
 
   const priceLabelStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-Regular',
+    fontSize: 11,
+    lineHeight: 14,
     color: colors.stone,
   };
 
   const priceValueStyle: TextStyle = {
-    ...typography.bodySemiBold,
-    color: colors.gold,
+    fontFamily: 'Inter-Bold',
     fontSize: 16,
+    lineHeight: 22,
+    color: colors.gold,
   };
 
   const reserveButtonStyle: ViewStyle = {
@@ -249,9 +259,10 @@ export const EventCard = React.memo(function EventCard({
   };
 
   const reserveTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.white,
-    fontWeight: '600',
   };
 
   return (
@@ -281,7 +292,7 @@ export const EventCard = React.memo(function EventCard({
 
           {/* Badge categorie */}
           <View style={categoryBadgeStyle}>
-            <Text style={[typography.caption, { color: colors.white, fontWeight: '600' }]}>
+            <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 12, lineHeight: 16, color: colors.white, letterSpacing: 0.3 }}>
               {category}
             </Text>
           </View>
@@ -300,7 +311,7 @@ export const EventCard = React.memo(function EventCard({
                 paddingVertical: spacing.xs,
               }}
             >
-              <Text style={[typography.caption, { color: colors.onyx, fontWeight: '700' }]}>
+              <Text style={{ fontFamily: 'Inter-Bold', fontSize: 12, lineHeight: 16, color: colors.onyx, letterSpacing: 0.5 }}>
                 A la une
               </Text>
             </View>

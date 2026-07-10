@@ -29,7 +29,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import * as SecureStore from 'expo-secure-store';
 
-import { colors, typography, spacing } from '@/lib/constants';
+import { colors, spacing } from '@/lib/constants';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 const ANIMATION_DURATION = 2000;
@@ -178,26 +178,26 @@ const styles = StyleSheet.create({
     height: 120,
   },
   title: {
-    ...typography.h1,
+    fontFamily: 'PlayfairDisplay-Black',
     fontSize: 36,
     color: colors.onyx,
     letterSpacing: 2,
-    fontWeight: '900',
     textAlign: 'center',
   },
   subtitleWrapper: {
     marginTop: spacing.sm,
   },
   subtitle: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.gold,
     letterSpacing: 4,
-    fontWeight: '600',
     textAlign: 'center',
   },
   baselineWrapper: {
     position: 'absolute',
-    bottom: spacing['3xl'],
+    bottom: spacing.xxxl,
     alignItems: 'center',
   },
   goldBar: {
@@ -207,7 +207,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   baseline: {
-    ...typography.caption,
+    fontFamily: 'Inter-Medium',
+    fontSize: 11,
+    lineHeight: 14,
     color: `${colors.ivory}99`,
     letterSpacing: 3,
     fontStyle: 'italic',

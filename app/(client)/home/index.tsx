@@ -48,6 +48,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { EventCard } from '@/components/events/EventCard';
 import { FeaturedCarousel } from '@/components/events/FeaturedCarousel';
 import { VenueCard } from '@/components/venues/VenueCard';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useRouter } from 'expo-router';
 
 // ============================================================
@@ -271,6 +273,10 @@ export default function HomeScreen() {
   const { profile } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Compteur de notifications non lues (mock)
+  const unreadNotificationCount = 3;
 
   // -- Handlers --
   const handleCategoryPress = useCallback((categoryId: string) => {
@@ -313,6 +319,22 @@ export default function HomeScreen() {
     router.push(`/(purchase)/event/${eventId}/tickets`);
   }, [router]);
 
+  const handleNotificationPress = useCallback(() => {
+    impact('light');
+    setShowNotifications(true);
+  }, [impact]);
+
+  const handleCloseNotifications = useCallback(() => {
+    setShowNotifications(false);
+  }, []);
+
+  const handleNotificationItemPress = useCallback((notification: { eventId?: string }) => {
+    setShowNotifications(false);
+    if (notification.eventId) {
+      router.push(`/(client)/home/${notification.eventId}`);
+    }
+  }, [router]);
+
   // -- Filtrer les evenements par categorie active --
   const filteredEvents = activeCategory === 'all'
     ? MOCK_EVENTS
@@ -339,10 +361,10 @@ export default function HomeScreen() {
   };
 
   const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 22,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 24,
     color: colors.onyx,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   };
 
   const searchContainerStyle: ViewStyle = {
@@ -392,14 +414,19 @@ export default function HomeScreen() {
   };
 
   const categoryChipActiveTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.white,
-    fontWeight: '600',
+    letterSpacing: 0.3,
   };
 
   const categoryChipInactiveTextStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.onyx,
+    letterSpacing: 0.2,
   };
 
   const sectionHeaderStyle: ViewStyle = {
@@ -412,14 +439,19 @@ export default function HomeScreen() {
   };
 
   const sectionTitleStyle: TextStyle = {
-    ...typography.h3,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: -0.3,
     color: colors.onyx,
   };
 
   const seeAllTextStyle: TextStyle = {
-    ...typography.caption,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.terracotta,
-    fontWeight: '600',
+    letterSpacing: 0.2,
   };
 
   const eventsContainerStyle: ViewStyle = {
@@ -439,6 +471,14 @@ export default function HomeScreen() {
 
   return (
     <View style={screenStyle}>
+      {/* Panneau de notifications (overlay au-dessus de tout) */}
+      <NotificationsPanel
+        visible={showNotifications}
+        onClose={handleCloseNotifications}
+        onNotificationPress={handleNotificationItemPress}
+        testID="notifications-panel"
+      />
+
       <ScrollView
         style={screenStyle}
         contentContainerStyle={scrollContentStyle}
@@ -449,19 +489,26 @@ export default function HomeScreen() {
             ============================================ */}
         <View style={headerStyle}>
           <Text style={headerTitleStyle}>Rivald'event</Text>
-          <Pressable
-            onPress={handleProfilePress}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Mon profil"
-          >
-            <Avatar
-              source={profile?.avatar_url ?? null}
-              fallback={profile?.full_name ?? 'U'}
-              size="sm"
-              border
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <NotificationBell
+              count={unreadNotificationCount}
+              onPress={handleNotificationPress}
+              testID="notification-bell"
             />
-          </Pressable>
+            <Pressable
+              onPress={handleProfilePress}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Mon profil"
+            >
+              <Avatar
+                source={profile?.avatar_url ?? null}
+                fallback={profile?.full_name ?? 'U'}
+                size="sm"
+                border
+              />
+            </Pressable>
+          </View>
         </View>
 
         {/* ============================================

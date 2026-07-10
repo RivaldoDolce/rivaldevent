@@ -285,16 +285,22 @@ const styles = StyleSheet.create({
     height: 56,
   },
   title: {
-    ...typography.h1,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 32,
+    lineHeight: 40,
     color: colors.onyx,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    ...typography.body,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.stone,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
+    letterSpacing: 0.2,
   },
   errorBanner: {
     backgroundColor: `${colors.terracotta}15`,
@@ -336,13 +342,17 @@ const styles = StyleSheet.create({
     borderColor: colors.terracotta,
   },
   checkboxLabel: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.onyx,
   },
   forgotPasswordText: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.terracotta,
-    fontWeight: '500',
+    letterSpacing: 0.1,
   },
   separator: {
     flexDirection: 'row',
@@ -355,8 +365,12 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.stone}30`,
   },
   separatorText: {
-    ...typography.caption,
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.5,
     color: colors.stone,
+    textTransform: 'uppercase',
   },
   alternatives: {
     marginBottom: spacing.lg,
@@ -375,9 +389,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   alternativeText: {
-    ...typography.body,
+    fontFamily: 'Inter-Medium',
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.onyx,
-    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   signUpWrapper: {
     flexDirection: 'row',
@@ -386,7 +402,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   signUpText: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.stone,
   },
   signUpLinkWrapper: {
@@ -394,9 +412,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signUpLink: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.terracotta,
-    fontWeight: '600',
     textDecorationLine: 'underline',
+    letterSpacing: 0.2,
   },
 });

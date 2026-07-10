@@ -362,13 +362,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   title: {
-    ...typography.h1,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 28,
+    lineHeight: 36,
     color: colors.onyx,
+    letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    ...typography.body,
-    color: colors.onyx,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.stone,
+    letterSpacing: 0.2,
     marginBottom: spacing.xl,
   },
   errorBanner: {
@@ -415,9 +421,10 @@ const styles = StyleSheet.create({
     borderColor: colors.forest,
   },
   checkboxLabel: {
-    ...typography.bodySmall,
-    color: colors.onyx,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
     lineHeight: 20,
+    color: colors.onyx,
     flex: 1,
   },
   linkText: {
@@ -456,9 +463,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   alternativeText: {
-    ...typography.body,
+    fontFamily: 'Inter-Medium',
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.onyx,
-    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   loginWrapper: {
     flexDirection: 'row',
@@ -466,7 +475,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginText: {
-    ...typography.body,
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.onyx,
   },
   loginLinkWrapper: {
@@ -474,9 +485,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginLink: {
-    ...typography.body,
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.terracotta,
-    fontWeight: '600',
     textDecorationLine: 'underline',
+    letterSpacing: 0.2,
   },
 });
