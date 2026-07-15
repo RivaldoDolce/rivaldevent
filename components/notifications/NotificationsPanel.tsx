@@ -36,6 +36,7 @@ import {
   type ImageStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   X,
   Heart,
@@ -196,6 +197,7 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
 }: NotificationsPanelProps) {
   const slideAnim = useRef(new Animated.Value(-PANEL_HEIGHT)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   // Etat local des notifications (pour gerer le marquage comme lu)
   const [notifications, setNotifications] = useState<NotificationItem[]>(
@@ -428,7 +430,8 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
           justifyContent: 'space-between',
           alignItems: 'center',
           paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.md,
+          paddingTop: insets.top + spacing.md,
+          paddingBottom: spacing.md,
           borderBottomWidth: 1,
           borderBottomColor: `${colors.stone}15`,
         }}>

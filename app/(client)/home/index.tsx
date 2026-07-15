@@ -363,13 +363,9 @@ export default function HomeScreen() {
 
   // Titre Rivald'event : gras fantasique (Playfair Display Bold, taille elaguee)
   const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 28,
-    color: colors.terracotta,
-    letterSpacing: -1,
-    textShadowColor: `${colors.onyx}15`,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontFamily: 'Lobster_400Regular',
+    fontSize: 32,
+    color: colors.forest,
   };
 
   const searchContainerStyle: ViewStyle = {

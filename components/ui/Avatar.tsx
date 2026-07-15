@@ -92,7 +92,7 @@ export const Avatar = memo(function Avatar({
     wrapperStyle.padding = 3;
     wrapperStyle.borderRadius = halfDim + 3;
     (wrapperStyle as Record<string, unknown>).borderWidth = 3;
-    (wrapperStyle as Record<string, unknown>).borderColor = colors.terracotta;
+    (wrapperStyle as Record<string, unknown>).borderColor = colors.gold;
   }
   // Bordure fine par defaut
   else if (border === 'default') {

@@ -5,11 +5,7 @@
  * - QueryClientProvider (TanStack Query)
  * - SafeAreaProvider (insets)
  * - StatusBar (style auto, bg sand)
- *
- * GestureHandlerRootView a ete retire car @gorhom/bottom-sheet
- * (qui en dependait) a ete remplace par une implementation native.
- * react-native-gesture-handler reste en dependance pour un
- * eventuel usage futur mais n'est plus wrappe ici.
+ * - useFonts (expo-font)
  *
  * Redirige vers (auth)/splash au demarrage.
  */
@@ -17,30 +13,24 @@
 import { LogBox } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-// eslint-disable-next-line import/no-unresolved
-import * as SplashScreen from 'expo-splash-screen';
+import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts, Lobster_400Regular } from '@expo-google-fonts/lobster';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
 import { colors } from '@/lib/constants';
 
 // ============================================================
-// Couche 1 : LogBox — filtre les warnings Expo Router
+// Configuration & Initialisation
 // ============================================================
-LogBox.ignoreLogs([
-  '[Layout children]',
-  'Unable to resolve manifest assets',
-]);
 
-// ============================================================
-// Couche 2 : Override console.error pour supprimer les erreurs
-// reseau internes (non declenchees par l'utilisateur).
-// Les erreurs utilisateur sont gerees par l'UI (toast/alert).
-// ============================================================
+// Filtre les warnings de navigation Expo Router
+LogBox.ignoreLogs(['[Layout children]', 'Unable to resolve manifest assets']);
+
+// Supprime les erreurs réseau internes de la console
 const _originalConsoleError = console.error;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 console.error = (...args: any[]) => {
@@ -55,13 +45,23 @@ console.error = (...args: any[]) => {
   _originalConsoleError.apply(console, args);
 };
 
-SplashScreen.preventAutoHideAsync().catch(() => {
-  // Silent fail
+// Empêche le splash screen de se cacher automatiquement
+preventAutoHideAsync().catch(() => {
+  /* Silent fail */
 });
 
-export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
+// ============================================================
+// Composant Racine
+// ============================================================
 
+export default function RootLayout() {
+  const [isQueryClientReady, setQueryClientReady] = useState(false);
+  const [fontsLoaded] = useFonts({
+    Lobster_400Regular,
+    // On peut charger d'autres polices ici si besoin
+  });
+
+  // Initialise la persistance de React Query
   useEffect(() => {
     const init = async () => {
       try {
@@ -69,16 +69,24 @@ export default function RootLayout() {
       } catch (err) {
         logger.debug('[RootLayout] init error:', err);
       } finally {
-        setIsReady(true);
-        await SplashScreen.hideAsync();
+        setQueryClientReady(true);
       }
     };
 
     init();
   }, []);
 
-  if (!isReady) {
-    return null;
+  const isAppReady = fontsLoaded && isQueryClientReady;
+
+  // Cache le splash screen une fois que l'app est prête
+  useEffect(() => {
+    if (isAppReady) {
+      hideAsync();
+    }
+  }, [isAppReady]);
+
+  if (!isAppReady) {
+    return null; // Affiche le splash screen natif
   }
 
   return (
