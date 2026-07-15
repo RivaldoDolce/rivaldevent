@@ -7,6 +7,7 @@
  * - Items avec icone, titre, description, date
  * - Badge non lu (point terracotta)
  * - Fermeture par tap sur overlay ou bouton
+ * - Bouton "Tout marquer comme lu"
  *
  * Conventions :
  * - expo-image pour les images
@@ -20,6 +21,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import {
   View,
@@ -41,6 +43,7 @@ import {
   Ticket,
   TrendingUp,
   Bell,
+  CheckCheck,
 } from 'lucide-react-native';
 
 import { colors, spacing, radii, shadows, typography } from '@/lib/constants';
@@ -57,7 +60,7 @@ interface NotificationItem {
   readonly title: string;
   readonly description: string;
   readonly date: string;
-  readonly isRead: boolean;
+  isRead: boolean;
   readonly image?: string;
   readonly eventId?: string;
 }
@@ -66,6 +69,7 @@ interface NotificationsPanelProps {
   readonly visible: boolean;
   readonly onClose: () => void;
   readonly onNotificationPress?: (notification: NotificationItem) => void;
+  readonly onReadCountChange?: (unreadCount: number) => void;
   readonly testID?: string;
 }
 
@@ -73,7 +77,7 @@ interface NotificationsPanelProps {
 // Donnees mock (en attendant le branchement Supabase)
 // ============================================================
 
-const MOCK_NOTIFICATIONS: readonly NotificationItem[] = [
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'notif-1',
     type: 'favorite',
@@ -187,10 +191,30 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
   visible,
   onClose,
   onNotificationPress,
+  onReadCountChange,
   testID,
 }: NotificationsPanelProps) {
   const slideAnim = useRef(new Animated.Value(-PANEL_HEIGHT)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+
+  // Etat local des notifications (pour gerer le marquage comme lu)
+  const [notifications, setNotifications] = useState<NotificationItem[]>(
+    () => [...INITIAL_NOTIFICATIONS],
+  );
+
+  // Compter les non lues et notifier le parent
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  useEffect(() => {
+    onReadCountChange?.(unreadCount);
+  }, [unreadCount, onReadCountChange]);
+
+  // Reinitialiser quand le panneau s'ouvre
+  useEffect(() => {
+    if (visible) {
+      setNotifications([...INITIAL_NOTIFICATIONS]);
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -224,18 +248,48 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
     }
   }, [visible, slideAnim, overlayAnim]);
 
+  // -- Marquer une notification comme lue --
   const handleNotificationPress = useCallback(
     (notification: NotificationItem) => {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id ? { ...n, isRead: true } : n,
+        ),
+      );
       onNotificationPress?.(notification);
     },
     [onNotificationPress],
   );
+
+  // -- Tout marquer comme lu --
+  const handleMarkAllRead = useCallback(() => {
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, isRead: true })),
+    );
+  }, []);
 
   const headerTitleStyle: TextStyle = {
     fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 22,
     color: colors.onyx,
     letterSpacing: -0.5,
+  };
+
+  const markAllButtonStyle: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+  };
+
+  const markAllTextStyle: TextStyle = {
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.terracotta,
+    fontStyle: 'italic',
   };
 
   const closeButtonStyle: ViewStyle = {
@@ -345,7 +399,7 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
   if (!visible) return null;
 
   return (
-    <View style={StyleSheet.absoluteFillObject} testID={testID}>
+    <View style={[StyleSheet.absoluteFillObject, { zIndex: 999, elevation: 999 }]} testID={testID}>
       {/* Overlay */}
       <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.onyx, opacity: overlayAnim }]} pointerEvents={visible ? 'auto' : 'none'}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
@@ -379,14 +433,29 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
           borderBottomColor: `${colors.stone}15`,
         }}>
           <Text style={headerTitleStyle}>Notifications</Text>
-          <Pressable
-            style={closeButtonStyle}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Fermer les notifications"
-          >
-            <X size={18} color={colors.onyx} strokeWidth={1.5} />
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            {/* Bouton tout marquer comme lu */}
+            {unreadCount > 0 && (
+              <Pressable
+                onPress={handleMarkAllRead}
+                style={markAllButtonStyle}
+                accessibilityRole="button"
+                accessibilityLabel="Tout marquer comme lu"
+              >
+                <CheckCheck size={15} color={colors.terracotta} strokeWidth={2} />
+                <Text style={markAllTextStyle}>Tout lire</Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={closeButtonStyle}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Fermer les notifications"
+            >
+              <X size={18} color={colors.onyx} strokeWidth={1.5} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Scroll */}
@@ -395,7 +464,7 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
           contentContainerStyle={scrollContentStyle}
           showsVerticalScrollIndicator={false}
         >
-          {MOCK_NOTIFICATIONS.length === 0 ? (
+          {notifications.length === 0 ? (
             <View style={emptyStateStyle}>
               <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: `${colors.terracotta}10`, justifyContent: 'center', alignItems: 'center' }}>
                 <Bell size={28} color={colors.terracotta} strokeWidth={1.5} />
@@ -406,7 +475,7 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
               </Text>
             </View>
           ) : (
-            MOCK_NOTIFICATIONS.map((notification) => (
+            notifications.map((notification) => (
               <Pressable
                 key={notification.id}
                 style={[

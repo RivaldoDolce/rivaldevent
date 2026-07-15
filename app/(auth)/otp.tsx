@@ -37,7 +37,7 @@ import { colors, typography, spacing, radius, APP_CONFIG } from '@/lib/constants
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 
-const OTP_LENGTH = APP_CONFIG.OTP_LENGTH;
+const OTP_LENGTH = APP_CONFIG.OTP_CODE_LENGTH;
 const COUNTDOWN_SECONDS = 60;
 
 export default function OtpScreen() {

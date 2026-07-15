@@ -92,11 +92,7 @@ export default function TabBar(props: TabBarProps) {
         route.name === state.routes[state.index]?.name;
 
       if (!isAlreadyFocused && !event.defaultPrevented) {
-        navigation.navigate({
-          name: route.name,
-          params: route.params,
-          merge: true,
-        });
+        navigation.navigate(route.name, route.params, { merge: true });
       }
     },
     [navigation, state],

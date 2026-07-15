@@ -3,7 +3,7 @@
  *
  * Structure (de haut en bas, dans un ScrollView) :
  * 1. Header : Logo "Rivald'event" (gauche) + Avatar profil (droite)
- * 2. Barre de recherche : Search icon + placeholder + SlidersHorizontal
+ * 2. Barre de recherche : Search icon + placeholder italic centre une seule ligne + SlidersHorizontal
  * 3. Categories : chips horizontaux scrollables (Tous, Concerts, Festivals...)
  * 4. Section "A la une" : carrousel plein ecran d'evenements tendance
  * 5. Section "Evenements a proximite" : cartes verticales full-width
@@ -25,8 +25,6 @@
  * - Design tokens depuis lib/constants.ts
  *
  * Donnees : mock en attendant le branchement TanStack Query.
- * Les types d'interface sont simplifies pour etre remplaces
- * par les vrais types Event/Venue quand les services seront branches.
  */
 
 import { useCallback, useState } from 'react';
@@ -41,7 +39,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, SlidersHorizontal } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows, typography, ROUTES } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar } from '@/components/ui/Avatar';
@@ -275,8 +273,8 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Compteur de notifications non lues (mock)
-  const unreadNotificationCount = 3;
+  // Compteur de notifications non lues (dynamique, mis a jour par le panel)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(3);
 
   // -- Handlers --
   const handleCategoryPress = useCallback((categoryId: string) => {
@@ -329,11 +327,14 @@ export default function HomeScreen() {
   }, []);
 
   const handleNotificationItemPress = useCallback((notification: { eventId?: string }) => {
-    setShowNotifications(false);
     if (notification.eventId) {
       router.push(`/(client)/home/${notification.eventId}`);
     }
   }, [router]);
+
+  const handleReadCountChange = useCallback((count: number) => {
+    setUnreadNotificationCount(count);
+  }, []);
 
   // -- Filtrer les evenements par categorie active --
   const filteredEvents = activeCategory === 'all'
@@ -360,11 +361,15 @@ export default function HomeScreen() {
     paddingBottom: spacing.sm,
   };
 
+  // Titre Rivald'event : gras fantasique (Playfair Display Bold, taille elaguee)
   const headerTitleStyle: TextStyle = {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    color: colors.onyx,
-    letterSpacing: -0.8,
+    fontSize: 28,
+    color: colors.terracotta,
+    letterSpacing: -1,
+    textShadowColor: `${colors.onyx}15`,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   };
 
   const searchContainerStyle: ViewStyle = {
@@ -382,11 +387,15 @@ export default function HomeScreen() {
     ...shadows.search,
   };
 
+  // Placeholder : centree, une seule ligne, italique
   const searchPlaceholderStyle: TextStyle = {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.muted,
     flex: 1,
-    marginLeft: spacing.sm,
+    textAlign: 'center',
+    fontStyle: 'italic',
   };
 
   const categoriesContainerStyle: ViewStyle = {
@@ -471,21 +480,13 @@ export default function HomeScreen() {
 
   return (
     <View style={screenStyle}>
-      {/* Panneau de notifications (overlay au-dessus de tout) */}
-      <NotificationsPanel
-        visible={showNotifications}
-        onClose={handleCloseNotifications}
-        onNotificationPress={handleNotificationItemPress}
-        testID="notifications-panel"
-      />
-
       <ScrollView
         style={screenStyle}
         contentContainerStyle={scrollContentStyle}
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            1. HEADER : Logo + Avatar
+            1. HEADER : Logo "Rivald'event" + Avatar profil
             ============================================ */}
         <View style={headerStyle}>
           <Text style={headerTitleStyle}>Rivald'event</Text>
@@ -505,7 +506,7 @@ export default function HomeScreen() {
                 source={profile?.avatar_url ?? null}
                 fallback={profile?.full_name ?? 'U'}
                 size="sm"
-                border
+                border="highlight"
               />
             </Pressable>
           </View>
@@ -521,7 +522,7 @@ export default function HomeScreen() {
           accessibilityLabel="Rechercher un evenement"
         >
           <Search size={20} color={colors.muted} strokeWidth={1.5} />
-          <Text style={searchPlaceholderStyle}>
+          <Text style={searchPlaceholderStyle} numberOfLines={1}>
             Rechercher un evenement, artiste, lieu...
           </Text>
           <Pressable
@@ -676,6 +677,15 @@ export default function HomeScreen() {
         {/* Espacement final */}
         <View style={{ height: spacing.lg }} />
       </ScrollView>
+
+      {/* Panneau de notifications (apres le ScrollView pour etre au-dessus en z-order) */}
+      <NotificationsPanel
+        visible={showNotifications}
+        onClose={handleCloseNotifications}
+        onNotificationPress={handleNotificationItemPress}
+        onReadCountChange={handleReadCountChange}
+        testID="notifications-panel"
+      />
     </View>
   );
 }
