@@ -167,7 +167,7 @@ export const ROUTES = {
 export const APP_CONFIG = {
   OTP_MAX_ATTEMPTS: 3,
   OTP_LOCK_MINUTES: 15,
-  OTP_CODE_LENGTH: 6,
+  OTP_CODE_LENGTH: 4,
   SESSION_TIMEOUT_DAYS: 7,
   CACHE_VERSION: 'v1',
   CACHE_STALE_TIME: 5 * 60 * 1000,       // 5 minutes

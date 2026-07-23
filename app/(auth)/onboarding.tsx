@@ -2,11 +2,11 @@
  * Onboarding - 3 slides carrousel.
  *
  * Design :
- * - Header : Logo small + "Passer" en haut a droite
+ * - Header : Logo de l'app (image) + "Passer" en haut a droite
  * - Image : 40% hauteur, 90% largeur
- * - Titre : h1 onyx gras, aligné à gauche
- * - Description : body stone (lisible, régulier), aligné à gauche
- * - Indicateurs : 3 points à gauche, actif terracotta
+ * - Titre : h1 onyx gras, aligne a gauche
+ * - Description : body stone (lisible, regulier), aligne a gauche
+ * - Indicateurs : 3 points a gauche, actif terracotta
  * - Bouton : "Continuer" / "Commencer" terracotta, bas DROITE
  */
 
@@ -18,10 +18,10 @@ import { Image } from 'expo-image';
 import { ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
-import { Logo } from '@/components/icons/Logo';
 import { colors, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
+const LOGO_SOURCE = require('@/assets/images/logo.png');
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface Slide {
@@ -33,23 +33,23 @@ interface Slide {
 
 const SLIDES: readonly Slide[] = [
   {
-    title: 'Trouvez des\névénements',
+    title: 'Trouvez des\nevenements',
     description:
-      'Découvrez des expériences culturelles et des lieux exclusifs à travers le Cameroun.',
+      'Decouvrez des experiences culturelles et des lieux exclusifs a travers le Cameroun.',
     illustration: require('@/assets/images/onboarding/slide1.png'),
     ctaLabel: 'Continuer',
   },
   {
-    title: 'Accédez avec\nvotre QR Code',
+    title: 'Accedez avec\nvotre QR Code',
     description:
-      'Recevez votre billet numérique instantanément. Présentez-le à l\'entrée, c\'est tout simple.',
+      'Recevez votre billet numerique instantanement. Presentez-le a l\'entree, c\'est tout simple.',
     illustration: require('@/assets/images/onboarding/slide2.png'),
     ctaLabel: 'Continuer',
   },
   {
     title: 'Payez par\nMobile Money',
     description:
-      'Choisissez votre opérateur local (MTN, Orange, Moov) pour un paiement simple et sécurisé.',
+      'Choisissez votre operateur local (MTN, Orange, Moov) pour un paiement simple et securise.',
     illustration: require('@/assets/images/onboarding/slide3.png'),
     ctaLabel: 'Commencer',
   },
@@ -86,7 +86,10 @@ export default function OnboardingScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Logo size="sm" />
+        {/* Logo de l'app au lieu du cercle d'etoiles */}
+        <View style={styles.logoContainer}>
+          <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
+        </View>
         <Pressable onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Passer">
           <Text style={styles.skipText}>Passer</Text>
         </Pressable>
@@ -117,7 +120,7 @@ export default function OnboardingScreen() {
               cachePolicy="memory-disk"
             />
 
-            {/* Texte : aligné à gauche */}
+            {/* Texte : aligne a gauche */}
             <View style={styles.textContainer}>
               <Text style={styles.title}>{slide.title}</Text>
               <Text style={styles.description}>{slide.description}</Text>
@@ -126,7 +129,7 @@ export default function OnboardingScreen() {
         ))}
       </ScrollView>
 
-      {/* Footer : indicateurs à gauche + bouton à droite */}
+      {/* Footer : indicateurs a gauche + bouton a droite */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xl }]}>
         <View style={styles.indicators}>
           {SLIDES.map((_, index) => (
@@ -166,6 +169,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  // Logo de l'app remplace le composant Logo (cercle etoiles)
+  logoContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${colors.gold}15`,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}40`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logo: {
+    width: 26,
+    height: 26,
+  },
   skipText: {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
@@ -178,7 +197,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    alignItems: 'center', // Centre l'image horizontalement
+    alignItems: 'center',
     paddingTop: spacing.md,
   },
   illustration: {
@@ -190,7 +209,7 @@ const styles = StyleSheet.create({
   textContainer: {
     width: '100%',
     paddingHorizontal: spacing.lg,
-    alignItems: 'flex-start', // Texte aligné à gauche
+    alignItems: 'flex-start',
   },
   title: {
     fontFamily: 'PlayfairDisplay-Bold',
