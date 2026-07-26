@@ -22,8 +22,8 @@ import { APP_CONFIG } from './constants';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: APP_CONFIG.CACHE_DURATION_MS, // 24h en cache
+      staleTime: APP_CONFIG.CACHE_STALE_TIME, // 5 minutes
+      gcTime: APP_CONFIG.CACHE_GC_TIME, // 24h en cache
       retry: 3,
       retryDelay: (attemptIndex: number): number =>
         Math.min(1000 * 2 ** attemptIndex, 30000), // 1s, 2s, 4s, 8s max

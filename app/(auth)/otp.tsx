@@ -1,16 +1,19 @@
 /**
- * OTP - vérification du code à 6 chiffres.
+ * OTP - verification du code.
  *
- * Design :
- * - Fond sand, pas de scroll (page fixe)
- * - Flèche retour en haut à gauche
- * - Titre "Entrez le code"
- * - Sous-titre "Code envoyé au +237 6XX XXX XXX"
- * - 6 cases compactes (largeur fixe 48px, gap 12px, centrées)
- * - Bouton "Vérifier" terracotta pleine largeur
- * - Countdown + lien "Renvoyer"
+ * Design (mis a jour) :
+ * - Fond creme/ivoire clair
+ * - Fleche retour en haut a gauche
+ * - Illustration : cercle jaune pale + shield terracotta avec check
+ * - Titre "Verification" centre en gras
+ * - Sous-titre avec "4 chiffres" mis en evidence
+ * - 4 cases carrees arrondies (72x72) avec bordure grise
+ * - Bouton "Valider" terracotta pill-shaped pleine largeur
+ * - Lien "Renvoyer le code" en terracotta souligne
+ * - Points indicateurs en bas
+ * - Barre decorative alternee en fond
  *
- * Sécurité :
+ * Securite :
  * - Rate limiting (3 tentatives, lock 15 min)
  * - Auto-fill SMS (Android)
  * - Countdown 60s avant renvoi possible
@@ -29,15 +32,13 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowRight } from 'lucide-react-native';
+import { ArrowRight, ChevronLeft, ShieldCheck, } from 'lucide-react-native';
 
-import { Button } from '@/components/ui/Button';
-import { Header } from '@/components/ui/Header';
-import { colors, typography, spacing, radius, APP_CONFIG } from '@/lib/constants';
+import { colors, spacing, radius, APP_CONFIG } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 
-const OTP_LENGTH = APP_CONFIG.OTP_LENGTH;
+const OTP_LENGTH = APP_CONFIG.OTP_CODE_LENGTH;
 const COUNTDOWN_SECONDS = 60;
 
 export default function OtpScreen() {
@@ -52,10 +53,10 @@ export default function OtpScreen() {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   const { width: windowWidth } = useWindowDimensions();
-  const otpSpacing = spacing.sm;
-  const otpInputWidth = Math.min(
-    48,
-    Math.max(40, Math.floor((windowWidth - spacing.lg * 2 - otpSpacing * (OTP_LENGTH - 1)) / OTP_LENGTH))
+  const otpSpacing = 16;
+  const otpInputSize = Math.min(
+    72,
+    Math.max(56, Math.floor((windowWidth - spacing.lg * 2 - otpSpacing * (OTP_LENGTH - 1)) / OTP_LENGTH)),
   );
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -90,7 +91,6 @@ export default function OtpScreen() {
       if (result.error) {
         setError(result.error.message);
         notification('error');
-        // Vider les cases
         setCode(Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
       } else {
@@ -100,7 +100,7 @@ export default function OtpScreen() {
 
       setIsLoading(false);
     },
-    [code, params.email, params.phone, impact, notification, router]
+    [code, params.email, params.phone, impact, notification, router],
   );
 
   const handleInputChange = useCallback(
@@ -125,17 +125,16 @@ export default function OtpScreen() {
         }
       }
     },
-    [code, handleVerify]
+    [code, handleVerify],
   );
 
   const handleKeyPress = useCallback(
     (index: number, event: TextInputKeyPressEvent) => {
-      // Backspace : revenir à la case précédente
       if (event.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
         inputRefs.current[index - 1]?.focus();
       }
     },
-    [code]
+    [code],
   );
 
   const handleResend = useCallback(async () => {
@@ -154,27 +153,50 @@ export default function OtpScreen() {
   }, [countdown, params.phone, impact]);
 
   const formatPhone = (phone?: string) => {
-    if (!phone) return 'votre numéro';
+    if (!phone) return 'votre numero';
     return `+237 ${phone.slice(0, 1)}${phone.slice(1, 3)} ${phone.slice(3, 5)} ${phone.slice(5, 7)} ${phone.slice(7)}`;
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Header title="Vérification" onBack={() => router.back()} showBack />
+    <View style={styles.container}>
+      {/* Barre du haut avec retour */}
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
+        <Pressable
+          onPress={() => {
+            impact('light');
+            router.back();
+          }}
+          hitSlop={12}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+        >
+          <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
+        </Pressable>
+      </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.content}>
-          {/* Texte d'instruction */}
-          <View style={styles.textSection}>
-            <Text style={styles.title}>Entrez le code</Text>
-            <Text style={styles.subtitle}>
-              Code envoyé au {formatPhone(params.phone)}
-              {params.email ? ` et à ${params.email}` : ''}
-            </Text>
+          {/* Illustration : cercle pale + shield */}
+          <View style={styles.illustrationContainer}>
+            <View style={styles.illustrationCircle}>
+              <ShieldCheck size={52} color={colors.terracotta} strokeWidth={1.8} />
+            </View>
           </View>
+
+          {/* Titre */}
+          <Text style={styles.title}>Verification</Text>
+
+          {/* Sous-titre */}
+          <Text style={styles.subtitle}>
+            Veuillez saisir le code a{' '}
+            <Text style={styles.subtitleHighlight}>{OTP_LENGTH} chiffres</Text>
+            {' '}envoye au {formatPhone(params.phone)}
+            {params.email ? ` et a ${params.email}` : ''}
+          </Text>
 
           {/* Erreur */}
           {error && (
@@ -183,7 +205,7 @@ export default function OtpScreen() {
             </View>
           )}
 
-          {/* 6 cases rectangulaires — largeur FIXE, pas de flex:1 */}
+          {/* Cases OTP - carrees arrondies */}
           <View style={styles.otpContainer}>
             {Array.from({ length: OTP_LENGTH }).map((_, index) => (
               <TextInput
@@ -193,7 +215,7 @@ export default function OtpScreen() {
                 }}
                 style={[
                   styles.otpInput,
-                  { width: otpInputWidth, marginRight: index < OTP_LENGTH - 1 ? otpSpacing : 0 },
+                  { width: otpInputSize, height: otpInputSize, marginRight: index < OTP_LENGTH - 1 ? otpSpacing : 0 },
                   code[index] ? styles.otpInputFilled : null,
                   error ? styles.otpInputError : null,
                 ]}
@@ -209,39 +231,50 @@ export default function OtpScreen() {
             ))}
           </View>
 
-          {/* Bouton vérifier — pleine largeur */}
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            loading={isLoading}
+          {/* Bouton Valider - pill-shaped pleine largeur */}
+          <Pressable
+            style={[styles.validateButton, isLoading && styles.validateButtonDisabled]}
             onPress={() => handleVerify()}
-            icon={<ArrowRight color={colors.sand} size={18} />}
-            iconPosition="right"
+            disabled={isLoading}
+            accessibilityRole="button"
           >
-            Vérifier
-          </Button>
+            <Text style={styles.validateButtonText}>
+              Valider <ArrowRight size={18} color={colors.sand} strokeWidth={2.5} />
+            </Text>
+          </Pressable>
 
-          {/* Countdown + renvoyer */}
+          {/* Lien renvoyer */}
           <View style={styles.resendWrapper}>
             {countdown > 0 ? (
               <Text style={styles.countdownText}>
-                Renvoyer le code dans{' '}
+                Vous n&apos;avez pas recu le code ?{' '}
                 <Text style={styles.countdownTimer}>
-                  0:{countdown.toString().padStart(2, '0')}
+                  Renvoyer dans 0:{countdown.toString().padStart(2, '0')}
                 </Text>
               </Text>
             ) : (
               <Pressable onPress={handleResend} hitSlop={12}>
-                <Text style={styles.resendLink}>Renvoyer le code</Text>
+                <Text style={styles.resendLink}>
+                  Vous n&apos;avez pas recu le code ?{' '}
+                  <Text style={styles.resendLinkBold}>Renvoyer le code</Text>
+                </Text>
               </Pressable>
             )}
           </View>
+        </View>
 
-          {/* Lien support */}
-          <Pressable onPress={() => impact('light')} hitSlop={12} style={styles.supportLink}>
-            <Text style={styles.supportText}>Je n'ai pas reçu le code</Text>
-          </Pressable>
+        <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.xl }]}>
+          {/* Barre decorative alternee */}
+          <View style={styles.accentBar}>
+            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
+            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
+            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
+            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -251,59 +284,127 @@ export default function OtpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: '#FDF8F3',
   },
+
+  // Barre du haut
+  topBar: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   keyboardView: {
     flex: 1,
   },
+
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    // Pas de scroll — tout tient sur l'écran
+    paddingTop: spacing.sm,
   },
-  textSection: {
-    marginBottom: spacing.lg,
+
+  // Illustration shield
+  illustrationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+    position: 'relative',
   },
+  illustrationCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFF3D6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  magnifierBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.terracotta,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.terracotta,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  // Titre
   title: {
-    ...typography.h1,
-    color: colors.onyx,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 30,
+    lineHeight: 38,
+    color: '#0F172A',
+    textAlign: 'center',
     marginBottom: spacing.sm,
   },
+
+  // Sous-titre
   subtitle: {
-    ...typography.body,
-    color: colors.stone,
-    lineHeight: 24,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
+  subtitleHighlight: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.terracotta,
+  },
+
+  // Erreur
   errorBanner: {
     backgroundColor: `${colors.terracotta}15`,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.sm,
   },
   errorText: {
-    ...typography.bodySmall,
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.terracotta,
     textAlign: 'center',
   },
-  // ── OTP Inputs ── Largeur FIXE 48px — jamais flex:1
+
+  // Cases OTP
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
   otpInput: {
-    width: 48,
-    height: 56,
     borderWidth: 1.5,
-    borderColor: `${colors.stone}40`,
-    borderRadius: radius.md,
-    backgroundColor: colors.ivory,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     textAlign: 'center',
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: colors.onyx,
     fontFamily: 'Inter-Bold',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   otpInputFilled: {
     borderColor: colors.terracotta,
@@ -312,30 +413,99 @@ const styles = StyleSheet.create({
   otpInputError: {
     borderColor: `${colors.terracotta}60`,
   },
+
+  // Bouton Valider
+  validateButton: {
+    backgroundColor: colors.terracotta,
+    borderRadius: 28,
+    paddingVertical: 18,
+    marginHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: colors.terracotta,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  validateButtonDisabled: {
+    opacity: 0.6,
+  },
+  validateButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 17,
+    lineHeight: 24,
+    color: colors.sand,
+    letterSpacing: 0.3,
+  },
+
+  // Lien renvoyer
   resendWrapper: {
     alignItems: 'center',
     marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   countdownText: {
-    ...typography.bodySmall,
-    color: colors.stone,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#64748B',
+    textAlign: 'center',
   },
   countdownTimer: {
     color: colors.terracotta,
     fontWeight: '600',
   },
   resendLink: {
-    ...typography.bodySmall,
-    color: colors.terracotta,
-    fontWeight: '600',
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#64748B',
+    textAlign: 'center',
   },
-  supportLink: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  supportText: {
-    ...typography.bodySmall,
+  resendLinkBold: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.terracotta,
     textDecorationLine: 'underline',
+  },
+
+  // Section bas : points + barre
+  bottomSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+
+  // Points indicateurs
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: spacing.xl,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotActive: {
+    backgroundColor: `${colors.terracotta}90`,
+    width: 24,
+  },
+  dotInactive: {
+    backgroundColor: `${colors.stone}25`,
+  },
+
+  // Barre decorative alternee
+  accentBar: {
+    flexDirection: 'row',
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  accentSegment: {
+    flex: 1,
   },
 });

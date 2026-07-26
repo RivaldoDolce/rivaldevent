@@ -1,237 +1,279 @@
 /**
- * Tab Bar custom pour Expo Router.
- * - Mode Client (4 onglets) : actif terracotta
- * - Mode Vendeur (5 onglets) : actif forest, onglet Vendre gold surleve
+ * TabBar personnalisee -- Rivald'Event
  *
- * Safe areas : utilise useSafeAreaInsets() pour ne JAMAIS
- * s'incruster dans la barre de navigation du telephone.
- * La hauteur totale = 68 + insets.bottom.
+ * Gere l'affichage des onglets normaux ET de l'onglet special (Vendre)
+ * avec un cercle or surleve au centre de la barre.
  *
- * Utilise Animated de react-native (PAS reanimated)
- * pour eviter l'erreur TurboModule au lancement.
+ * Architecture :
+ *   - Onglets normaux : flex:1, icone + label centres
+ *   - Onglet special : cercle or surleve (debordement vertical gere),
+ *     icone blanche a l'interieur, label en dessous
+ *   - Safe areas gerees via useSafeAreaInsets
  *
- * Rendu des onglets :
- *   On itere sur le tableau tabs (4-5 onglets definis dans le layout),
- *   PAS sur state.routes (qui contient aussi les routes cachees comme
- *   home/[id], explore/venues/[id], etc.).
- *   Cela evite les doublons dans la tab bar.
+ * Corrections apporte vs version precedente :
+ *   1. Icone de l'onglet special est desormais rendue comme un composant
+ *      (React.ComponentType<IconProps>) au lieu d'un ReactNode vide
+ *   2. Alignement vertical coherent entre onglets normaux et special
+ *   3. Navigation fonctionnelle via les props de BottomTabBarProps
+ *   4. Dimensions et espacement calibres pour 5 onglets vendeur
  */
 
-import React, { useRef } from 'react';
-import { Pressable, View, Text, Animated, type ViewStyle } from 'react-native';
+import React, { useCallback } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { colors } from '@/lib/constants';
 
-import { useHaptics } from '@/hooks/useHaptics';
-import { colors, spacing, typography } from '@/lib/constants';
-
-// ============================================================
+// ---------------------------------------------------------------------------
 // Types
-// ============================================================
+// ---------------------------------------------------------------------------
+
+interface IconProps {
+  readonly color: string;
+  readonly size: number;
+}
 
 interface TabConfig {
-  readonly key: string;
-  readonly label: string;
-  readonly icon: React.ComponentType<{ color: string; size: number }>;
-  readonly isSpecial?: boolean;
+  /** Cle logique (ex: 'sell', 'home') */
+  key: string;
+  /** Label affiche sous l'icone */
+  label: string;
+  /** Composant icone -- doit accepter { color, size } */
+  icon: React.ComponentType<IconProps>;
+  /** Si true, onglet special avec cercle or surleve */
+  isSpecial?: boolean;
 }
 
-interface TabItemProps {
-  readonly tab: TabConfig;
-  readonly isFocused: boolean;
-  readonly onPress: () => void;
-  readonly activeColor: string;
-  readonly inactiveColor: string;
+interface TabBarProps extends BottomTabBarProps {
+  tabs: TabConfig[];
+  /** Mode d'affichage ('client' | 'seller') -- peut servir pour des variantes */
+  mode?: string;
 }
 
-// ============================================================
-// TabItem (composant separe pour respecter les rules of hooks)
-// ============================================================
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
-function TabItem({
-  tab,
-  isFocused,
-  onPress,
-  activeColor,
-  inactiveColor,
-}: TabItemProps) {
-  const { impact } = useHaptics();
+const TAB_BAR_BASE_HEIGHT = 60;
+const SPECIAL_CIRCLE_SIZE = 52;
+const NORMAL_ICON_SIZE = 22;
+const SPECIAL_ICON_SIZE = 24;
+const LABEL_FONT_SIZE = 10;
 
-  // Animation avec Animated natif (pas reanimated)
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  const Icon = tab.icon;
-  const isSpecial = tab.isSpecial === true;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      damping: 15,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      damping: 15,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePress = () => {
-    impact('light');
-    onPress();
-  };
-
-  const specialStyle: ViewStyle = isSpecial
-    ? {
-        backgroundColor: colors.gold,
-        borderRadius: 16,
-        marginTop: -4,
-        paddingHorizontal: spacing.md + 4,
-        paddingVertical: spacing.sm,
-      }
-    : {};
-
-  const labelColor = isFocused
-    ? isSpecial
-      ? colors.onyx
-      : activeColor
-    : isSpecial
-      ? colors.onyx
-      : inactiveColor;
-
-  return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Pressable
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[
-          {
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: spacing.sm,
-          },
-          specialStyle,
-        ]}
-        accessibilityRole="button"
-        accessibilityState={isFocused ? { selected: true } : {}}
-        accessibilityLabel={tab.label}
-      >
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <Icon color={labelColor} size={24} />
-        </Animated.View>
-        <Text
-          style={[
-            typography.caption,
-            {
-              color: labelColor,
-              marginTop: 4,
-              fontSize: 11,
-              fontWeight: isFocused ? '600' : '400',
-            },
-          ]}
-        >
-          {tab.label}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// ============================================================
-// TabBar (container)
-// ============================================================
-
-interface TabBarProps {
-  readonly state: {
-    readonly routes: readonly { key: string; name: string }[];
-    readonly index: number;
-  };
-  readonly mode?: 'client' | 'seller';
-  readonly tabs: readonly TabConfig[];
-  readonly onTabPress: (routeName: string, key: string) => void;
-}
-
-export function TabBar({ state, mode = 'client', tabs, onTabPress }: TabBarProps) {
-  // Safe area insets : empeche tout chevauchement avec la barre systeme
+export default function TabBar(props: TabBarProps) {
+  const { state, navigation, tabs } = props;
   const insets = useSafeAreaInsets();
 
-  const activeColor = mode === 'seller' ? colors.forest : colors.terracotta;
-  const inactiveColor = colors.stone;
+  const safeBottom = Math.max(insets.bottom, 0);
+  const tabBarHeight = TAB_BAR_BASE_HEIGHT + safeBottom;
 
-  const containerStyle: ViewStyle = {
-    flexDirection: 'row',
-    backgroundColor: colors.sand,
-    borderTopWidth: 1,
-    borderTopColor: `${colors.stone}33`,
-    // Safe area : paddingBottom respecte toujours la barre de navigation du telephone
-    paddingBottom: Math.max(insets.bottom, 12),
-    paddingTop: 8,
-    paddingHorizontal: spacing.xs,
-    // Hauteur totale : contenu (68) + inset bottom pour ne jamais s'incruster
-    height: 68 + Math.max(insets.bottom, 0),
-  };
+  const handleTabPress = useCallback(
+    (routeIndex: number) => {
+      const route = state.routes[routeIndex];
+      if (!route) return;
 
-  /**
-   * Determine si un tab est focus en comparant avec la route active.
-   * state.index pointe vers la route active dans state.routes.
-   * On cherche la route active et on verifie si elle correspond au tab.
-   */
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+
+      const isAlreadyFocused =
+        route.name === state.routes[state.index]?.name;
+
+      if (!isAlreadyFocused && !event.defaultPrevented) {
+        navigation.navigate(route.name, route.params, { merge: true });
+      }
+    },
+    [navigation, state],
+  );
+
+  const getRouteIndexForTab = useCallback(
+    (tab: TabConfig): number => {
+      return state.routes.findIndex((r) => {
+        if (r.name === tab.key) return true;
+        if (r.name.startsWith(tab.key + '/')) return true;
+        // Match "sell/index" -> tab.key "sell"
+        const routeBase = r.name.split('/')[0];
+        return routeBase === tab.key;
+      });
+    },
+    [state.routes],
+  );
+
   const activeRoute = state.routes[state.index];
+  const activeRouteBase = activeRoute?.name.split('/')[0] ?? '';
 
-  const isTabFocused = (tabKey: string): boolean => {
-    if (!activeRoute) return false;
-    if (activeRoute.name === tabKey) return true;
-    if (activeRoute.name.startsWith(tabKey + '/')) return true;
-    return false;
-  };
-
-  /**
-   * Trouve le nom de route complet dans state.routes pour un tab donne.
-   * Necessaire car onTabPress doit naviguer vers la route complete (ex: "home/index")
-   * et non juste la cle logique (ex: "home").
-   */
-  const findRouteNameForTab = (tabKey: string): string | undefined => {
-    // Priorite : route exacte, puis route avec /index, puis premiere route fille
-    const exact = state.routes.find((r) => r.name === tabKey);
-    if (exact) return exact.name;
-
-    const indexRoute = state.routes.find((r) => r.name === `${tabKey}/index`);
-    if (indexRoute) return indexRoute.name;
-
-    const childRoute = state.routes.find((r) => r.name.startsWith(tabKey + '/'));
-    if (childRoute) return childRoute.name;
-
-    return tabKey;
-  };
-
-  // On itere sur TABS (4-5 onglets), pas sur state.routes (9+ routes)
   return (
-    <View style={containerStyle}>
-      {tabs.map((tab) => {
-        const focused = isTabFocused(tab.key);
-        const routeName = findRouteNameForTab(tab.key);
+    <View
+      style={[
+        styles.container,
+        { height: tabBarHeight, paddingBottom: safeBottom },
+      ]}
+    >
+      <View style={styles.tabRow}>
+        {tabs.map((tab) => {
+          const routeIndex = getRouteIndexForTab(tab);
+          const isActive = activeRouteBase === tab.key;
 
-        return (
-          <TabItem
-            key={tab.key}
-            tab={tab}
-            isFocused={focused}
-            onPress={() => {
-              if (routeName) {
-                onTabPress(routeName, tab.key);
-              }
-            }}
-            activeColor={activeColor}
-            inactiveColor={inactiveColor}
-          />
-        );
-      })}
+          // Rendre le composant icone avec les bonnes props
+          const IconComponent = tab.icon;
+
+          if (tab.isSpecial) {
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (routeIndex >= 0) handleTabPress(routeIndex);
+                }}
+                style={styles.specialTab}
+              >
+                <View
+                  style={[
+                    styles.specialCircle,
+                    {
+                      backgroundColor: isActive
+                        ? colors.primary
+                        : colors.gold,
+                    },
+                  ]}
+                >
+                  <IconComponent
+                    color={colors.white}
+                    size={SPECIAL_ICON_SIZE}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.specialLabel,
+                    { color: isActive ? colors.primary : colors.gold },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (routeIndex >= 0) handleTabPress(routeIndex);
+              }}
+              style={styles.normalTab}
+            >
+              <IconComponent
+                color={isActive ? colors.primary : colors.muted}
+                size={NORMAL_ICON_SIZE}
+              />
+              <Text
+                style={[
+                  styles.normalLabel,
+                  { color: isActive ? colors.primary : colors.muted },
+                ]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
-// Re-export
-export type { TabConfig };
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  tabRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: TAB_BAR_BASE_HEIGHT,
+  },
+  // -- Onglet normal --
+  normalTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingBottom: 2,
+  },
+  normalLabel: {
+    fontSize: LABEL_FONT_SIZE,
+    fontFamily: 'Inter-Medium',
+    letterSpacing: 0.2,
+    lineHeight: 13,
+  },
+  // -- Onglet special (Vendre) --
+  specialTab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 2,
+  },
+  specialCircle: {
+    width: SPECIAL_CIRCLE_SIZE,
+    height: SPECIAL_CIRCLE_SIZE,
+    borderRadius: SPECIAL_CIRCLE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Le cercle deborde vers le haut de la barre
+    marginTop: -(SPECIAL_CIRCLE_SIZE / 2 + 4),
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(201, 168, 76, 0.5)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 1,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
+  },
+  specialLabel: {
+    fontSize: LABEL_FONT_SIZE,
+    fontFamily: 'Inter-Bold',
+    letterSpacing: 0.3,
+    lineHeight: 13,
+    marginTop: 6,
+  },
+});

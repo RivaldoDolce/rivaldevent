@@ -1,56 +1,125 @@
 /**
- * Ecran d'accueil - ecran de demarrage.
+ * Ecran de demarrage - Rivald'event.
  *
  * Design :
- * - Fond terracotta, logo anime, titre RIVALD'EVENT
- * - Baseline CURATING EXCELLENCE en bas
+ * - Fond sombre onyx premium
+ * - Logo avec contours circulaires epais en or brillant (bordure naturelle)
+ * - Titre "Rivald'event" en PlayfairDisplay creme
+ * - Ligne decorative or
+ * - Tagline "Vivez. Reservez. Celebrez."
+ * - Baseline "CURATING EXCELLENCE"
  *
- * Logique :
- * - Animation 2s + getSession() en PARALLELE
- * - Des que les 2 sont prets, on navigue
- * - Pas de fetch profil ici (useAuth s'en charge en arriere-plan)
- * - Si session : home (buyer par defaut, useAuth corrigera si vendeur)
- * - Si pas de session : onboarding
- */
-
-/**
- * Ecran de demarrage.
- *
- * Offline-first : ZERO appel reseau.
- * - Verifie uniquement si un token existe dans SecureStore (lecture locale)
- * - Animation 2s puis navigation
- * - Si token en local : home (buyer par defaut)
- * - Si pas de token : onboarding
+ * Logique session :
+ * - Utilise supabase.auth.getSession() (lit via SecureStoreAdapter)
+ * - Decode le JWT pour verifier l'expiration LOCALEMENT (pas de reseau)
+ * - Si session valide et non expiree : home
+ * - Si pas de session ou JWT expire : onboarding
+ * - Timeout session : 24h (verifie via claim iat du JWT)
  */
 
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
-import * as SecureStore from 'expo-secure-store';
 
-import { colors, typography, spacing } from '@/lib/constants';
+import { supabase } from '@/lib/supabase';
+import { colors, spacing } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 const ANIMATION_DURATION = 2000;
 
-/**
- * Construit la clé SecureStore où Supabase stocke le token.
- * Format : rivaldevent.sb-<projectRef>-auth-token
- * Identique à la logique interne de GoTrue + notre prefixe SecureStoreAdapter.
- */
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const projectRef = supabaseUrl.replace(/^https?:\/\//, '').split('.')[0];
-const AUTH_TOKEN_KEY = `rivaldevent.sb-${projectRef}-auth-token`;
+// ============================================================
+// Helpers : verification JWT locale (hors ligne)
+// ============================================================
 
-async function hasLocalSession(): Promise<boolean> {
+/**
+ * Decode le payload d'un JWT sans dependance externe.
+ * Retourne null si le token est invalide.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
-    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-    return token !== null;
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifie si un token JWT est expire.
+ * Un token est considere expire si :
+ *   - Le claim exp est depasse (avec 30s de marge)
+ *   - Le claim iat indique que le token a ete emis il y a plus de SESSION_TIMEOUT_HOURS heures
+ */
+const SESSION_TIMEOUT_HOURS = 24;
+const SESSION_TIMEOUT_SECONDS = SESSION_TIMEOUT_HOURS * 60 * 60;
+
+function isJwtExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return true;
+
+  // Verifier le claim exp (expiration du token)
+  const exp = payload.exp as number | undefined;
+  if (exp) {
+    const nowSeconds = Date.now() / 1000;
+    if (nowSeconds > exp - 30) return true; // 30s de marge
+  }
+
+  // Verifier le claim iat (emission) pour le timeout 24h
+  const iat = payload.iat as number | undefined;
+  if (iat) {
+    const ageSeconds = Date.now() / 1000 - iat;
+    if (ageSeconds > SESSION_TIMEOUT_SECONDS) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verifie la session de maniere fiable.
+ * 1. Lit la session via supabase.auth.getSession() (utilise SecureStoreAdapter)
+ * 2. Decode le JWT pour verifier l'expiration localement (pas d'appel reseau)
+ * 3. Retourne true seulement si la session existe ET le token est valide
+ */
+async function hasValidSession(): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      logger.debug('[Splash] No session found');
+      return false;
+    }
+
+    if (isJwtExpired(session.access_token)) {
+      logger.debug('[Splash] Session JWT expired');
+      // Nettoyer la session expiree
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {
+        /* Silent */
+      });
+      return false;
+    }
+
+    logger.debug('[Splash] Valid session found');
+    return true;
+  } catch (err) {
+    logger.error('[Splash] getSession error:', err);
     return false;
   }
 }
+
+// ============================================================
+// Composant
+// ============================================================
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -72,9 +141,10 @@ export default function SplashScreen() {
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(logoScale, {
+      Animated.spring(logoScale, {
         toValue: 1,
-        duration: 600,
+        damping: 12,
+        stiffness: 100,
         useNativeDriver: true,
       }),
       Animated.sequence([
@@ -106,18 +176,17 @@ export default function SplashScreen() {
       ]),
     ]).start();
 
-    // 2. Check local ONLY (SecureStore, pas de reseau)
-    const sessionCheck = hasLocalSession();
+    // 2. Verification session (en parallele avec l'animation)
+    const sessionCheck = hasValidSession();
 
     // 3. Naviguer apres l'animation
     const timer = setTimeout(async () => {
       if (cancelled) return;
 
-      const hasSession = await sessionCheck;
-
+      const validSession = await sessionCheck;
       if (cancelled) return;
 
-      if (hasSession) {
+      if (validSession) {
         router.replace('/(client)/home');
       } else {
         router.replace('/(auth)/onboarding');
@@ -142,20 +211,32 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
+
       <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-        <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
+        <View style={styles.logoBorder}>
+          <View style={styles.logoBorderInner}>
+            <View style={styles.logoContainer}>
+              <Image source={LOGO_SOURCE} style={styles.logo} contentFit="cover" transition={300} />
+            </View>
+          </View>
+        </View>
       </Animated.View>
 
       <Animated.View style={titleAnimatedStyle}>
-        <Text style={styles.title}>RIVALD&apos;EVENT</Text>
+        <Text style={styles.title}>Rivald&apos;event</Text>
+      </Animated.View>
+
+      <Animated.View style={[styles.lineWrapper, { opacity: subtitleOpacity }]}>
+        <View style={styles.goldLine} />
       </Animated.View>
 
       <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}>
-        <Text style={styles.subtitle}>LUXURY AFRICAN EVENTS</Text>
+        <Text style={styles.subtitle}>Vivez. Reservez. Celebrez.</Text>
       </Animated.View>
 
       <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}>
-        <View style={styles.goldBar} />
+        <View style={styles.baselineBar} />
         <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
       </Animated.View>
     </View>
@@ -165,7 +246,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.terracotta,
+    backgroundColor: colors.onyx,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
@@ -173,42 +254,101 @@ const styles = StyleSheet.create({
   logoWrapper: {
     marginBottom: spacing.xl,
   },
+  /**
+   * Bordure exterieure epaisse en or brillant.
+   * L'effet "brillant" est obtenu par le combo :
+   *   - borderWidth epais (6px)
+   *   - shadowColor/shadowOpacity en or (halo dore)
+   *   - Couleur de bordure gold
+   */
+  logoBorder: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 6,
+    borderColor: colors.gold,
+    backgroundColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /**
+   * Anneau intermediaire plus fin pour renforcer l'effet
+   * de double bordure or (style medaillon/baguette).
+   */
+  logoBorderInner: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    borderWidth: 2,
+    borderColor: '#D4B85C',
+    backgroundColor: '#0f0e0d',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /**
+   * Conteneur du logo avec overflow hidden.
+   * Le logo se decoupe naturellement en cercle.
+   */
+  logoContainer: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    overflow: 'hidden',
+    backgroundColor: '#0f0e0d',
+  },
   logo: {
-    width: 120,
-    height: 120,
+    width: 108,
+    height: 108,
   },
   title: {
-    ...typography.h1,
+    fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 36,
-    color: colors.onyx,
-    letterSpacing: 2,
-    fontWeight: '900',
+    lineHeight: 46,
+    color: '#FFF8E7',
+    letterSpacing: 1.5,
     textAlign: 'center',
+  },
+  lineWrapper: {
+    marginTop: spacing.sm,
+    alignItems: 'center',
+  },
+  goldLine: {
+    width: 48,
+    height: 1.5,
+    backgroundColor: colors.gold,
   },
   subtitleWrapper: {
     marginTop: spacing.sm,
   },
   subtitle: {
-    ...typography.bodySmall,
-    color: colors.gold,
-    letterSpacing: 4,
-    fontWeight: '600',
+    fontFamily: 'Inter-Light',
+    fontSize: 14,
+    lineHeight: 20,
+    color: `${colors.gold}AA`,
+    letterSpacing: 3,
     textAlign: 'center',
   },
   baselineWrapper: {
     position: 'absolute',
-    bottom: spacing['3xl'],
+    bottom: spacing.xxxl,
     alignItems: 'center',
   },
-  goldBar: {
-    width: 40,
-    height: 2,
+  baselineBar: {
+    width: 36,
+    height: 1.5,
     backgroundColor: colors.gold,
     marginBottom: spacing.sm,
   },
   baseline: {
-    ...typography.caption,
-    color: `${colors.ivory}99`,
+    fontFamily: 'Inter-Medium',
+    fontSize: 10,
+    lineHeight: 14,
+    color: `${colors.ivory}66`,
     letterSpacing: 3,
     fontStyle: 'italic',
   },

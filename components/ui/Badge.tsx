@@ -18,7 +18,7 @@
 import React from 'react';
 import { View, Text, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/lib/constants';
+import { colors, radii, spacing, typography } from '@/lib/constants';
 
 // ============================================================
 // Types
@@ -88,7 +88,7 @@ export const Badge = React.memo(function Badge(props: BadgeProps) {
 
 function getContainerStyle(props: BadgeProps): ViewStyle {
   const base: ViewStyle = {
-    borderRadius: radius.sm,
+    borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     alignSelf: 'flex-start',

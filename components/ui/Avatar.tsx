@@ -1,29 +1,34 @@
 /**
- * Avatar du design system.
+ * Avatar - Composant avatar avec support taille, fallback et bordure.
  *
- * Regles UI/UX :
- * - 3 tailles : sm (32px), md (48px), lg (64px)
- * - Fallback : initiales sur bg terracotta/10
- * - Border optionnel : 2px white + shadow (avatars dans des listes)
- * - utilise expo-image (cache memory-disk, transitions)
- * - Radius full (9999px)
+ * Design "Minimalisme Africain Camerounais" :
+ * - Cercle avec initiale en fallback
+ * - Bordure fine par defaut
+ * - Bordure grasse subrillee (terracotta) quand border="highlight"
+ *
+ * Conventions :
+ * - expo-image pour la photo
+ * - Pas de type any, pas d'emojis
+ * - Design tokens depuis lib/constants.ts
  */
 
-import React, { useCallback, useState } from 'react';
-import { View, Text, type ViewStyle } from 'react-native';
+import { memo } from 'react';
+import { View, Text, type ViewStyle, type TextStyle } from 'react-native';
 import { Image } from 'expo-image';
 
-import { colors, spacing } from '@/lib/constants';
+import { colors } from '@/lib/constants';
 
 // ============================================================
 // Types
 // ============================================================
 
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+
 interface AvatarProps {
-  readonly source?: string | null;
-  readonly fallback?: string;
-  readonly size?: 'sm' | 'md' | 'lg';
-  readonly border?: boolean;
+  readonly source: string | null;
+  readonly fallback: string;
+  readonly size?: AvatarSize;
+  readonly border?: 'none' | 'default' | 'highlight';
   readonly testID?: string;
 }
 
@@ -31,102 +36,98 @@ interface AvatarProps {
 // Constantes
 // ============================================================
 
-const SIZE_PX: Record<NonNullable<AvatarProps['size']>, number> = {
-  sm: 32,
-  md: 48,
-  lg: 64,
+const SIZE_MAP: Record<AvatarSize, number> = {
+  xs: 24,
+  sm: 36,
+  md: 44,
+  lg: 56,
+  xl: 72,
 };
 
-const SIZE_FONT: Record<NonNullable<AvatarProps['size']>, number> = {
-  sm: 12,
+const FONT_SIZE_MAP: Record<AvatarSize, number> = {
+  xs: 10,
+  sm: 14,
   md: 16,
-  lg: 22,
+  lg: 20,
+  xl: 26,
 };
 
 // ============================================================
 // Composant
 // ============================================================
 
-export const Avatar = React.memo(function Avatar({
+export const Avatar = memo(function Avatar({
   source,
   fallback,
   size = 'md',
-  border = false,
+  border = 'none',
   testID,
 }: AvatarProps) {
-  const [hasError, setHasError] = useState(false);
+  const dimension = SIZE_MAP[size];
+  const fontSize = FONT_SIZE_MAP[size];
+  const halfDim = dimension / 2;
+  const borderRadius = halfDim;
 
-  const handleError = useCallback(() => {
-    setHasError(true);
-  }, []);
+  const fallbackChar = fallback?.charAt(0)?.toUpperCase() ?? '?';
 
-  const dimension = SIZE_PX[size];
-
+  // -- Style du conteneur --
   const containerStyle: ViewStyle = {
     width: dimension,
     height: dimension,
-    borderRadius: 9999,
-    backgroundColor: `${colors.terracotta}1A`,
-    borderWidth: border ? 2 : 0,
-    borderColor: border ? colors.sand : 'transparent',
+    borderRadius,
+    overflow: 'hidden',
+    backgroundColor: colors.ivory,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
   };
 
-  // Calcul des initiales depuis le fallback
-  const initials = getInitials(fallback);
+  // -- Style de la bordure (wrapper autour du conteneur) --
+  const wrapperStyle: ViewStyle = {
+    padding: 0,
+    borderRadius,
+  };
 
-  // Afficher le fallback si pas d'image, erreur, ou source vide
-  if (!source || hasError) {
-    return (
-      <View testID={testID} style={containerStyle} accessibilityRole="image">
-        <Text
-          style={{
-            color: colors.terracotta,
-            fontSize: SIZE_FONT[size],
-            fontWeight: '600',
-          }}
-        >
-          {initials}
-        </Text>
-      </View>
-    );
+  // Bordure grasse subrillee
+  if (border === 'highlight') {
+    wrapperStyle.padding = 3;
+    wrapperStyle.borderRadius = halfDim + 3;
+    (wrapperStyle as Record<string, unknown>).borderWidth = 3;
+    (wrapperStyle as Record<string, unknown>).borderColor = colors.gold;
+  }
+  // Bordure fine par defaut
+  else if (border === 'default') {
+    wrapperStyle.padding = 1.5;
+    wrapperStyle.borderRadius = halfDim + 1.5;
+    (wrapperStyle as Record<string, unknown>).borderWidth = 1.5;
+    (wrapperStyle as Record<string, unknown>).borderColor = `${colors.stone}40`;
   }
 
+  const fallbackStyle: TextStyle = {
+    fontFamily: 'Inter-SemiBold',
+    fontSize,
+    lineHeight: dimension,
+    color: colors.terracotta,
+    textAlign: 'center',
+  };
+
   return (
-    <View testID={testID} style={containerStyle}>
-      <Image
-        source={{ uri: source }}
-        style={{ width: dimension, height: dimension }}
-        contentFit="cover"
-        transition={300}
-        cachePolicy="memory-disk"
-        onError={handleError}
-        accessibilityLabel={fallback ? `Avatar de ${fallback}` : 'Avatar'}
-      />
+    <View style={wrapperStyle} testID={testID}>
+      {source ? (
+        <Image
+          source={{ uri: source }}
+          style={{ width: dimension, height: dimension, borderRadius }}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          accessibilityLabel={fallback}
+        />
+      ) : (
+        <View style={containerStyle}>
+          <Text style={fallbackStyle} numberOfLines={1}>
+            {fallbackChar}
+          </Text>
+        </View>
+      )}
     </View>
   );
 });
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function getInitials(name?: string): string {
-  if (!name || typeof name !== 'string') return '?';
-
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return '?';
-
-  const parts = trimmed.split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0].charAt(0).toUpperCase();
-  }
-
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
-// Variable utilisee pour eviter le warning "spacing is declared but never used"
-// (sera utilise quand on ajoutera des props de margin)
-void spacing;

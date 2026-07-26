@@ -5,7 +5,7 @@
  * pour garantir :
  *   - Affichage fiable des icones (lucide-react-native)
  *   - Ordre des onglets controle (Profil TOUJOURS en dernier)
- *   - Onglet "Vendre" surleve en gold (isSpecial)
+ *   - Onglet "Vendre" surleve en or (isSpecial)
  *   - Safe areas gerees par TabBar.tsx
  *   - Comportement uniforme entre les deux modes
  *
@@ -13,6 +13,11 @@
  *   Les ecrans sont dans des dossiers (home/index.tsx)
  *   donc les noms de route sont "home/index", "explore/index", etc.
  *   Tabs.Screen name DOIT matcher le chemin reel du fichier.
+ *
+ * Corrections vs version precedente :
+ *   - Retrait de la prop onTabPress (inexistante sur TabBar)
+ *   - Navigation geree nativement par BottomTabBarProps
+ *   - Icones passees comme composants (pas comme ReactNode)
  */
 
 import { Tabs } from 'expo-router';
@@ -26,7 +31,8 @@ import {
   SellIcon,
   type IconComponent,
 } from '@/components/icons/TabIcons';
-import { TabBar } from '@/components/ui/TabBar';
+import TabBar from '@/components/ui/TabBar';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 interface TabConfig {
   readonly name: string;
@@ -42,6 +48,7 @@ interface TabConfig {
 }
 
 // Ordre garanti : Profil TOUJOURS en dernier
+// Vendre au centre (3e sur 5) pour un acces naturel au pouce
 const TABS: readonly TabConfig[] = [
   { name: 'home/index', label: 'Accueil', icon: HomeIcon, tabKey: 'home' },
   { name: 'explore/index', label: 'Explorer', icon: ExploreIcon, tabKey: 'explore' },
@@ -52,27 +59,27 @@ const TABS: readonly TabConfig[] = [
 
 // Routes imbriquees a cacher de la tab bar
 // Seulement les routes qui EXISTENT reellement dans le filesystem
-// Les routes sell/create/*, sell/sales, etc. seront ajoutees
-// quand les fichiers seront crees.
 const HIDDEN_TAB_ROUTES = [
   'profile/switch-client',
 ] as const;
 
 export default function SellerLayout() {
   return (
-    <Tabs
-      // TabBar personnalisee : memes icones, meme ordre, meme safe areas que le client
+    <>
+      <OfflineBanner />
+      <Tabs
       tabBar={(props) => (
         <TabBar
           state={props.state}
-          mode="seller"
+          navigation={props.navigation}
+          descriptors={props.descriptors}
+          insets={props.insets}
           tabs={TABS.map((t) => ({
             key: t.tabKey ?? t.name.split('/').pop() ?? t.name,
             label: t.label,
             icon: t.icon,
             isSpecial: t.isSpecial,
           }))}
-          onTabPress={(routeName) => props.navigation.navigate(routeName)}
         />
       )}
       screenOptions={{
@@ -100,5 +107,6 @@ export default function SellerLayout() {
         <Tabs.Screen key={route} name={route} options={{ href: null }} />
       ))}
     </Tabs>
+    </>
   );
 }
