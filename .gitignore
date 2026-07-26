@@ -69,3 +69,6 @@ coverage/
 *.patch
 
 Skills/
+
+# Audit
+AUDIT_SECURITE.md

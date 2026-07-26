@@ -52,12 +52,12 @@ export interface ProfileWithStats extends Profile {
 // ============================================================
 
 export interface EventWithOrganizer extends Event {
-  readonly organizer: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null;
+  readonly organizer: Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'phone'> | null;
 }
 
 export interface EventWithVenue extends Event {
   readonly venue: Venue | null;
-  readonly organizer: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null;
+  readonly organizer: Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'phone'> | null;
 }
 
 export interface EventWithTiers extends EventWithVenue {
@@ -117,6 +117,7 @@ export interface TicketTierWithAvailability extends TicketTier {
 }
 
 export interface EventWithAvailability extends EventWithTiers {
+  readonly ticket_tiers: TicketTierWithAvailability[];
   readonly tiers_with_availability: TicketTierWithAvailability[];
   readonly total_available: number;
   readonly is_sold_out: boolean;

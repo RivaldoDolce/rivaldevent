@@ -28,6 +28,7 @@ import {
   type IconComponent,
 } from '@/components/icons/TabIcons';
 import TabBar from '@/components/ui/TabBar';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 interface TabConfig {
   readonly name: string;
@@ -63,7 +64,9 @@ export default function ClientLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
+    <>
+      <OfflineBanner />
+      <Tabs
       tabBar={(props) => (
         <TabBar
           state={props.state}
@@ -100,5 +103,6 @@ export default function ClientLayout() {
         <Tabs.Screen key={route} name={route} options={{ href: null }} />
       ))}
     </Tabs>
+    </>
   );
 }

@@ -1,72 +1,144 @@
 /**
  * Ecran de demarrage - Rivald'event.
  *
- * Design (mis a jour) :
- * - Fond divise : sombre en haut, ivoire/creme en bas
- * - Logo or medaillon au centre de la zone sombre
- * - Titre "Rivald'event" en PlayfairDisplay serif
- * - Tagline "Vivez. Reservez. Celebrez." en or
- * - Separateur courbe art-deco entre les deux zones
- * - Motifs subtils en bas
- * 
- * Logique :
- * - Animation 2.5s + getSession() en PARALLELE
- * - Des que les 2 sont prets, on navigue
- * - Si session : home (buyer par defaut)
- * - Si pas de session : onboarding
+ * Design :
+ * - Fond sombre onyx premium
+ * - Logo avec contours circulaires epais en or brillant (bordure naturelle)
+ * - Titre "Rivald'event" en PlayfairDisplay creme
+ * - Ligne decorative or
+ * - Tagline "Vivez. Reservez. Celebrez."
+ * - Baseline "CURATING EXCELLENCE"
+ *
+ * Logique session :
+ * - Utilise supabase.auth.getSession() (lit via SecureStoreAdapter)
+ * - Decode le JWT pour verifier l'expiration LOCALEMENT (pas de reseau)
+ * - Si session valide et non expiree : home
+ * - Si pas de session ou JWT expire : onboarding
+ * - Timeout session : 24h (verifie via claim iat du JWT)
  */
 
 import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
-import * as SecureStore from 'expo-secure-store';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Svg, Path, Circle, Ellipse } from 'react-native-svg';
 
+import { supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
-const ANIMATION_DURATION = 2500;
-const SCREEN_WIDTH = Dimensions.get('window').width;
-//const SCREEN_HEIGHT = Dimensions.get('window').height;
+const ANIMATION_DURATION = 2000;
+
+// ============================================================
+// Helpers : verification JWT locale (hors ligne)
+// ============================================================
 
 /**
- * Construit la cle SecureStore ou Supabase stocke le token.
+ * Decode le payload d'un JWT sans dependance externe.
+ * Retourne null si le token est invalide.
  */
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const projectRef = supabaseUrl.replace(/^https?:\/\//, '').split('.')[0];
-const AUTH_TOKEN_KEY = `rivaldevent.sb-${projectRef}-auth-token`;
-
-async function hasLocalSession(): Promise<boolean> {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
-    const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-    return token !== null;
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    return JSON.parse(json) as Record<string, unknown>;
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifie si un token JWT est expire.
+ * Un token est considere expire si :
+ *   - Le claim exp est depasse (avec 30s de marge)
+ *   - Le claim iat indique que le token a ete emis il y a plus de SESSION_TIMEOUT_HOURS heures
+ */
+const SESSION_TIMEOUT_HOURS = 24;
+const SESSION_TIMEOUT_SECONDS = SESSION_TIMEOUT_HOURS * 60 * 60;
+
+function isJwtExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return true;
+
+  // Verifier le claim exp (expiration du token)
+  const exp = payload.exp as number | undefined;
+  if (exp) {
+    const nowSeconds = Date.now() / 1000;
+    if (nowSeconds > exp - 30) return true; // 30s de marge
+  }
+
+  // Verifier le claim iat (emission) pour le timeout 24h
+  const iat = payload.iat as number | undefined;
+  if (iat) {
+    const ageSeconds = Date.now() / 1000 - iat;
+    if (ageSeconds > SESSION_TIMEOUT_SECONDS) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verifie la session de maniere fiable.
+ * 1. Lit la session via supabase.auth.getSession() (utilise SecureStoreAdapter)
+ * 2. Decode le JWT pour verifier l'expiration localement (pas d'appel reseau)
+ * 3. Retourne true seulement si la session existe ET le token est valide
+ */
+async function hasValidSession(): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      logger.debug('[Splash] No session found');
+      return false;
+    }
+
+    if (isJwtExpired(session.access_token)) {
+      logger.debug('[Splash] Session JWT expired');
+      // Nettoyer la session expiree
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {
+        /* Silent */
+      });
+      return false;
+    }
+
+    logger.debug('[Splash] Valid session found');
+    return true;
+  } catch (err) {
+    logger.error('[Splash] getSession error:', err);
     return false;
   }
 }
+
+// ============================================================
+// Composant
+// ============================================================
 
 export default function SplashScreen() {
   const router = useRouter();
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.6)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleTranslateY = useRef(new Animated.Value(20)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const dividerOpacity = useRef(new Animated.Value(0)).current;
-  const bottomOpacity = useRef(new Animated.Value(0)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const baselineOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     let cancelled = false;
 
-    // 1. Animation sequentielle
+    // 1. Animation
     Animated.parallel([
-      // Logo apparait en premier
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 700,
+        duration: 600,
         useNativeDriver: true,
       }),
       Animated.spring(logoScale, {
@@ -75,57 +147,46 @@ export default function SplashScreen() {
         stiffness: 100,
         useNativeDriver: true,
       }),
-      // Puis le titre
       Animated.sequence([
-        Animated.delay(400),
+        Animated.delay(300),
         Animated.parallel([
           Animated.timing(titleOpacity, {
             toValue: 1,
-            duration: 600,
+            duration: 500,
             useNativeDriver: true,
           }),
           Animated.timing(titleTranslateY, {
             toValue: 0,
-            duration: 600,
+            duration: 500,
             useNativeDriver: true,
           }),
         ]),
-        // Tagline
         Animated.delay(200),
-        Animated.timing(taglineOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        // Separateur courbe
-        Animated.delay(200),
-        Animated.timing(dividerOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        // Elements du bas
-        Animated.delay(200),
-        Animated.timing(bottomOpacity, {
+        Animated.timing(subtitleOpacity, {
           toValue: 1,
           duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.delay(200),
+        Animated.timing(baselineOpacity, {
+          toValue: 1,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]),
     ]).start();
 
-    // 2. Check local ONLY
-    const sessionCheck = hasLocalSession();
+    // 2. Verification session (en parallele avec l'animation)
+    const sessionCheck = hasValidSession();
 
     // 3. Naviguer apres l'animation
     const timer = setTimeout(async () => {
       if (cancelled) return;
 
-      const hasSession = await sessionCheck;
-
+      const validSession = await sessionCheck;
       if (cancelled) return;
 
-      if (hasSession) {
+      if (validSession) {
         router.replace('/(client)/home');
       } else {
         router.replace('/(auth)/onboarding');
@@ -136,7 +197,7 @@ export default function SplashScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [router, bottomOpacity, dividerOpacity, logoOpacity, logoScale, taglineOpacity, titleOpacity, titleTranslateY]);
+  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,
@@ -150,114 +211,34 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Zone sombre en haut avec gradient */}
-      <LinearGradient
-        colors={['#0d0d0d', '#1a1a1a', '#1f1f1f']}
-        style={styles.topSection}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      >
-        {/* Lueur doree derriere le logo */}
-        <View style={styles.glowContainer}>
-          <View style={styles.glow} />
-        </View>
+      <StatusBar style="light" />
 
-        {/* Logo medaillon or */}
-        <Animated.View style={[styles.logoMedallion, logoAnimatedStyle]}>
-          <View style={styles.medallionBorder}>
-            <View style={styles.medallionInner}>
-              <Image source={LOGO_SOURCE} style={styles.logoImage} contentFit="contain" transition={300} />
+      <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
+        <View style={styles.logoBorder}>
+          <View style={styles.logoBorderInner}>
+            <View style={styles.logoContainer}>
+              <Image source={LOGO_SOURCE} style={styles.logo} contentFit="cover" transition={300} />
             </View>
           </View>
-        </Animated.View>
-
-        {/* Titre Rivald'event */}
-        <Animated.View style={[styles.titleWrapper, titleAnimatedStyle]}>
-          <Text style={styles.title}>Rivald&apos;event</Text>
-        </Animated.View>
-
-        {/* Ligne decorative or */}
-        <Animated.View style={[styles.goldLineWrapper, { opacity: taglineOpacity }]}>
-          <View style={styles.goldLine} />
-        </Animated.View>
-
-        {/* Tagline */}
-        <Animated.View style={[styles.taglineWrapper, { opacity: taglineOpacity }]}>
-          <Text style={styles.tagline}>Vivez. Reservez. Celebrez.</Text>
-        </Animated.View>
-      </LinearGradient>
-
-      {/* Separateur courbe art-deco */}
-      <Animated.View style={[styles.dividerContainer, { opacity: dividerOpacity }]}>
-        <Svg
-          width={SCREEN_WIDTH}
-          height={60}
-          viewBox={`0 0 ${SCREEN_WIDTH} 60`}
-          preserveAspectRatio="none"
-          style={styles.dividerSvg}
-        >
-          {/* Courbe principale */}
-          <Path
-            d={`M0,0 Q${SCREEN_WIDTH * 0.25},55 ${SCREEN_WIDTH * 0.5},50 Q${SCREEN_WIDTH * 0.75},45 ${SCREEN_WIDTH},0 L${SCREEN_WIDTH},0 L0,0 Z`}
-            fill={colors.sand}
-          />
-          {/* Ligne or sur la courbe */}
-          <Path
-            d={`M0,2 Q${SCREEN_WIDTH * 0.25},55 ${SCREEN_WIDTH * 0.5},50 Q${SCREEN_WIDTH * 0.75},45 ${SCREEN_WIDTH},2`}
-            fill="none"
-            stroke={colors.gold}
-            strokeWidth={1.5}
-            strokeDasharray="6 4"
-          />
-        </Svg>
+        </View>
       </Animated.View>
 
-      {/* Zone ivoire en bas */}
-      <View style={styles.bottomSection}>
-        {/* Motif subtil diamant en fond */}
-        <View style={styles.patternContainer} pointerEvents="none">
-          <Svg width={SCREEN_WIDTH} height={200} viewBox={`0 0 ${SCREEN_WIDTH} 200`} opacity={0.04}>
-            {Array.from({ length: 12 }).map((_, col) =>
-              Array.from({ length: 6 }).map((_, row) => (
-                <Path
-                  key={`${col}-${row}`}
-                  d={`M${col * 40 + 20},${row * 40} L${col * 40 + 30},${row * 40 + 10} L${col * 40 + 20},${row * 40 + 20} L${col * 40 + 10},${row * 40 + 10} Z`}
-                  fill={colors.gold}
-                />
-              )),
-            )}
-          </Svg>
-        </View>
+      <Animated.View style={titleAnimatedStyle}>
+        <Text style={styles.title}>Rivald&apos;event</Text>
+      </Animated.View>
 
-        {/* Icones ticket + pin (simplifies en SVG) */}
-        <Animated.View style={[styles.bottomIcons, { opacity: bottomOpacity }]}>
-          <Svg width={80} height={80} viewBox="0 0 80 80">
-            {/* Ticket */}
-            <Path
-              d="M10,25 L55,25 L55,35 Q60,37.5 55,40 L55,50 Q50,52.5 45,50 L10,50 L10,45 Q15,42.5 10,40 Q15,37.5 10,35 Z"
-              fill={colors.terracotta}
-              opacity={0.9}
-            />
-            <Path
-              d="M20,32 L45,32 L45,34 L20,34 Z M20,38 L45,38 L45,40 L20,40 Z M20,44 L35,44 L35,46 L20,46 Z"
-              fill={`${colors.sand}80`}
-            />
-            {/* Location pin */}
-            <Ellipse cx={58} cy={22} rx={10} ry={12} fill={colors.gold} />
-            <Path
-              d="M58,34 Q54,30 54,26 Q54,22 58,22 Q62,22 62,26 Q62,30 58,34 Z"
-              fill={colors.terracotta}
-            />
-            <Circle cx={58} cy={26} r={3} fill={colors.sand} />
-          </Svg>
-        </Animated.View>
+      <Animated.View style={[styles.lineWrapper, { opacity: subtitleOpacity }]}>
+        <View style={styles.goldLine} />
+      </Animated.View>
 
-        {/* Texte CURATING EXCELLENCE en bas */}
-        <Animated.View style={[styles.baselineWrapper, { opacity: bottomOpacity }]}>
-          <View style={styles.goldBar} />
-          <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
-        </Animated.View>
-      </View>
+      <Animated.View style={[styles.subtitleWrapper, { opacity: subtitleOpacity }]}>
+        <Text style={styles.subtitle}>Vivez. Reservez. Celebrez.</Text>
+      </Animated.View>
+
+      <Animated.View style={[styles.baselineWrapper, { opacity: baselineOpacity }]}>
+        <View style={styles.baselineBar} />
+        <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -265,151 +246,100 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
-  },
-
-  // -- Zone sombre (haut, ~55%) --
-  topSection: {
-    height: '58%',
+    backgroundColor: colors.onyx,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    overflow: 'hidden',
+    paddingHorizontal: spacing.lg,
   },
-
-  // Lueur doree radiale derriere le logo
-  glowContainer: {
-    position: 'absolute',
-    top: '15%',
-    left: '20%',
-    right: '20%',
-    bottom: '35%',
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoWrapper: {
+    marginBottom: spacing.xl,
   },
-  glow: {
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: `${colors.gold}18`,
-  },
-
-  // Medaillon or du logo
-  logoMedallion: {
-    marginBottom: spacing.lg,
-  },
-  medallionBorder: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+  /**
+   * Bordure exterieure epaisse en or brillant.
+   * L'effet "brillant" est obtenu par le combo :
+   *   - borderWidth epais (6px)
+   *   - shadowColor/shadowOpacity en or (halo dore)
+   *   - Couleur de bordure gold
+   */
+  logoBorder: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 6,
+    borderColor: colors.gold,
     backgroundColor: colors.gold,
-    padding: 4,
     shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  medallionInner: {
-    flex: 1,
-    borderRadius: 61,
-    backgroundColor: '#1a1a1a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  /**
+   * Anneau intermediaire plus fin pour renforcer l'effet
+   * de double bordure or (style medaillon/baguette).
+   */
+  logoBorderInner: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    borderWidth: 2,
+    borderColor: '#D4B85C',
+    backgroundColor: '#0f0e0d',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /**
+   * Conteneur du logo avec overflow hidden.
+   * Le logo se decoupe naturellement en cercle.
+   */
+  logoContainer: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
     overflow: 'hidden',
+    backgroundColor: '#0f0e0d',
   },
-  logoImage: {
-    width: 100,
-    height: 100,
-  },
-
-  // Titre
-  titleWrapper: {
-    marginTop: spacing.md,
+  logo: {
+    width: 108,
+    height: 108,
   },
   title: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 38,
-    lineHeight: 48,
+    fontSize: 36,
+    lineHeight: 46,
     color: '#FFF8E7',
     letterSpacing: 1.5,
     textAlign: 'center',
-    textShadowColor: `${colors.gold}40`,
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
   },
-
-  // Ligne or
-  goldLineWrapper: {
+  lineWrapper: {
     marginTop: spacing.sm,
+    alignItems: 'center',
   },
   goldLine: {
-    width: 50,
+    width: 48,
     height: 1.5,
     backgroundColor: colors.gold,
   },
-
-  // Tagline
-  taglineWrapper: {
+  subtitleWrapper: {
     marginTop: spacing.sm,
   },
-  tagline: {
+  subtitle: {
     fontFamily: 'Inter-Light',
     fontSize: 14,
     lineHeight: 20,
-    color: `${colors.gold}BB`,
+    color: `${colors.gold}AA`,
     letterSpacing: 3,
     textAlign: 'center',
   },
-
-  // Separateur courbe
-  dividerContainer: {
-    position: 'absolute',
-    top: '55%',
-    left: 0,
-    right: 0,
-    height: 60,
-    zIndex: 2,
-  },
-  dividerSvg: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-
-  // -- Zone ivoire (bas) --
-  bottomSection: {
-    flex: 1,
-    backgroundColor: colors.sand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginTop: -30,
-    paddingTop: 40,
-  },
-
-  // Motif diamant subtil
-  patternContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-
-  // Icones ticket + pin
-  bottomIcons: {
-    marginBottom: spacing.xl,
-  },
-
-  // Baseline
   baselineWrapper: {
     position: 'absolute',
     bottom: spacing.xxxl,
     alignItems: 'center',
   },
-  goldBar: {
-    width: 40,
+  baselineBar: {
+    width: 36,
     height: 1.5,
     backgroundColor: colors.gold,
     marginBottom: spacing.sm,
@@ -418,7 +348,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 10,
     lineHeight: 14,
-    color: `${colors.stone}80`,
+    color: `${colors.ivory}66`,
     letterSpacing: 3,
     fontStyle: 'italic',
   },

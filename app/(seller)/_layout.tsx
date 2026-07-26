@@ -32,6 +32,7 @@ import {
   type IconComponent,
 } from '@/components/icons/TabIcons';
 import TabBar from '@/components/ui/TabBar';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
 interface TabConfig {
   readonly name: string;
@@ -64,7 +65,9 @@ const HIDDEN_TAB_ROUTES = [
 
 export default function SellerLayout() {
   return (
-    <Tabs
+    <>
+      <OfflineBanner />
+      <Tabs
       tabBar={(props) => (
         <TabBar
           state={props.state}
@@ -104,5 +107,6 @@ export default function SellerLayout() {
         <Tabs.Screen key={route} name={route} options={{ href: null }} />
       ))}
     </Tabs>
+    </>
   );
 }
