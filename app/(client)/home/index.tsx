@@ -24,7 +24,7 @@
  * - Imports @/
  * - Design tokens depuis lib/constants.ts
  *
- * Donnees : mock importees depuis @/data/mock en attendant le branchement TanStack Query.
+ * Donnees : mock en attendant le branchement TanStack Query.
  */
 
 import { useCallback, useState } from 'react';
@@ -37,7 +37,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, SlidersHorizontal } from 'lucide-react-native';
+import { Search, SlidersHorizontal, MapPin, ChevronDown } from 'lucide-react-native';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -50,8 +50,215 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useRouter } from 'expo-router';
 
-// Donnees mock extraites dans data/mock/ (plus inline)
-import { CATEGORIES, MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
+// ============================================================
+// Types (mock - seront remplaces par les vrais types)
+// ============================================================
+
+interface MockEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly image: string;
+  readonly date: string;
+  readonly location: string;
+  readonly time: string;
+  readonly organizerName: string;
+  readonly organizerAvatar?: string | null;
+  readonly price: number;
+  readonly currency: string;
+  readonly category: string;
+  readonly isFeatured: boolean;
+}
+
+interface MockVenue {
+  readonly id: string;
+  readonly name: string;
+  readonly image: string;
+  readonly location: string;
+  readonly rating: number;
+  readonly badge: string | null;
+}
+
+interface FeaturedEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly image: string;
+  readonly date: string;
+  readonly location: string;
+  readonly category: string;
+  readonly price: number;
+  readonly currency: string;
+}
+
+// ============================================================
+// Donnees mock
+// ============================================================
+
+const CATEGORIES = [
+  { id: 'all', label: 'Tous' },
+  { id: 'concerts', label: 'Concerts' },
+  { id: 'festivals', label: 'Festivals' },
+  { id: 'conferences', label: 'Conferences' },
+  { id: 'sports', label: 'Sports' },
+  { id: 'theatre', label: 'Theatre' },
+  { id: 'galas', label: 'Galas' },
+] as const;
+
+const MOCK_FEATURED: readonly FeaturedEvent[] = [
+  {
+    id: 'feat-1',
+    title: 'Soiree Afrobeats Yaounde',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
+    date: '12 Juil.',
+    location: 'Palais des Sports, Yaounde',
+    category: 'Concerts',
+    price: 5000,
+    currency: 'FCFA',
+  },
+  {
+    id: 'feat-2',
+    title: 'Festival Culturel Nguon 2026',
+    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
+    date: '25 Juil.',
+    location: 'Centre Culturel, Douala',
+    category: 'Festivals',
+    price: 2000,
+    currency: 'FCFA',
+  },
+  {
+    id: 'feat-3',
+    title: 'Gala de Charite 2026',
+    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800',
+    date: '02 Sept.',
+    location: 'Hilton Yaounde',
+    category: 'Galas',
+    price: 50000,
+    currency: 'FCFA',
+  },
+];
+
+const MOCK_EVENTS: readonly MockEvent[] = [
+  {
+    id: '1',
+    title: 'Soiree Afrobeats Yaounde',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
+    date: '12 Juil.',
+    location: 'Palais des Sports, Yaounde',
+    time: '20h00',
+    organizerName: 'Pro Events CMR',
+    price: 5000,
+    currency: 'FCFA',
+    category: 'concerts',
+    isFeatured: true,
+  },
+  {
+    id: '2',
+    title: 'Festival Culturel Nguon 2026',
+    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
+    date: '25 Juil.',
+    location: 'Centre Culturel, Douala',
+    time: '18h30',
+    organizerName: 'Ministere de la Culture',
+    price: 2000,
+    currency: 'FCFA',
+    category: 'festivals',
+    isFeatured: false,
+  },
+  {
+    id: '3',
+    title: 'Conference Tech Douala',
+    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
+    date: '03 Aout',
+    location: 'Hotel Pullman, Douala',
+    time: '09h00',
+    organizerName: 'Cameroon Tech Hub',
+    price: 15000,
+    currency: 'FCFA',
+    category: 'conferences',
+    isFeatured: false,
+  },
+  {
+    id: '4',
+    title: 'Match Football Classique',
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
+    date: '15 Aout',
+    location: 'Stade Japoma, Douala',
+    time: '16h00',
+    organizerName: 'FECAfoot',
+    price: 3000,
+    currency: 'FCFA',
+    category: 'sports',
+    isFeatured: false,
+  },
+  {
+    id: '5',
+    title: 'Piece de Theatre "Le Choix"',
+    image: 'https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=800',
+    date: '20 Aout',
+    location: 'Maison de la Culture, Yaounde',
+    time: '19h30',
+    organizerName: 'Troupe Les Eclats',
+    price: 3500,
+    currency: 'FCFA',
+    category: 'theatre',
+    isFeatured: false,
+  },
+  {
+    id: '6',
+    title: 'Gala de Charite 2026',
+    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800',
+    date: '02 Sept.',
+    location: 'Hilton Yaounde',
+    time: '20h00',
+    organizerName: 'Fondation Hope',
+    price: 50000,
+    currency: 'FCFA',
+    category: 'galas',
+    isFeatured: true,
+  },
+] as const;
+
+const MOCK_VENUES: readonly MockVenue[] = [
+  {
+    id: '1',
+    name: 'The Golden Lounge',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
+    location: 'Bastos, Yaounde',
+    rating: 4.7,
+    badge: 'Or Savane',
+  },
+  {
+    id: '2',
+    name: 'Suna \' a Home Bonapriso',
+    image: 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/509004353.jpg?k=e299286e7a5328538faeffe4d7cd874f2cc4c31f498228afc0f15e5d70f7d501&o=',
+    location: 'Bonapriso, Douala',
+    rating: 4.5,
+    badge: null,
+  },
+  {
+    id: '3',
+    name: 'Espace Mont Febe',
+    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400',
+    location: 'Mont Febe, Yaounde',
+    rating: 4.8,
+    badge: 'Premium',
+  },
+  {
+    id: '4',
+    name: 'Stade Japoma',
+    image: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400',
+    location: 'Japoma, Douala',
+    rating: 4.3,
+    badge: null,
+  },
+  {
+    id: '5',
+    name: 'Silicon Mountain Hub',
+    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
+    location: 'Buea, Sud-Ouest',
+    rating: 4.6,
+    badge: 'Recommande',
+  },
+] as const;
 
 // ============================================================
 // Ecran principal
@@ -89,7 +296,9 @@ export default function HomeScreen() {
 
   const handleSearchPress = useCallback(() => {
     impact('light');
-    router.push(ROUTES.EXPLORE);
+    // Navigation avec autoFocus pour que le TextInput d'Explorer
+    // recoive le focus immediatement (pas de perte de focus)
+    router.push(`${ROUTES.EXPLORE}?autoFocus=true`);
   }, [impact, router]);
 
   const handleFilterPress = useCallback(() => {
@@ -275,10 +484,33 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            1. HEADER : Logo "Rivald'event" + Avatar profil
+            1. HEADER : Logo "Rivald'event" + Localisation + Avatar profil
             ============================================ */}
         <View style={headerStyle}>
-          <Text style={headerTitleStyle}>Rivald'event</Text>
+          <View>
+            <Text style={headerTitleStyle}>Rivald'event</Text>
+            {/* Localisation contextuelle - signature UX de la page Showroom */}
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 }}
+              onPress={() => {
+                impact('light');
+                // TODO: ouvrir le selecteur de ville (Roadmap)
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Changer la localisation"
+            >
+              <MapPin size={14} color={colors.terracotta} strokeWidth={2} />
+              <Text style={{
+                fontFamily: 'Inter-Medium',
+                fontSize: 13,
+                lineHeight: 18,
+                color: colors.stone,
+              }}>
+                Yaounde - Ce week-end
+              </Text>
+              <ChevronDown size={12} color={colors.stone} strokeWidth={2} />
+            </Pressable>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <NotificationBell
               count={unreadNotificationCount}

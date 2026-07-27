@@ -24,7 +24,7 @@
  * - Commentaires en francais
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,13 +33,10 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
-  Dimensions,
   StyleSheet,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,7 +56,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { eventService, formatPrice, formatDate, formatTime } from '@/services/event.service';
@@ -70,8 +67,7 @@ import type { EventWithAvailability, TicketTierWithAvailability } from '@/types'
 // Constantes
 // ============================================================
 
-const HERO_HEIGHT = 280;
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const HERO_HEIGHT = 320;
 const GALLERY_ITEM_WIDTH = 100;
 const GALLERY_ITEM_HEIGHT = 72;
 const BOTTOM_BAR_HEIGHT = 72;
@@ -117,7 +113,7 @@ function openWhatsApp(phone: string, message: string): void {
 export default function EventDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; from?: string }>();
   const { impact } = useHaptics();
   const isOffline = useOffline();
 
@@ -137,7 +133,6 @@ export default function EventDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
-  const heroScrollRef = useRef<ScrollView>(null);
 
   // -- Chargement des donnees --
   useEffect(() => {
@@ -178,8 +173,14 @@ export default function EventDetail() {
   // -- Handlers --
   const handleBack = useCallback(() => {
     impact('light');
-    router.back();
-  }, [impact, router]);
+    // Si l'utilisateur vient d'Explorer, on le ramene a Explorer
+    // (pas a l'Accueil) pour eviter la confusion UX
+    if (params.from === 'explore') {
+      router.replace(ROUTES.EXPLORE);
+    } else {
+      router.back();
+    }
+  }, [impact, router, params.from]);
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
@@ -223,16 +224,6 @@ export default function EventDetail() {
   }, [impact, router]);
 
   // -- Donnees derivees --
-  const displayImages = useMemo(() => {
-    if (!event) return [];
-    const cover = event.cover_image;
-    const gallery = event.images ?? [];
-    if (cover && !gallery.includes(cover)) {
-      return [cover, ...gallery];
-    }
-    return gallery.length > 0 ? gallery : (cover ? [cover] : []);
-  }, [event]);
-
   const minPrice = useMemo(() => {
     if (!event) return null;
     const prices = event.ticket_tiers.map((t) => t.price).filter((p) => p > 0);
@@ -244,24 +235,15 @@ export default function EventDetail() {
     return event.tiers_with_availability.reduce((sum, t) => sum + t.available_quantity, 0);
   }, [event]);
 
-  // -- Handler : scroll du carrousel hero --
-  const handleHeroScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetX = e.nativeEvent.contentOffset.x;
-      const newIndex = Math.round(offsetX / SCREEN_WIDTH);
-      if (newIndex !== activeGalleryIndex && newIndex >= 0 && newIndex < displayImages.length) {
-        setActiveGalleryIndex(newIndex);
-      }
-    },
-    [activeGalleryIndex, displayImages.length],
-  );
-
-  // -- Handler : clic miniature synchronise le carrousel hero --
-  const handleThumbnailPress = useCallback((index: number) => {
-    impact('light');
-    setActiveGalleryIndex(index);
-    heroScrollRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
-  }, [impact]);
+  const displayImages = useMemo(() => {
+    if (!event) return [];
+    const cover = event.cover_image;
+    const gallery = event.images ?? [];
+    if (cover && !gallery.includes(cover)) {
+      return [cover, ...gallery];
+    }
+    return gallery.length > 0 ? gallery : (cover ? [cover] : []);
+  }, [event]);
 
   // ============================================================
   // Loading state
@@ -293,7 +275,6 @@ export default function EventDetail() {
   // ============================================================
 
   const locationDisplay = event.address ?? event.venue?.name ?? event.city ?? 'Lieu non precise';
-  const floatingButtonTop = Math.max(insets.top + spacing.sm, spacing.xl);
 
   return (
     <View style={styles.screen}>
@@ -305,34 +286,12 @@ export default function EventDetail() {
         showsVerticalScrollIndicator={false}
       >
         {/* =============================================
-            CARROUSEL HERO (swipe horizontal)
+            IMAGE HERO
             ============================================= */}
         <View style={styles.heroContainer}>
-          {displayImages.length > 1 ? (
-            <ScrollView
-              ref={heroScrollRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={handleHeroScrollEnd}
-              style={styles.heroCarousel}
-              contentContainerStyle={styles.heroCarouselContent}
-            >
-              {displayImages.map((img, index) => (
-                <View key={index} style={styles.heroSlide}>
-                  <Image
-                    source={{ uri: img }}
-                    style={styles.heroImage}
-                    contentFit="cover"
-                    transition={400}
-                    cachePolicy="memory-disk"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          ) : displayImages.length === 1 ? (
+          {displayImages.length > 0 ? (
             <Image
-              source={{ uri: displayImages[0] }}
+              source={{ uri: displayImages[activeGalleryIndex] ?? '' }}
               style={styles.heroImage}
               contentFit="cover"
               transition={400}
@@ -361,11 +320,7 @@ export default function EventDetail() {
           {/* Bouton retour */}
           <Pressable
             onPress={handleBack}
-            style={[
-              styles.floatingButton,
-              styles.floatingBackButton,
-              { top: floatingButtonTop },
-            ]}
+            style={[styles.floatingButton, { left: spacing.md, top: insets.top + spacing.sm }]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
@@ -374,7 +329,7 @@ export default function EventDetail() {
           </Pressable>
 
           {/* Boutons droite : Partage + Favori */}
-          <View style={[styles.floatingButtonsRight, { top: floatingButtonTop }]}>
+          <View style={[styles.floatingButtonsRight, { top: insets.top + spacing.sm }]}>
             <Pressable
               onPress={handleShare}
               style={styles.floatingButton}
@@ -400,18 +355,12 @@ export default function EventDetail() {
             </Pressable>
           </View>
 
-          {/* Indicateurs de pagination (dots) */}
+          {/* Compteur d'images */}
           {displayImages.length > 1 && (
-            <View style={styles.paginationDots}>
-              {displayImages.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.paginationDot,
-                    activeGalleryIndex === index && styles.paginationDotActive,
-                  ]}
-                />
-              ))}
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>
+                {activeGalleryIndex + 1} / {displayImages.length}
+              </Text>
             </View>
           )}
         </View>
@@ -429,7 +378,10 @@ export default function EventDetail() {
               {displayImages.map((img, index) => (
                 <Pressable
                   key={index}
-                  onPress={() => handleThumbnailPress(index)}
+                  onPress={() => {
+                    impact('light');
+                    setActiveGalleryIndex(index);
+                  }}
                   style={[
                     styles.galleryItem,
                     activeGalleryIndex === index && styles.galleryItemActive,
@@ -798,18 +750,8 @@ const styles = {
     position: 'relative',
     overflow: 'hidden',
   } as ViewStyle,
-  heroCarousel: {
-    height: HERO_HEIGHT,
-  } as ViewStyle,
-  heroCarouselContent: {
-    height: HERO_HEIGHT,
-  } as ViewStyle,
-  heroSlide: {
-    width: SCREEN_WIDTH,
-    height: HERO_HEIGHT,
-  } as ViewStyle,
   heroImage: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: HERO_HEIGHT,
   } as ImageStyle,
   heroPlaceholder: {
@@ -833,6 +775,7 @@ const styles = {
 
   // -- Flottants --
   floatingButton: {
+    position: 'absolute',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -841,14 +784,9 @@ const styles = {
     alignItems: 'center',
     ...shadows.card,
   } as ViewStyle,
-  floatingBackButton: {
-    position: 'absolute',
-    left: spacing.md,
-  } as ViewStyle,
   floatingButtonsRight: {
     position: 'absolute',
     right: spacing.md,
-    flexDirection: 'column',
     gap: spacing.sm,
   } as ViewStyle,
 
@@ -870,29 +808,22 @@ const styles = {
     letterSpacing: 0.3,
   } as TextStyle,
 
-  // -- Dots pagination --
-  paginationDots: {
+  // -- Compteur images --
+  imageCounter: {
     position: 'absolute',
     bottom: spacing.md,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
+    right: spacing.md,
+    backgroundColor: `${colors.onyx}88`,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   } as ViewStyle,
-  paginationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: `${colors.white}80`,
-  } as ViewStyle,
-  paginationDotActive: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.white,
-  } as ViewStyle,
+  imageCounterText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.white,
+  } as TextStyle,
 
   // -- Galerie --
   galleryContainer: {
@@ -1291,6 +1222,7 @@ const styles = {
     borderTopColor: `${colors.stone}15`,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.lg,
+    zIndex: 50,
     ...shadows.card,
   } as ViewStyle,
   bottomBarContent: {
