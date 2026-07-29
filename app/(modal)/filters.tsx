@@ -37,6 +37,7 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, radii, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { CATEGORIES } from '@/data/mock';
+import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
 // Options de filtres
@@ -74,11 +75,14 @@ export default function FiltersScreen() {
   const router = useRouter();
   const { impact } = useHaptics();
 
-  // -- State --
+  // -- Store global --
+  const { advancedFilters, setAdvancedFilters } = useExploreStore();
+
+  // -- State local --
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [activeCity, setActiveCity] = useState<string>('all');
-  const [activeDate, setActiveDate] = useState<string>('all');
-  const [activePriceRange, setActivePriceRange] = useState<string>('all');
+  const [activeCity, setActiveCity] = useState<string>(advancedFilters.city);
+  const [activeDate, setActiveDate] = useState<string>(advancedFilters.date);
+  const [activePriceRange, setActivePriceRange] = useState<string>(advancedFilters.priceRange);
 
   // -- Handlers --
   const handleClose = useCallback(() => {
@@ -88,10 +92,14 @@ export default function FiltersScreen() {
 
   const handleApply = useCallback(() => {
     impact('medium');
-    // TODO: passer les filtres selectionnes via params ou Zustand store
-    // Pour l'instant, on ferme le modal
+    // Sauvegarder les filtres dans le store global
+    setAdvancedFilters({
+      city: activeCity,
+      priceRange: activePriceRange,
+      date: activeDate,
+    });
     router.back();
-  }, [impact, router]);
+  }, [impact, router, activeCity, activePriceRange, activeDate, setAdvancedFilters]);
 
   const handleClear = useCallback(() => {
     impact('light');

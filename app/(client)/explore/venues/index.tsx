@@ -45,6 +45,9 @@ import { useHaptics } from '@/hooks/useHaptics';
 import type { MockVenue } from '@/data/mock';
 import { MOCK_VENUES } from '@/data/mock';
 
+// Store global pour filtres
+import { useExploreStore } from '@/stores/explore-store';
+
 // ============================================================
 // Villes disponibles dans les mock (pour les chips)
 // ============================================================
@@ -196,8 +199,10 @@ export default function VenuesScreen() {
   const router = useRouter();
   const { impact } = useHaptics();
 
-  // -- State --
-  const [activeCity, setActiveCity] = useState<string>('all');
+  // -- Store global --
+  const { advancedFilters } = useExploreStore();
+
+  // -- State local pour recherche --
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
@@ -207,10 +212,11 @@ export default function VenuesScreen() {
     router.back();
   }, [impact, router]);
 
-  const handleCityPress = useCallback((cityId: string) => {
+  const handleCityPress = useCallback(() => {
     impact('light');
-    setActiveCity(cityId);
-  }, [impact]);
+    // Navigation vers le modal filtre pour changer la ville
+    router.push('/(modal)/filters');
+  }, [impact, router]);
 
   const handleVenuePress = useCallback((venueId: string) => {
     router.push(`/(client)/explore/venues/${venueId}`);
@@ -226,13 +232,13 @@ export default function VenuesScreen() {
     router.push('/(modal)/filters');
   }, [impact, router]);
 
-  // -- Filtrer les lieux par ville + recherche --
+  // -- Filtrer les lieux par ville (du store) + recherche --
   const filteredVenues = useMemo(() => {
     let result = MOCK_VENUES;
 
-    // Filtre par ville
-    if (activeCity !== 'all') {
-      result = result.filter((v) => v.location.includes(activeCity));
+    // Filtre par ville depuis le store global
+    if (advancedFilters.city !== 'all') {
+      result = result.filter((v) => v.location.includes(advancedFilters.city));
     }
 
     // Filtre par recherche
@@ -245,7 +251,7 @@ export default function VenuesScreen() {
     }
 
     return result;
-  }, [activeCity, searchQuery]);
+  }, [advancedFilters.city, searchQuery]);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -441,11 +447,11 @@ export default function VenuesScreen() {
           contentContainerStyle={{ paddingRight: spacing.lg }}
         >
           {CITY_FILTERS.map((city) => {
-            const isActive = activeCity === city.id;
+            const isActive = advancedFilters.city === city.id;
             return (
               <Pressable
                 key={city.id}
-                onPress={() => handleCityPress(city.id)}
+                onPress={handleCityPress}
                 style={isActive ? chipActiveStyle : chipInactiveStyle}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}

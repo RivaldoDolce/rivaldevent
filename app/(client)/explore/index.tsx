@@ -55,6 +55,7 @@ import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { BottomSheet, type BottomSheetRef } from '@/components/ui/BottomSheet';
+import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
 // Constantes
@@ -257,13 +258,14 @@ export default function ExploreScreen() {
   const searchInputRef = useRef<TextInput>(null);
   const bottomSheetRef = useRef<BottomSheetRef>(null);
 
-  // -- State --
+  // -- Store global pour filtres avances --
+  const { advancedFilters, setAdvancedFilters } = useExploreStore();
+
+  // -- State local --
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(
     params.filterCategory ?? 'all',
   );
-  const [activePriceRange, setActivePriceRange] = useState('all');
-  const [activeDateFilter, setActiveDateFilter] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showFiltersSheet, setShowFiltersSheet] = useState(false);
 
@@ -351,9 +353,12 @@ export default function ExploreScreen() {
 
   const handleResetFilters = useCallback(() => {
     impact('light');
-    setActivePriceRange('all');
-    setActiveDateFilter('all');
-  }, [impact]);
+    setAdvancedFilters({
+      city: 'all',
+      priceRange: 'all',
+      date: 'all',
+    });
+  }, [impact, setAdvancedFilters]);
 
   // -- Filtrage des evenements --
   const filteredEvents = useMemo(() => {
@@ -375,27 +380,27 @@ export default function ExploreScreen() {
       result = result.filter((e) => e.category === activeCategory);
     }
 
-    // Filtre prix (depuis BottomSheet)
-    const priceRange = PRICE_RANGES.find((r) => r.id === activePriceRange);
+    // Filtre prix (depuis le store global)
+    const priceRange = PRICE_RANGES.find((r) => r.id === advancedFilters.priceRange);
     if (priceRange && priceRange.id !== 'all') {
       result = result.filter((e) => e.price >= priceRange.min && e.price <= priceRange.max);
     }
 
-    // Filtre date (simule sur les ids mock)
-    if (activeDateFilter !== 'all') {
+    // Filtre date (depuis le store global)
+    if (advancedFilters.date !== 'all') {
       const mockDateMap: Record<string, readonly string[]> = {
         today: ['1', '2', '3'] as const,
         weekend: ['4', '5'] as const,
         week: ['1', '2', '3', '4', '5', '6'] as const,
       };
-      const allowedIds = mockDateMap[activeDateFilter];
+      const allowedIds = mockDateMap[advancedFilters.date];
       if (allowedIds) {
         result = result.filter((e) => allowedIds.includes(e.id));
       }
     }
 
     return result;
-  }, [searchQuery, activeCategory, activePriceRange, activeDateFilter]);
+  }, [searchQuery, activeCategory, advancedFilters]);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -544,8 +549,7 @@ export default function ExploreScreen() {
                 impact('light');
                 setSearchQuery('');
                 setActiveCategory('all');
-                setActivePriceRange('all');
-                setActiveDateFilter('all');
+                handleResetFilters();
               }}
               style={emptyStateButtonStyle}
               accessibilityRole="button"
@@ -623,11 +627,11 @@ export default function ExploreScreen() {
         <Text style={sheetSectionLabelStyle}>Budget</Text>
         <View style={sheetChipsRowStyle}>
           {PRICE_RANGES.map((range) => {
-            const isActive = activePriceRange === range.id;
+            const isActive = advancedFilters.priceRange === range.id;
             return (
               <Pressable
                 key={range.id}
-                onPress={() => setActivePriceRange(range.id)}
+                onPress={() => setAdvancedFilters({ ...advancedFilters, priceRange: range.id })}
                 style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
@@ -647,11 +651,11 @@ export default function ExploreScreen() {
         <Text style={sheetSectionLabelStyle}>Date</Text>
         <View style={sheetChipsRowStyle}>
           {DATE_FILTERS.map((dateFilter) => {
-            const isActive = activeDateFilter === dateFilter.id;
+            const isActive = advancedFilters.date === dateFilter.id;
             return (
               <Pressable
                 key={dateFilter.id}
-                onPress={() => setActiveDateFilter(dateFilter.id)}
+                onPress={() => setAdvancedFilters({ ...advancedFilters, date: dateFilter.id })}
                 style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
