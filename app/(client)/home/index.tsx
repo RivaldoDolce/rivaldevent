@@ -37,7 +37,8 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, SlidersHorizontal, Music, PartyPopper, Presentation, Dumbbell, Drama, Wine } from 'lucide-react-native';
+import { Search, SlidersHorizontal } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -58,9 +59,7 @@ import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 interface CategoryIconCard {
   readonly id: string;
   readonly label: string;
-  readonly icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
-  readonly bgColor: string;
-  readonly iconColor: string;
+  readonly iconSource: any;
 }
 
 // ============================================================
@@ -68,12 +67,12 @@ interface CategoryIconCard {
 // ============================================================
 
 const CATEGORY_ICONS: readonly CategoryIconCard[] = [
-  { id: 'concerts', label: 'Concerts', icon: Music, bgColor: colors.ivory, iconColor: colors.gold },
-  { id: 'festivals', label: 'Festivals', icon: PartyPopper, bgColor: colors.ivory, iconColor: colors.terracotta },
-  { id: 'conferences', label: 'Conferences', icon: Presentation, bgColor: colors.ivory, iconColor: colors.forest },
-  { id: 'galas', label: 'Galas', icon: Wine, bgColor: colors.ivory, iconColor: colors.gold },
-  { id: 'sports', label: 'Sports', icon: Dumbbell, bgColor: colors.ivory, iconColor: colors.terracotta },
-  { id: 'theatre', label: 'Theatre', icon: Drama, bgColor: colors.ivory, iconColor: colors.indigo },
+  { id: 'concerts', label: 'Concerts', iconSource: require('@/assets/icons/concert.svg') },
+  { id: 'festivals', label: 'Festivals', iconSource: require('@/assets/icons/festival.svg') },
+  { id: 'conferences', label: 'Conferences', iconSource: require('@/assets/icons/conference.svg') },
+  { id: 'galas', label: 'Galas', iconSource: require('@/assets/icons/gala.svg') },
+  { id: 'sports', label: 'Sports', iconSource: require('@/assets/icons/sport.svg') },
+  { id: 'theatre', label: 'Theatre', iconSource: require('@/assets/icons/theatre.svg') },
 ] as const;
 
 // ============================================================
@@ -159,7 +158,7 @@ export default function HomeScreen() {
   const handleNotificationItemPress = useCallback((notification: { eventId?: string }) => {
     if (notification.eventId) {
       router.push({
-        pathname: '/(client)/home/[id]',
+        pathname: ROUTES.EVENT_DETAIL,
         params: { id: notification.eventId },
       } as any);
     }
@@ -257,26 +256,26 @@ export default function HomeScreen() {
     paddingBottom: spacing.md,
   };
 
-  // Grille flexWrap pour des cartes plus grandes et auto-suffisantes
+  // Grille flexWrap pour 2 colonnes x 3 lignes
   const categoryIconsGridStyle: ViewStyle = {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: spacing.md,
+    justifyContent: 'space-between',
+    gap: 4,
   };
 
-  // Cartes categories plus grandes : auto-width, minimum 90px, padding vertical accru
+  // Cartes categories : largeur calculée pour 2 colonnes exactes
   const categoryIconCardStyle: ViewStyle = {
-    minWidth: 90,
-    height: 90,
+    width: '48%',
+    height: 70,
     borderRadius: radii.md,
     backgroundColor: colors.ivory,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: `${colors.border}60`,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
     ...shadows.card,
   };
 
@@ -397,23 +396,24 @@ export default function HomeScreen() {
         </View>
 
         <View style={categoryIconsContainerStyle}>
-          {/* Grille flexWrap : toutes les categories sur 2 lignes auto */}
+          {/* Grille flexWrap : toutes les categories sur 2 lignes avec 3 colonnes */}
           <View style={categoryIconsGridStyle}>
-            {CATEGORY_ICONS.map((cat) => {
-              const IconComponent = cat.icon;
-              return (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => handleCategoryIconPress(cat.id)}
-                  style={categoryIconCardStyle}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Explorer les ${cat.label}`}
-                >
-                  <IconComponent size={26} color={cat.iconColor} strokeWidth={1.5} />
-                  <Text style={categoryIconLabelStyle}>{cat.label}</Text>
-                </Pressable>
-              );
-            })}
+            {CATEGORY_ICONS.map((cat) => (
+              <Pressable
+                key={cat.id}
+                onPress={() => handleCategoryIconPress(cat.id)}
+                style={categoryIconCardStyle}
+                accessibilityRole="button"
+                accessibilityLabel={`Explorer les ${cat.label}`}
+              >
+                <Image
+                  source={cat.iconSource}
+                  style={{ width: 32, height: 32 }}
+                  contentFit="contain"
+                />
+                <Text style={categoryIconLabelStyle}>{cat.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 

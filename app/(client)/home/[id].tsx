@@ -24,7 +24,7 @@
  * - Commentaires en francais
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  PanResponder,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -45,8 +46,6 @@ import {
   CalendarDays,
   MapPin,
   Clock,
-  Phone,
-  MessageCircle,
   Heart,
   Share2,
   Users,
@@ -133,6 +132,67 @@ export default function EventDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+
+  // -- Auto-scroll du carrousel d'images --
+  const resetAutoScroll = useCallback(() => {
+    if (galleryAutoScrollRef.current) {
+      clearTimeout(galleryAutoScrollRef.current);
+    }
+    if (!event || event.images === undefined || (Array.isArray(event.images) && event.images.length === 0 && !event.cover_image)) {
+      return;
+    }
+    const imgs = event.cover_image
+      ? event.images && event.images.length > 0 && !event.images.includes(event.cover_image)
+        ? [event.cover_image, ...event.images]
+        : event.images ?? (event.cover_image ? [event.cover_image] : [])
+      : event.images ?? [];
+    
+    if (imgs.length <= 1) return;
+    
+    galleryAutoScrollRef.current = setTimeout(() => {
+      setActiveGalleryIndex((prev) => (prev < imgs.length - 1 ? prev + 1 : 0));
+      resetAutoScroll();
+    }, 4000);
+  }, [event]);
+
+  // -- Gestion PanResponder pour swipe horizontal sur les images --
+  useEffect(() => {
+    panResponderRef.current = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10,
+      onPanResponderRelease: (_, { dx }) => {
+        const imgs = event?.cover_image
+          ? event.images && event.images.length > 0 && !event.images.includes(event.cover_image)
+            ? [event.cover_image, ...event.images]
+            : event.images ?? (event.cover_image ? [event.cover_image] : [])
+          : event?.images ?? [];
+        
+        if (imgs.length <= 1) return;
+        
+        if (dx > 50) {
+          // Swipe droite: image precedente
+          setActiveGalleryIndex((prev) => (prev > 0 ? prev - 1 : imgs.length - 1));
+          resetAutoScroll();
+        } else if (dx < -50) {
+          // Swipe gauche: image suivante
+          setActiveGalleryIndex((prev) => (prev < imgs.length - 1 ? prev + 1 : 0));
+          resetAutoScroll();
+        }
+      },
+    });
+  }, [event, resetAutoScroll]);
+
+  // -- Lancer l'auto-scroll au montage et quand l'event change --
+  useEffect(() => {
+    resetAutoScroll();
+    return () => {
+      if (galleryAutoScrollRef.current) {
+        clearTimeout(galleryAutoScrollRef.current);
+      }
+    };
+  }, [resetAutoScroll]);
 
   // -- Chargement des donnees --
   useEffect(() => {
@@ -223,7 +283,10 @@ export default function EventDetail() {
 
   const handleSimilarPress = useCallback((similarId: string) => {
     impact('light');
-    router.push(`/(client)/home/${similarId}`);
+    router.push({
+      pathname: ROUTES.EVENT_DETAIL,
+      params: { id: similarId },
+    } as any);
   }, [impact, router]);
 
   // -- Donnees derivees --
@@ -289,9 +352,12 @@ export default function EventDetail() {
         showsVerticalScrollIndicator={false}
       >
         {/* =============================================
-            IMAGE HERO
+            IMAGE HERO AVEC SWIPE
             ============================================= */}
-        <View style={styles.heroContainer}>
+        <View
+          style={styles.heroContainer}
+          {...(panResponderRef.current ? panResponderRef.current.panHandlers : {})}
+        >
           {displayImages.length > 0 ? (
             <Image
               source={{ uri: displayImages[activeGalleryIndex] ?? '' }}
@@ -320,10 +386,10 @@ export default function EventDetail() {
             </View>
           )}
 
-          {/* Bouton retour */}
+          {/* Bouton retour (absolu) */}
           <Pressable
             onPress={handleBack}
-            style={[styles.floatingButton, { left: spacing.md, top: insets.top + spacing.sm }]}
+            style={[styles.floatingButton, { left: spacing.md, top: Math.max(insets.top + spacing.sm, spacing.lg) }]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
@@ -331,8 +397,8 @@ export default function EventDetail() {
             <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
           </Pressable>
 
-          {/* Boutons droite : Partage + Favori */}
-          <View style={[styles.floatingButtonsRight, { top: insets.top + spacing.sm }]}>
+          {/* Boutons droite : Partage + Favori (conteneur absolu, boutons flexibles) */}
+          <View style={[styles.floatingButtonsContainer, { top: Math.max(insets.top + spacing.sm, spacing.lg) }]}>
             <Pressable
               onPress={handleShare}
               style={styles.floatingButton}
@@ -514,7 +580,11 @@ export default function EventDetail() {
                   accessibilityRole="button"
                   accessibilityLabel="Contacter via WhatsApp"
                 >
-                  <MessageCircle size={18} color={colors.white} strokeWidth={2} />
+                  <Image
+                    source={require('@/assets/icons/WhatsApp.svg')}
+                    style={styles.whatsappIcon}
+                    contentFit="contain"
+                  />
                   <Text style={styles.whatsappButtonText}>WhatsApp</Text>
                 </Pressable>
                 <Pressable
@@ -523,7 +593,11 @@ export default function EventDetail() {
                   accessibilityRole="button"
                   accessibilityLabel="Appeler l'organisateur"
                 >
-                  <Phone size={18} color={colors.white} strokeWidth={2} />
+                  <Image
+                    source={require('@/assets/icons/phone.png')}
+                    style={styles.callIcon}
+                    contentFit="contain"
+                  />
                   <Text style={styles.callButtonText}>Appeler</Text>
                 </Pressable>
               </View>
@@ -778,7 +852,6 @@ const styles = {
 
   // -- Flottants --
   floatingButton: {
-    position: 'absolute',
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -787,9 +860,10 @@ const styles = {
     alignItems: 'center',
     ...shadows.card,
   } as ViewStyle,
-  floatingButtonsRight: {
+  floatingButtonsContainer: {
     position: 'absolute',
     right: spacing.md,
+    flexDirection: 'column',
     gap: spacing.sm,
   } as ViewStyle,
 
@@ -1050,7 +1124,7 @@ const styles = {
   organizerCard: {
     backgroundColor: colors.white,
     borderRadius: radii.lg,
-    padding: spacing.lg,
+    padding: spacing.xl,
     ...shadows.card,
   } as ViewStyle,
   organizerInfo: {
@@ -1095,7 +1169,7 @@ const styles = {
     fontSize: 13,
     lineHeight: 18,
     color: colors.stone,
-    marginTop: 2,
+    marginTop: spacing.xs,
   } as TextStyle,
 
   // -- Boutons contact --
@@ -1137,6 +1211,14 @@ const styles = {
     color: colors.white,
     letterSpacing: 0.2,
   } as TextStyle,
+  whatsappIcon: {
+    width: 18,
+    height: 18,
+  } as ImageStyle,
+  callIcon: {
+    width: 18,
+    height: 18,
+  } as ImageStyle,
 
   // -- Voir tout --
   seeAllRow: {
