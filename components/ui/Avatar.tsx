@@ -25,7 +25,7 @@ import { colors } from '@/lib/constants';
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface AvatarProps {
-  readonly source: string | null;
+  readonly source?: string | null;
   readonly fallback: string;
   readonly size?: AvatarSize;
   readonly border?: 'none' | 'default' | 'highlight';

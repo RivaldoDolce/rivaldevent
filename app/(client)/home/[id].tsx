@@ -200,7 +200,10 @@ export default function EventDetail() {
       return;
     }
     impact('medium');
-    router.push(`/(purchase)/event/${eventId}/tickets`);
+    router.push({
+      pathname: ROUTES.PURCHASE_TICKETS,
+      params: { id: eventId },
+    } as any);
   }, [impact, router, eventId, isOffline]);
 
   const handleContactWhatsApp = useCallback(() => {

@@ -3,10 +3,12 @@
  *
  * Design distinct de la page d'accueil (Showroom vs Catalogue) :
  * - Barre de recherche ACTIVE (TextInput avec autofocus)
- * - Filtres fonctionnels (categorie, date, prix) sous forme de chips
- * - Toggle Vue Grille / Vue Liste
- * - Grille 2 colonnes compacte (style Pinterest/Masonry)
- * - Resultats filtres par recherche + categorie + prix + date
+ * - Filtres categories superieurs fonctionnels (chips)
+ * - Filtres avances via icone SlidersHorizontal (BottomSheet)
+ * - Toggle Vue Grille / Vue Liste (libelle fonce)
+ * - Grille 2 colonnes compacte avec prix bien visible et bouton Reserver
+ * - Section "Lieux a decouvrir"
+ * - Resultats filtres par recherche + categorie + filtres avances
  * - Pas de section "Tendances" (celle-ci appartient a l'Accueil)
  *
  * Conventions :
@@ -17,6 +19,7 @@
  * - Imports @/
  * - Commentaires en francais
  * - TextInput natif (pas de composant custom)
+ * - BottomSheet du design system pour les filtres avances
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,7 +30,6 @@ import {
   Pressable,
   TextInput,
   Dimensions,
-  InteractionManager,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -45,13 +47,14 @@ import {
   CalendarDays,
   Clock,
   TrendingUp,
-  //ChevronRight,
 } from 'lucide-react-native';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { CATEGORIES, MOCK_EVENTS } from '@/data/mock';
+import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
+import { VenueCard } from '@/components/venues/VenueCard';
+import { BottomSheet, type BottomSheetRef } from '@/components/ui/BottomSheet';
 
 // ============================================================
 // Constantes
@@ -63,7 +66,7 @@ const GRID_IMAGE_HEIGHT = 140;
 const LIST_IMAGE_HEIGHT = 100;
 
 // ============================================================
-// Prix range labels
+// Prix range labels (pour filtres avances dans BottomSheet)
 // ============================================================
 
 const PRICE_RANGES = [
@@ -82,7 +85,7 @@ const DATE_FILTERS = [
 ] as const;
 
 // ============================================================
-// Composant : GridCard (compact, 2 colonnes)
+// Composant : GridCard (compact, 2 colonnes, prix bien visible)
 // ============================================================
 
 interface GridCardProps {
@@ -93,14 +96,16 @@ interface GridCardProps {
 
 function GridCard({ event, onPress, onReserve }: GridCardProps) {
   const { impact } = useHaptics();
+
+  // -- Prix complet avec 'F' (FCFA abrege) en Or brillant --
   const formattedPrice = useMemo(() => {
     const abs = Math.abs(event.price);
     if (abs >= 1000) {
       const fmt = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
-      return `${fmt} ${event.currency}`;
+      return `${fmt} F`;
     }
-    return `${event.price} ${event.currency}`;
-  }, [event.price, event.currency]);
+    return `${event.price} F`;
+  }, [event.price]);
 
   const handlePress = useCallback(() => {
     impact('light');
@@ -134,6 +139,10 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
             <Text style={gridFeaturedBadgeTextStyle}>Tendance</Text>
           </View>
         )}
+        {/* Prix superimpose sur l'image en bas a gauche - montant complet en Or brillant */}
+        <View style={gridPriceOverlayStyle}>
+          <Text style={gridPriceOverlayTextStyle}>{formattedPrice}</Text>
+        </View>
       </View>
 
       {/* Contenu */}
@@ -150,13 +159,10 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
           <Text style={gridInfoTextStyle} numberOfLines={1}>{event.location}</Text>
         </View>
 
-        {/* Prix + micro-CTA */}
-        <View style={gridFooterStyle}>
-          <Text style={gridPriceStyle}>{formattedPrice}</Text>
-          <Pressable onPress={handleReserve} style={gridReserveButtonStyle}>
-            <Text style={gridReserveTextStyle}>Reserver</Text>
-          </Pressable>
-        </View>
+        {/* Bouton Reserver seul, toujours visible */}
+        <Pressable onPress={handleReserve} style={gridReserveButtonStyle}>
+          <Text style={gridReserveTextStyle}>Reserver</Text>
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -174,14 +180,15 @@ interface ListCardProps {
 
 function ListCard({ event, onPress, onReserve }: ListCardProps) {
   const { impact } = useHaptics();
+  // -- Prix complet avec 'F' (FCFA abrege) en Or brillant --
   const formattedPrice = useMemo(() => {
     const abs = Math.abs(event.price);
     if (abs >= 1000) {
       const fmt = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
-      return `${fmt} ${event.currency}`;
+      return `${fmt} F`;
     }
-    return `${event.price} ${event.currency}`;
-  }, [event.price, event.currency]);
+    return `${event.price} F`;
+  }, [event.price]);
 
   const handlePress = useCallback(() => {
     impact('light');
@@ -248,6 +255,7 @@ export default function ExploreScreen() {
   const params = useLocalSearchParams<{ autoFocus?: string; filterCategory?: string }>();
   const { impact } = useHaptics();
   const searchInputRef = useRef<TextInput>(null);
+  const bottomSheetRef = useRef<BottomSheetRef>(null);
 
   // -- State --
   const [searchQuery, setSearchQuery] = useState('');
@@ -257,31 +265,53 @@ export default function ExploreScreen() {
   const [activePriceRange, setActivePriceRange] = useState('all');
   const [activeDateFilter, setActiveDateFilter] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [showFiltersSheet, setShowFiltersSheet] = useState(false);
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
-  // Utilise InteractionManager pour s'assurer que la navigation
-  // est completement terminee avant de focusser le TextInput.
-  // Cela evite la perte de focus lors de la transition de tab.
   useEffect(() => {
     if (params.autoFocus === 'true') {
-      const handle = InteractionManager.runAfterInteractions(() => {
+      // Delai plus long pour eviter le crash avec InteractionManager
+      // sur certains appareils Expo Go
+      const timer = setTimeout(() => {
         searchInputRef.current?.focus();
-      });
-      return () => handle.cancel();
+      }, 400);
+      return () => clearTimeout(timer);
     }
+    return undefined;
   }, [params.autoFocus]);
+
+  // -- Mise a jour du filtre categorie si navigation depuis Home --
+  useEffect(() => {
+    if (params.filterCategory && params.filterCategory !== activeCategory) {
+      setActiveCategory(params.filterCategory);
+    }
+  }, [params.filterCategory]);
 
   // -- Handlers --
   const handleEventPress = useCallback((eventId: string) => {
     impact('light');
-    // Navigation vers le detail avec param from=explore
-    // pour que le bouton retour ramene a Explorer, pas a l'Accueil
-    router.push(`/(client)/home/${eventId}?from=explore`);
+    // Navigation vers la page detail partagee (pas sous l'onglet Home)
+    router.push({
+      pathname: ROUTES.EVENT_DETAIL,
+      params: { id: eventId },
+      query: { from: 'explore' },
+    } as any);
   }, [impact, router]);
 
   const handleReserve = useCallback((eventId: string) => {
     impact('medium');
-    router.push(`/(purchase)/event/${eventId}/tickets`);
+    router.push({
+      pathname: ROUTES.PURCHASE_TICKETS,
+      params: { id: eventId },
+    } as any);
+  }, [impact, router]);
+
+  const handleVenuePress = useCallback((venueId: string) => {
+    impact('light');
+    router.push({
+      pathname: ROUTES.VENUE_DETAIL,
+      params: { id: venueId },
+    } as any);
   }, [impact, router]);
 
   const handleClearSearch = useCallback(() => {
@@ -295,19 +325,34 @@ export default function ExploreScreen() {
     setActiveCategory(categoryId);
   }, [impact]);
 
-  const handlePriceRangePress = useCallback((rangeId: string) => {
-    impact('light');
-    setActivePriceRange(rangeId);
-  }, [impact]);
-
-  const handleDateFilterPress = useCallback((dateId: string) => {
-    impact('light');
-    setActiveDateFilter(dateId);
-  }, [impact]);
-
   const handleViewModeToggle = useCallback(() => {
     impact('light');
     setViewMode((prev) => prev === 'grid' ? 'list' : 'grid');
+  }, [impact]);
+
+  const handleOpenFilters = useCallback(() => {
+    impact('light');
+    // Ouvrir le BottomSheet de maniere declarative
+    bottomSheetRef.current?.expand();
+    setShowFiltersSheet(true);
+  }, [impact]);
+
+  // -- Callback du BottomSheet (memoise pour eviter les re-rendus infinis) --
+  const handleSheetChange = useCallback((index: number) => {
+    if (index < 0) {
+      setShowFiltersSheet(false);
+    }
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    impact('light');
+    setShowFiltersSheet(false);
+  }, [impact]);
+
+  const handleResetFilters = useCallback(() => {
+    impact('light');
+    setActivePriceRange('all');
+    setActiveDateFilter('all');
   }, [impact]);
 
   // -- Filtrage des evenements --
@@ -330,16 +375,13 @@ export default function ExploreScreen() {
       result = result.filter((e) => e.category === activeCategory);
     }
 
-    // Filtre prix
+    // Filtre prix (depuis BottomSheet)
     const priceRange = PRICE_RANGES.find((r) => r.id === activePriceRange);
     if (priceRange && priceRange.id !== 'all') {
       result = result.filter((e) => e.price >= priceRange.min && e.price <= priceRange.max);
     }
 
-    // Filtre date (simule sur les ids mock, pas sur les vraies dates)
-    // En mode mock, les evenements n'ont pas de vrai champ date ISO,
-    // on simule en filtrant selon l'id (evenements 1-3 = "Ce soir",
-    // 4-5 = "Ce week-end", 6 = "Cette semaine")
+    // Filtre date (simule sur les ids mock)
     if (activeDateFilter !== 'all') {
       const mockDateMap: Record<string, readonly string[]> = {
         today: ['1', '2', '3'] as const,
@@ -361,151 +403,97 @@ export default function ExploreScreen() {
     backgroundColor: colors.sand,
   };
 
-  const scrollContentStyle: ViewStyle = {
-    paddingTop: insets.top,
-    paddingBottom: 100,
-  };
-
   return (
     <View style={screenStyle}>
-      <ScrollView
-        style={screenStyle}
-        contentContainerStyle={scrollContentStyle}
-        showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[0]}
-      >
-        {/* =============================================
-            HEADER STICKY : Recherche + Toggle vue + Filtres
-            ============================================= */}
-        <View style={stickyHeaderStyle}>
-          {/* Barre de recherche active */}
-          <View style={searchContainerStyle}>
-            <Search size={20} color={colors.muted} strokeWidth={1.5} />
-            <TextInput
-              ref={searchInputRef}
-              style={searchInputStyle}
-              placeholder="Rechercher evenement, artiste, lieu..."
-              placeholderTextColor={colors.muted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityRole="search"
-              accessibilityLabel="Rechercher un evenement"
-            />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={handleClearSearch} hitSlop={12} accessibilityLabel="Effacer">
-                <X size={18} color={colors.stone} strokeWidth={2} />
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => {
-                impact('light');
-                router.push(ROUTES.FILTERS);
-              }}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Filtres avances"
-            >
-              <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.5} />
+      {/* =============================================
+          HEADER STICKY : Recherche + Toggle vue + Filtres categories
+          (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
+          ============================================= */}
+      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+        {/* Barre de recherche active */}
+        <View style={searchContainerStyle}>
+          <Search size={20} color={colors.muted} strokeWidth={1.5} />
+          <TextInput
+            ref={searchInputRef}
+            style={searchInputStyle}
+            placeholder="Rechercher evenement, artiste, lieu..."
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityRole="search"
+            accessibilityLabel="Rechercher un evenement"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={handleClearSearch} hitSlop={12} accessibilityLabel="Effacer">
+              <X size={18} color={colors.stone} strokeWidth={2} />
             </Pressable>
-          </View>
-
-          {/* Toggle Vue Grille / Liste */}
-          <View style={viewToggleRowStyle}>
-            <Pressable onPress={handleViewModeToggle} style={viewToggleButtonStyle}>
-              {viewMode === 'grid' ? (
-                <List size={18} color={colors.stone} strokeWidth={1.5} />
-              ) : (
-                <LayoutGrid size={18} color={colors.stone} strokeWidth={1.5} />
-              )}
-              <Text style={viewToggleTextStyle}>
-                {viewMode === 'grid' ? 'Vue liste' : 'Vue grille'}
-              </Text>
-            </Pressable>
-            <Text style={resultCountStyle}>
-              {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {/* Chips filtres categorie */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={filterChipsContainerStyle}
-            contentContainerStyle={{ paddingRight: spacing.lg }}
+          )}
+          <Pressable
+            onPress={handleOpenFilters}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Filtres avances"
           >
-            {CATEGORIES.map((cat) => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => handleCategoryPress(cat.id)}
-                  style={isActive ? chipActiveStyle : chipInactiveStyle}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text style={isActive ? chipActiveTextStyle : chipInactiveTextStyle}>
-                    {cat.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Chips filtres prix */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={filterChipsContainerStyle}
-            contentContainerStyle={{ paddingRight: spacing.lg }}
-          >
-            {PRICE_RANGES.map((range) => {
-              const isActive = activePriceRange === range.id;
-              return (
-                <Pressable
-                  key={range.id}
-                  onPress={() => handlePriceRangePress(range.id)}
-                  style={isActive ? chipActiveSmallStyle : chipInactiveSmallStyle}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text style={isActive ? chipActiveSmallTextStyle : chipInactiveSmallTextStyle}>
-                    {range.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Chips filtres date */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={filterChipsContainerStyle}
-            contentContainerStyle={{ paddingRight: spacing.lg }}
-          >
-            {DATE_FILTERS.map((dateFilter) => {
-              const isActive = activeDateFilter === dateFilter.id;
-              return (
-                <Pressable
-                  key={dateFilter.id}
-                  onPress={() => handleDateFilterPress(dateFilter.id)}
-                  style={isActive ? chipActiveSmallStyle : chipInactiveSmallStyle}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <CalendarDays size={12} color={isActive ? colors.white : colors.stone} strokeWidth={1.5} />
-                  <Text style={isActive ? chipActiveSmallTextStyle : chipInactiveSmallTextStyle}>
-                    {dateFilter.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+            <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.5} />
+          </Pressable>
         </View>
 
+        {/* Toggle Vue Grille / Liste + Compteur */}
+        <View style={viewToggleRowStyle}>
+          <Pressable onPress={handleViewModeToggle} style={viewToggleButtonStyle}>
+            {viewMode === 'grid' ? (
+              <List size={18} color={colors.onyx} strokeWidth={1.5} />
+            ) : (
+              <LayoutGrid size={18} color={colors.onyx} strokeWidth={1.5} />
+            )}
+            <Text style={viewToggleTextStyle}>
+              {viewMode === 'grid' ? 'Vue liste' : 'Vue grille'}
+            </Text>
+          </Pressable>
+          <Text style={resultCountStyle}>
+            {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        {/* Chips filtres categorie (superieurs uniquement) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={filterChipsContainerStyle}
+          contentContainerStyle={{ paddingRight: spacing.lg }}
+        >
+          {CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.id;
+            return (
+              <Pressable
+                key={cat.id}
+                onPress={() => handleCategoryPress(cat.id)}
+                style={isActive ? chipActiveStyle : chipInactiveStyle}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text style={isActive ? chipActiveTextStyle : chipInactiveTextStyle}>
+                  {cat.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* =============================================
+          CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
+          ============================================= */}
+      <ScrollView
+        style={screenStyle}
+        contentContainerStyle={{
+          paddingBottom: 120, // Espace aeré pour la TabBar
+        }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* =============================================
             RESULTATS (Grille ou Liste)
             ============================================= */}
@@ -557,6 +545,7 @@ export default function ExploreScreen() {
                 setSearchQuery('');
                 setActiveCategory('all');
                 setActivePriceRange('all');
+                setActiveDateFilter('all');
               }}
               style={emptyStateButtonStyle}
               accessibilityRole="button"
@@ -566,22 +555,139 @@ export default function ExploreScreen() {
             </Pressable>
           </View>
         )}
+
+        {/* Espacement entre resultats et lieux */}
+        <View style={{ height: spacing.xxl }} />
+
+        {/* =============================================
+            SECTION "LIEUX A DECOUVRIR"
+            ============================================= */}
+        <View style={sectionHeaderStyle}>
+          <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
+          <Pressable
+            onPress={() => {
+              impact('light');
+              router.push(ROUTES.VENUES);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Voir tous les lieux"
+          >
+            <Text style={seeAllTextStyle}>Voir tout</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={venuesScrollContainerStyle}
+          contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.md }}
+        >
+          {MOCK_VENUES.map((venue) => (
+            <VenueCard
+              key={venue.id}
+              id={venue.id}
+              name={venue.name}
+              image={venue.image}
+              location={venue.location}
+              rating={venue.rating}
+              badge={venue.badge}
+              onPress={() => handleVenuePress(venue.id)}
+            />
+          ))}
+        </ScrollView>
+
+        {/* Espacement final aeré */}
+        <View style={{ height: spacing.xxl }} />
       </ScrollView>
+
+      {/* =============================================
+          BOTTOM SHEET : Filtres avances (prix + date)
+          ============================================= */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        snapPoints={['50%']}
+        index={showFiltersSheet ? 0 : -1}
+        onChange={handleSheetChange}
+        testID="filters-bottom-sheet"
+      >
+        {/* Titre */}
+        <View style={sheetHeaderStyle}>
+          <Text style={sheetTitleStyle}>Filtres avances</Text>
+          <Pressable onPress={handleResetFilters} hitSlop={8} accessibilityLabel="Reinitialiser">
+            <Text style={sheetResetTextStyle}>Reinitialiser</Text>
+          </Pressable>
+        </View>
+
+        {/* Filtre prix */}
+        <Text style={sheetSectionLabelStyle}>Budget</Text>
+        <View style={sheetChipsRowStyle}>
+          {PRICE_RANGES.map((range) => {
+            const isActive = activePriceRange === range.id;
+            return (
+              <Pressable
+                key={range.id}
+                onPress={() => setActivePriceRange(range.id)}
+                style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text style={isActive ? sheetChipActiveTextStyle : sheetChipInactiveTextStyle}>
+                  {range.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Espacement */}
+        <View style={{ height: spacing.md }} />
+
+        {/* Filtre date */}
+        <Text style={sheetSectionLabelStyle}>Date</Text>
+        <View style={sheetChipsRowStyle}>
+          {DATE_FILTERS.map((dateFilter) => {
+            const isActive = activeDateFilter === dateFilter.id;
+            return (
+              <Pressable
+                key={dateFilter.id}
+                onPress={() => setActiveDateFilter(dateFilter.id)}
+                style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+              >
+                <CalendarDays size={12} color={isActive ? colors.white : colors.stone} strokeWidth={1.5} />
+                <Text style={isActive ? sheetChipActiveTextStyle : sheetChipInactiveTextStyle}>
+                  {dateFilter.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Espacement */}
+        <View style={{ height: spacing.xl }} />
+
+        {/* Bouton Appliquer */}
+        <Pressable onPress={handleApplyFilters} style={sheetApplyButtonStyle}>
+          <Text style={sheetApplyButtonTextStyle}>Appliquer les filtres</Text>
+        </Pressable>
+      </BottomSheet>
     </View>
   );
 }
 
 // ============================================================
-// Styles - Sticky Header
+// Styles - Sticky Header (hors ScrollView)
 // ============================================================
 
 const stickyHeaderStyle: ViewStyle = {
   backgroundColor: colors.sand,
   paddingHorizontal: spacing.lg,
-  paddingTop: spacing.md,
   paddingBottom: spacing.sm,
   borderBottomWidth: 1,
   borderBottomColor: `${colors.border}50`,
+  // Pas de zIndex probleme car hors du ScrollView
 };
 
 const searchContainerStyle: ViewStyle = {
@@ -626,11 +732,13 @@ const viewToggleButtonStyle: ViewStyle = {
   borderColor: `${colors.stone}20`,
 };
 
+// Libelle vue en ecriture FONCE (onyx, pas stone)
 const viewToggleTextStyle: TextStyle = {
-  fontFamily: 'Inter-Medium',
+  fontFamily: 'Inter-SemiBold',
   fontSize: 13,
   lineHeight: 18,
-  color: colors.stone,
+  color: colors.onyx,
+  letterSpacing: 0.2,
 };
 
 const resultCountStyle: TextStyle = {
@@ -641,7 +749,7 @@ const resultCountStyle: TextStyle = {
 };
 
 // ============================================================
-// Styles - Filtres Chips
+// Styles - Filtres Chips (categories superieurs)
 // ============================================================
 
 const filterChipsContainerStyle: ViewStyle = {
@@ -682,46 +790,14 @@ const chipInactiveTextStyle: TextStyle = {
   letterSpacing: 0.2,
 };
 
-const chipActiveSmallStyle: ViewStyle = {
-  backgroundColor: colors.forest,
-  borderRadius: radii.full,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  marginRight: spacing.sm,
-};
-
-const chipInactiveSmallStyle: ViewStyle = {
-  backgroundColor: colors.ivory,
-  borderRadius: radii.full,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
-  marginRight: spacing.sm,
-  borderWidth: 1,
-  borderColor: `${colors.stone}20`,
-};
-
-const chipActiveSmallTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 12,
-  lineHeight: 16,
-  color: colors.white,
-  letterSpacing: 0.2,
-};
-
-const chipInactiveSmallTextStyle: TextStyle = {
-  fontFamily: 'Inter-Medium',
-  fontSize: 12,
-  lineHeight: 16,
-  color: colors.onyx,
-};
-
 // ============================================================
-// Styles - Grille
+// Styles - Grille (prix overlay sur image, boutton seul)
 // ============================================================
 
 const gridContainerStyle: ViewStyle = {
   paddingHorizontal: spacing.lg,
   gap: spacing.md,
+  paddingTop: spacing.md,
 };
 
 const gridRowStyle: ViewStyle = {
@@ -786,6 +862,25 @@ const gridFeaturedBadgeTextStyle: TextStyle = {
   letterSpacing: 0.3,
 };
 
+// Prix overlay sur l'image (en bas a gauche) - toujours visible
+const gridPriceOverlayStyle: ViewStyle = {
+  position: 'absolute',
+  bottom: spacing.sm,
+  left: spacing.xs,
+  backgroundColor: 'rgba(26,24,22,0.7)',
+  borderRadius: radii.sm,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: spacing.xs,
+};
+
+const gridPriceOverlayTextStyle: TextStyle = {
+  fontFamily: 'Inter-Bold',
+  fontSize: 12,
+  lineHeight: 16,
+  color: colors.goldBright,
+  letterSpacing: 0.2,
+};
+
 const gridContentStyle: ViewStyle = {
   padding: spacing.sm,
 };
@@ -813,32 +908,22 @@ const gridInfoTextStyle: TextStyle = {
   color: colors.stone,
 };
 
-const gridFooterStyle: ViewStyle = {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: spacing.sm,
-};
-
-const gridPriceStyle: TextStyle = {
-  fontFamily: 'Inter-Bold',
-  fontSize: 13,
-  lineHeight: 18,
-  color: colors.gold,
-};
-
+// Bouton Reserver seul (pas de row avec prix - prix est sur l'image)
 const gridReserveButtonStyle: ViewStyle = {
   backgroundColor: colors.terracotta,
   borderRadius: radii.sm,
   paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
+  paddingVertical: spacing.xs + 2,
+  marginTop: spacing.sm,
+  alignItems: 'center',
 };
 
 const gridReserveTextStyle: TextStyle = {
   fontFamily: 'Inter-SemiBold',
-  fontSize: 11,
-  lineHeight: 15,
+  fontSize: 12,
+  lineHeight: 16,
   color: colors.white,
+  letterSpacing: 0.2,
 };
 
 // ============================================================
@@ -848,6 +933,7 @@ const gridReserveTextStyle: TextStyle = {
 const listContainerStyle: ViewStyle = {
   paddingHorizontal: spacing.lg,
   gap: spacing.md,
+  paddingTop: spacing.md,
 };
 
 const listCardStyle: ViewStyle = {
@@ -925,7 +1011,7 @@ const listPriceStyle: TextStyle = {
   fontFamily: 'Inter-Bold',
   fontSize: 14,
   lineHeight: 20,
-  color: colors.gold,
+  color: colors.goldBright,
 };
 
 const listReserveButtonStyle: ViewStyle = {
@@ -940,6 +1026,39 @@ const listReserveTextStyle: TextStyle = {
   fontSize: 12,
   lineHeight: 16,
   color: colors.white,
+};
+
+// ============================================================
+// Styles - Section header + Lieux
+// ============================================================
+
+const sectionHeaderStyle: ViewStyle = {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: spacing.lg,
+  marginBottom: spacing.md,
+};
+
+const sectionTitleStyle: TextStyle = {
+  fontFamily: 'PlayfairDisplay-Bold',
+  fontSize: 20,
+  lineHeight: 26,
+  letterSpacing: -0.3,
+  color: colors.onyx,
+};
+
+const seeAllTextStyle: TextStyle = {
+  fontFamily: 'Inter-SemiBold',
+  fontSize: 13,
+  lineHeight: 18,
+  color: colors.terracotta,
+  letterSpacing: 0.2,
+};
+
+const venuesScrollContainerStyle: ViewStyle = {
+  paddingLeft: spacing.lg,
+  paddingRight: spacing.sm,
 };
 
 // ============================================================
@@ -979,6 +1098,96 @@ const emptyStateButtonStyle: ViewStyle = {
 };
 
 const emptyStateButtonTextStyle: TextStyle = {
+  fontFamily: 'Inter-SemiBold',
+  fontSize: 16,
+  lineHeight: 22,
+  color: colors.white,
+};
+
+// ============================================================
+// Styles - Bottom Sheet (Filtres avances)
+// ============================================================
+
+const sheetHeaderStyle: ViewStyle = {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: spacing.md,
+};
+
+const sheetTitleStyle: TextStyle = {
+  fontFamily: 'PlayfairDisplay-Bold',
+  fontSize: 20,
+  lineHeight: 26,
+  color: colors.onyx,
+};
+
+const sheetResetTextStyle: TextStyle = {
+  fontFamily: 'Inter-SemiBold',
+  fontSize: 14,
+  lineHeight: 20,
+  color: colors.terracotta,
+};
+
+const sheetSectionLabelStyle: TextStyle = {
+  fontFamily: 'Inter-SemiBold',
+  fontSize: 14,
+  lineHeight: 20,
+  color: colors.onyx,
+  marginBottom: spacing.sm,
+};
+
+const sheetChipsRowStyle: ViewStyle = {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: spacing.sm,
+};
+
+const sheetChipActiveStyle: ViewStyle = {
+  backgroundColor: colors.terracotta,
+  borderRadius: radii.full,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.xs,
+};
+
+const sheetChipInactiveStyle: ViewStyle = {
+  backgroundColor: colors.ivory,
+  borderRadius: radii.full,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: `${colors.stone}30`,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: spacing.xs,
+};
+
+const sheetChipActiveTextStyle: TextStyle = {
+  fontFamily: 'Inter-SemiBold',
+  fontSize: 13,
+  lineHeight: 18,
+  color: colors.white,
+};
+
+const sheetChipInactiveTextStyle: TextStyle = {
+  fontFamily: 'Inter-Medium',
+  fontSize: 13,
+  lineHeight: 18,
+  color: colors.onyx,
+};
+
+const sheetApplyButtonStyle: ViewStyle = {
+  backgroundColor: colors.terracotta,
+  borderRadius: radii.md,
+  paddingHorizontal: spacing.xl,
+  paddingVertical: spacing.md,
+  alignItems: 'center',
+};
+
+const sheetApplyButtonTextStyle: TextStyle = {
   fontFamily: 'Inter-SemiBold',
   fontSize: 16,
   lineHeight: 22,

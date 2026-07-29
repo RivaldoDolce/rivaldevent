@@ -47,7 +47,7 @@ export const EmptyState = React.memo(function EmptyState({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing['3xl'],
+    paddingVertical: spacing.xxxl,
   };
 
   return (

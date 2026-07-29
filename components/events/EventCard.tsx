@@ -46,7 +46,7 @@ interface EventCardProps {
   readonly location: string;
   readonly time: string;
   readonly organizerName: string;
-  readonly organizerAvatar?: string | null;
+  readonly organizerAvatar: string | null;
   readonly price: number;
   readonly currency?: string;
   readonly category: string;
@@ -80,7 +80,6 @@ export const EventCard = React.memo(function EventCard({
   organizerName,
   organizerAvatar,
   price,
-  currency = 'FCFA',
   category,
   isFeatured = false,
   isFavorited = false,
@@ -130,16 +129,17 @@ export const EventCard = React.memo(function EventCard({
     onReserve?.();
   }, [impact, onReserve]);
 
-  // -- Format price (formatage africain : 5 000 FCFA, 15 000 FCFA) --
+  // -- Format price (formatage africain : 5 000 F, 15 000 F) --
+  // FCFA abrege en 'F' pour plus de lisibilite
   const formattedPrice = React.useMemo(() => {
     const absPrice = Math.abs(price);
     if (absPrice >= 1000) {
       // Separateur de milliers style francais : espace insécable
       const formatted = absPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
-      return `${price < 0 ? '-' : ''}${formatted} ${currency}`;
+      return `${price < 0 ? '-' : ''}${formatted} F`;
     }
-    return `${price} ${currency}`;
-  }, [price, currency]);
+    return `${price} F`;
+  }, [price]);
 
   // -- Styles --
   const cardStyle: ViewStyle = {
@@ -248,7 +248,7 @@ export const EventCard = React.memo(function EventCard({
     fontFamily: 'Inter-Bold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.gold,
+    color: colors.goldBright,
   };
 
   const reserveButtonStyle: ViewStyle = {

@@ -22,6 +22,8 @@ export type RootStackParamList = {
   '(client)/home': undefined;
   '(client)/home/[id]': { id: string };
 
+  '(client)/event/[id]': { id: string; from?: string };
+
   '(client)/explore': undefined;
   '(client)/explore/venues': undefined;
   '(client)/explore/venues/[id]': { id: string };

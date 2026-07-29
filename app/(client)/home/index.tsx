@@ -3,10 +3,10 @@
  *
  * Structure (de haut en bas, dans un ScrollView) :
  * 1. Header : Logo "Rivald'event" (gauche) + Avatar profil (droite)
- * 2. Barre de recherche : Search icon + placeholder italic centre une seule ligne + SlidersHorizontal
- * 3. Categories : chips horizontaux scrollables (Tous, Concerts, Festivals...)
- * 4. Section "A la une" : carrousel plein ecran d'evenements tendance
- * 5. Section "Evenements a proximite" : cartes verticales full-width
+ * 2. Barre de recherche : Search icon + placeholder italic + SlidersHorizontal
+ * 3. Section "A la une" : carrousel plein ecran d'evenements tendance
+ * 4. Section "Evenements" : cartes d'icones categories (Concerts, Festivals, etc.)
+ * 5. Section "Evenements populaires" : cartes verticales full-width
  * 6. Section "Lieux a decouvrir" : cartes horizontales 200px
  *
  * Design "Minimalisme Africain Camerounais" :
@@ -37,7 +37,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, SlidersHorizontal, MapPin, ChevronDown } from 'lucide-react-native';
+import { Search, SlidersHorizontal, Music, PartyPopper, Presentation, Dumbbell, Drama, Wine } from 'lucide-react-native';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -49,215 +49,31 @@ import { VenueCard } from '@/components/venues/VenueCard';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useRouter } from 'expo-router';
+import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 
 // ============================================================
-// Types (mock - seront remplaces par les vrais types)
+// Types (categories icones pour les cartes de navigation)
 // ============================================================
 
-interface MockEvent {
+interface CategoryIconCard {
   readonly id: string;
-  readonly title: string;
-  readonly image: string;
-  readonly date: string;
-  readonly location: string;
-  readonly time: string;
-  readonly organizerName: string;
-  readonly organizerAvatar?: string | null;
-  readonly price: number;
-  readonly currency: string;
-  readonly category: string;
-  readonly isFeatured: boolean;
-}
-
-interface MockVenue {
-  readonly id: string;
-  readonly name: string;
-  readonly image: string;
-  readonly location: string;
-  readonly rating: number;
-  readonly badge: string | null;
-}
-
-interface FeaturedEvent {
-  readonly id: string;
-  readonly title: string;
-  readonly image: string;
-  readonly date: string;
-  readonly location: string;
-  readonly category: string;
-  readonly price: number;
-  readonly currency: string;
+  readonly label: string;
+  readonly icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
+  readonly bgColor: string;
+  readonly iconColor: string;
 }
 
 // ============================================================
-// Donnees mock
+// Donnees : cartes categories avec icones
 // ============================================================
 
-const CATEGORIES = [
-  { id: 'all', label: 'Tous' },
-  { id: 'concerts', label: 'Concerts' },
-  { id: 'festivals', label: 'Festivals' },
-  { id: 'conferences', label: 'Conferences' },
-  { id: 'sports', label: 'Sports' },
-  { id: 'theatre', label: 'Theatre' },
-  { id: 'galas', label: 'Galas' },
-] as const;
-
-const MOCK_FEATURED: readonly FeaturedEvent[] = [
-  {
-    id: 'feat-1',
-    title: 'Soiree Afrobeats Yaounde',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-    date: '12 Juil.',
-    location: 'Palais des Sports, Yaounde',
-    category: 'Concerts',
-    price: 5000,
-    currency: 'FCFA',
-  },
-  {
-    id: 'feat-2',
-    title: 'Festival Culturel Nguon 2026',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
-    date: '25 Juil.',
-    location: 'Centre Culturel, Douala',
-    category: 'Festivals',
-    price: 2000,
-    currency: 'FCFA',
-  },
-  {
-    id: 'feat-3',
-    title: 'Gala de Charite 2026',
-    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800',
-    date: '02 Sept.',
-    location: 'Hilton Yaounde',
-    category: 'Galas',
-    price: 50000,
-    currency: 'FCFA',
-  },
-];
-
-const MOCK_EVENTS: readonly MockEvent[] = [
-  {
-    id: '1',
-    title: 'Soiree Afrobeats Yaounde',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-    date: '12 Juil.',
-    location: 'Palais des Sports, Yaounde',
-    time: '20h00',
-    organizerName: 'Pro Events CMR',
-    price: 5000,
-    currency: 'FCFA',
-    category: 'concerts',
-    isFeatured: true,
-  },
-  {
-    id: '2',
-    title: 'Festival Culturel Nguon 2026',
-    image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800',
-    date: '25 Juil.',
-    location: 'Centre Culturel, Douala',
-    time: '18h30',
-    organizerName: 'Ministere de la Culture',
-    price: 2000,
-    currency: 'FCFA',
-    category: 'festivals',
-    isFeatured: false,
-  },
-  {
-    id: '3',
-    title: 'Conference Tech Douala',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800',
-    date: '03 Aout',
-    location: 'Hotel Pullman, Douala',
-    time: '09h00',
-    organizerName: 'Cameroon Tech Hub',
-    price: 15000,
-    currency: 'FCFA',
-    category: 'conferences',
-    isFeatured: false,
-  },
-  {
-    id: '4',
-    title: 'Match Football Classique',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
-    date: '15 Aout',
-    location: 'Stade Japoma, Douala',
-    time: '16h00',
-    organizerName: 'FECAfoot',
-    price: 3000,
-    currency: 'FCFA',
-    category: 'sports',
-    isFeatured: false,
-  },
-  {
-    id: '5',
-    title: 'Piece de Theatre "Le Choix"',
-    image: 'https://images.unsplash.com/photo-1507924538820-ede94a04019d?w=800',
-    date: '20 Aout',
-    location: 'Maison de la Culture, Yaounde',
-    time: '19h30',
-    organizerName: 'Troupe Les Eclats',
-    price: 3500,
-    currency: 'FCFA',
-    category: 'theatre',
-    isFeatured: false,
-  },
-  {
-    id: '6',
-    title: 'Gala de Charite 2026',
-    image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800',
-    date: '02 Sept.',
-    location: 'Hilton Yaounde',
-    time: '20h00',
-    organizerName: 'Fondation Hope',
-    price: 50000,
-    currency: 'FCFA',
-    category: 'galas',
-    isFeatured: true,
-  },
-] as const;
-
-const MOCK_VENUES: readonly MockVenue[] = [
-  {
-    id: '1',
-    name: 'The Golden Lounge',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
-    location: 'Bastos, Yaounde',
-    rating: 4.7,
-    badge: 'Or Savane',
-  },
-  {
-    id: '2',
-    name: 'Suna \' a Home Bonapriso',
-    image: 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/509004353.jpg?k=e299286e7a5328538faeffe4d7cd874f2cc4c31f498228afc0f15e5d70f7d501&o=',
-    location: 'Bonapriso, Douala',
-    rating: 4.5,
-    badge: null,
-  },
-  {
-    id: '3',
-    name: 'Espace Mont Febe',
-    image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400',
-    location: 'Mont Febe, Yaounde',
-    rating: 4.8,
-    badge: 'Premium',
-  },
-  {
-    id: '4',
-    name: 'Stade Japoma',
-    image: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400',
-    location: 'Japoma, Douala',
-    rating: 4.3,
-    badge: null,
-  },
-  {
-    id: '5',
-    name: 'Silicon Mountain Hub',
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
-    location: 'Buea, Sud-Ouest',
-    rating: 4.6,
-    badge: 'Recommande',
-  },
+const CATEGORY_ICONS: readonly CategoryIconCard[] = [
+  { id: 'concerts', label: 'Concerts', icon: Music, bgColor: colors.ivory, iconColor: colors.gold },
+  { id: 'festivals', label: 'Festivals', icon: PartyPopper, bgColor: colors.ivory, iconColor: colors.terracotta },
+  { id: 'conferences', label: 'Conferences', icon: Presentation, bgColor: colors.ivory, iconColor: colors.forest },
+  { id: 'galas', label: 'Galas', icon: Wine, bgColor: colors.ivory, iconColor: colors.gold },
+  { id: 'sports', label: 'Sports', icon: Dumbbell, bgColor: colors.ivory, iconColor: colors.terracotta },
+  { id: 'theatre', label: 'Theatre', icon: Drama, bgColor: colors.ivory, iconColor: colors.indigo },
 ] as const;
 
 // ============================================================
@@ -270,28 +86,33 @@ export default function HomeScreen() {
   const { impact } = useHaptics();
   const { profile } = useAuth();
 
-  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Compteur de notifications non lues (dynamique, mis a jour par le panel)
+  // Compteur de notifications non lues
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(3);
 
   // -- Handlers --
-  const handleCategoryPress = useCallback((categoryId: string) => {
-    impact('light');
-    setActiveCategory(categoryId);
-  }, [impact]);
-
   const handleEventPress = useCallback((eventId: string) => {
-    router.push(`/(client)/home/${eventId}`);
-  }, [router]);
+    impact('light');
+    router.push({
+      pathname: ROUTES.EVENT_DETAIL,
+      params: { id: eventId },
+    } as any);
+  }, [impact, router]);
 
   const handleReserve = useCallback((eventId: string) => {
-    router.push(`/(purchase)/event/${eventId}/tickets`);
-  }, [router]);
+    impact('light');
+    router.push({
+      pathname: ROUTES.PURCHASE_TICKETS,
+      params: { id: eventId },
+    } as any);
+  }, [impact, router]);
 
   const handleVenuePress = useCallback((venueId: string) => {
-    router.push(`/(client)/explore/venues/${venueId}`);
+    router.push({
+      pathname: ROUTES.VENUE_DETAIL,
+      params: { id: venueId },
+    } as any);
   }, [router]);
 
   const handleSearchPress = useCallback(() => {
@@ -312,11 +133,18 @@ export default function HomeScreen() {
   }, [impact, router]);
 
   const handleFeaturedPress = useCallback((eventId: string) => {
-    router.push(`/(client)/home/${eventId}`);
+    // Navigation vers la page detail partagee (pas de switch d'onglet)
+    router.push({
+      pathname: ROUTES.EVENT_DETAIL,
+      params: { id: eventId },
+    } as any);
   }, [router]);
 
   const handleFeaturedReserve = useCallback((eventId: string) => {
-    router.push(`/(purchase)/event/${eventId}/tickets`);
+    router.push({
+      pathname: ROUTES.PURCHASE_TICKETS,
+      params: { id: eventId },
+    } as any);
   }, [router]);
 
   const handleNotificationPress = useCallback(() => {
@@ -330,7 +158,10 @@ export default function HomeScreen() {
 
   const handleNotificationItemPress = useCallback((notification: { eventId?: string }) => {
     if (notification.eventId) {
-      router.push(`/(client)/home/${notification.eventId}`);
+      router.push({
+        pathname: '/(client)/home/[id]',
+        params: { id: notification.eventId },
+      } as any);
     }
   }, [router]);
 
@@ -338,10 +169,11 @@ export default function HomeScreen() {
     setUnreadNotificationCount(count);
   }, []);
 
-  // -- Filtrer les evenements par categorie active --
-  const filteredEvents = activeCategory === 'all'
-    ? MOCK_EVENTS
-    : MOCK_EVENTS.filter((e) => e.category === activeCategory);
+  // Navigation vers Explorer avec filtre categorie pre-applique
+  const handleCategoryIconPress = useCallback((categoryId: string) => {
+    impact('light');
+    router.push(`${ROUTES.EXPLORE}?filterCategory=${categoryId}`);
+  }, [impact, router]);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -351,7 +183,7 @@ export default function HomeScreen() {
 
   const scrollContentStyle: ViewStyle = {
     paddingTop: insets.top,
-    paddingBottom: 100, // Espace pour la TabBar
+    paddingBottom: 120, // Espace aeré pour la TabBar
   };
 
   const headerStyle: ViewStyle = {
@@ -363,7 +195,6 @@ export default function HomeScreen() {
     paddingBottom: spacing.sm,
   };
 
-  // Titre Rivald'event : gras fantasique (Playfair Display Bold, taille elaguee)
   const headerTitleStyle: TextStyle = {
     fontFamily: 'Lobster_400Regular',
     fontSize: 32,
@@ -385,7 +216,6 @@ export default function HomeScreen() {
     ...shadows.search,
   };
 
-  // Placeholder : centree, une seule ligne, italique
   const searchPlaceholderStyle: TextStyle = {
     fontFamily: 'Inter-Medium',
     fontSize: 14,
@@ -394,46 +224,6 @@ export default function HomeScreen() {
     flex: 1,
     textAlign: 'center',
     fontStyle: 'italic',
-  };
-
-  const categoriesContainerStyle: ViewStyle = {
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    paddingBottom: spacing.lg,
-  };
-
-  const categoryChipActiveStyle: ViewStyle = {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-  };
-
-  const categoryChipInactiveStyle: ViewStyle = {
-    backgroundColor: colors.ivory,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-  };
-
-  const categoryChipActiveTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-    letterSpacing: 0.3,
-  };
-
-  const categoryChipInactiveTextStyle: TextStyle = {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-    letterSpacing: 0.2,
   };
 
   const sectionHeaderStyle: ViewStyle = {
@@ -461,6 +251,44 @@ export default function HomeScreen() {
     letterSpacing: 0.2,
   };
 
+  // -- Styles cartes categories icones --
+  const categoryIconsContainerStyle: ViewStyle = {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  };
+
+  // Grille flexWrap pour des cartes plus grandes et auto-suffisantes
+  const categoryIconsGridStyle: ViewStyle = {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: spacing.md,
+  };
+
+  // Cartes categories plus grandes : auto-width, minimum 90px, padding vertical accru
+  const categoryIconCardStyle: ViewStyle = {
+    minWidth: 90,
+    height: 90,
+    borderRadius: radii.md,
+    backgroundColor: colors.ivory,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: `${colors.border}60`,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...shadows.card,
+  };
+
+  const categoryIconLabelStyle: TextStyle = {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.onyx,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  };
+
   const eventsContainerStyle: ViewStyle = {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
@@ -484,33 +312,10 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            1. HEADER : Logo "Rivald'event" + Localisation + Avatar profil
+            1. HEADER : Logo "Rivald'event" + Avatar profil + Notifications
             ============================================ */}
         <View style={headerStyle}>
-          <View>
-            <Text style={headerTitleStyle}>Rivald'event</Text>
-            {/* Localisation contextuelle - signature UX de la page Showroom */}
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 }}
-              onPress={() => {
-                impact('light');
-                // TODO: ouvrir le selecteur de ville (Roadmap)
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Changer la localisation"
-            >
-              <MapPin size={14} color={colors.terracotta} strokeWidth={2} />
-              <Text style={{
-                fontFamily: 'Inter-Medium',
-                fontSize: 13,
-                lineHeight: 18,
-                color: colors.stone,
-              }}>
-                Yaounde - Ce week-end
-              </Text>
-              <ChevronDown size={12} color={colors.stone} strokeWidth={2} />
-            </Pressable>
-          </View>
+          <Text style={headerTitleStyle}>Rivald'event</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <NotificationBell
               count={unreadNotificationCount}
@@ -557,34 +362,7 @@ export default function HomeScreen() {
         </Pressable>
 
         {/* ============================================
-            3. CATEGORIES (chips horizontaux)
-            ============================================ */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={categoriesContainerStyle}
-          contentContainerStyle={{ paddingRight: spacing.lg }}
-        >
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => handleCategoryPress(cat.id)}
-                style={isActive ? categoryChipActiveStyle : categoryChipInactiveStyle}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-              >
-                <Text style={isActive ? categoryChipActiveTextStyle : categoryChipInactiveTextStyle}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* ============================================
-            4. SECTION "A LA UNE" - Carrousel tendance
+            3. SECTION "A LA UNE" - Carrousel tendance
             ============================================ */}
         <View style={sectionHeaderStyle}>
           <Text style={sectionTitleStyle}>A la une</Text>
@@ -608,14 +386,45 @@ export default function HomeScreen() {
           testID="featured-carousel"
         />
 
-        {/* Espacement entre carrousel et evenements a proximite */}
+        {/* Espacement entre carrousel et categories */}
         <View style={sectionSpacingStyle} />
 
         {/* ============================================
-            5. SECTION "EVENEMENTS A PROXIMITE"
+            4. SECTION "EVENEMENTS" - Cartes d'icones categories
             ============================================ */}
         <View style={sectionHeaderStyle}>
-          <Text style={sectionTitleStyle}>Evenements a proximite</Text>
+          <Text style={sectionTitleStyle}>Evenements</Text>
+        </View>
+
+        <View style={categoryIconsContainerStyle}>
+          {/* Grille flexWrap : toutes les categories sur 2 lignes auto */}
+          <View style={categoryIconsGridStyle}>
+            {CATEGORY_ICONS.map((cat) => {
+              const IconComponent = cat.icon;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => handleCategoryIconPress(cat.id)}
+                  style={categoryIconCardStyle}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Explorer les ${cat.label}`}
+                >
+                  <IconComponent size={26} color={cat.iconColor} strokeWidth={1.5} />
+                  <Text style={categoryIconLabelStyle}>{cat.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Espacement entre categories et evenements populaires */}
+        <View style={sectionSpacingStyle} />
+
+        {/* ============================================
+            5. SECTION "EVENEMENTS POPULAIRES"
+            ============================================ */}
+        <View style={sectionHeaderStyle}>
+          <Text style={sectionTitleStyle}>Evenements populaires</Text>
           <Pressable
             onPress={() => {
               impact('light');
@@ -630,7 +439,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={eventsContainerStyle}>
-          {filteredEvents.map((event) => (
+          {MOCK_EVENTS.map((event) => (
             <EventCard
               key={event.id}
               id={event.id}
@@ -695,8 +504,8 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Espacement final */}
-        <View style={{ height: spacing.lg }} />
+        {/* Espacement final aeré */}
+        <View style={{ height: spacing.xxl }} />
       </ScrollView>
 
       {/* Panneau de notifications (apres le ScrollView pour etre au-dessus en z-order) */}

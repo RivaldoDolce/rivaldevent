@@ -47,7 +47,7 @@ export interface MockEvent {
   readonly location: string;
   readonly time: string;
   readonly organizerName: string;
-  readonly organizerAvatar?: string | null;
+  readonly organizerAvatar: string | null;
   readonly price: number;
   readonly currency: string;
   readonly category: string;

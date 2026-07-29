@@ -167,14 +167,15 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
     onReserve?.(eventId);
   }, [impact, onReserve]);
 
-  // -- Format price (formatage africain : 5 000 FCFA, 15 000 FCFA) --
-  const formatPrice = useCallback((price: number, currency: string): string => {
+  // -- Format price (formatage africain : 5 000 F, 15 000 F) --
+  // FCFA abrege en 'F' pour plus de lisibilite
+  const formatPrice = useCallback((price: number, _currency: string): string => {
     const absPrice = Math.abs(price);
     if (absPrice >= 1000) {
       const formatted = absPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
-      return `${price < 0 ? '-' : ''}${formatted} ${currency}`;
+      return `${price < 0 ? '-' : ''}${formatted} F`;
     }
-    return `${price} ${currency}`;
+    return `${price} F`;
   }, []);
 
   if (events.length === 0) return null;
@@ -288,7 +289,7 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   const priceStyle: TextStyle = {
     fontFamily: 'Inter-Bold',
     fontSize: 16,
-    color: colors.gold,
+    color: colors.goldBright,
   };
 
   const reserveButtonStyle: ViewStyle = {
