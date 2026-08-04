@@ -179,7 +179,7 @@ export interface MockVenuePromotion {
 // ============================================================
 
 /**
- * Tier de billet (Standard, VIP, VVIP).
+ * Tier de billet (Standard, VIP, PREMIUM).
  * Aligne sur TicketTierWithAvailability de types/models.ts.
  */
 export interface MockTicketTier {

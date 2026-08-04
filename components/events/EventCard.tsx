@@ -46,7 +46,7 @@ interface EventCardProps {
   readonly location: string;
   readonly time: string;
   readonly organizerName: string;
-  readonly organizerAvatar: string | null;
+  readonly organizerAvatar?: string | null;
   readonly price: number;
   readonly currency?: string;
   readonly category: string;
@@ -80,6 +80,7 @@ export const EventCard = React.memo(function EventCard({
   organizerName,
   organizerAvatar,
   price,
+  //currency = 'FCFA',
   category,
   isFeatured = false,
   isFavorited = false,
@@ -248,7 +249,7 @@ export const EventCard = React.memo(function EventCard({
     fontFamily: 'Inter-Bold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.goldBright,
+    color: colors.gold,
   };
 
   const reserveButtonStyle: ViewStyle = {

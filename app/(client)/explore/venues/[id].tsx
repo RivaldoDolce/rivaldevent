@@ -782,28 +782,30 @@ export default function VenueDetail() {
               </View>
             </View>
 
-            {/* Boutons de contact */}
+            {/* Boutons de contact premium */}
             <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
               <Pressable
                 onPress={handleContactWhatsApp}
                 style={{
+                  flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: colors.forest,
+                  backgroundColor: '#25D366',
                   borderRadius: radii.lg,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
+                  paddingVertical: spacing.md + 2,
                   justifyContent: 'center',
+                  gap: spacing.sm,
+                  ...shadows.card,
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="Contacter via WhatsApp"
               >
-                <MessageCircle size={16} color={colors.white} strokeWidth={2} />
+                <MessageCircle size={24} color={colors.white} strokeWidth={2} />
                 <Text style={{
-                  fontFamily: 'Inter-SemiBold',
-                  fontSize: 13,
+                  fontFamily: 'Inter-Bold',
+                  fontSize: 15,
                   color: colors.white,
-                  marginLeft: spacing.xs,
+                  letterSpacing: 0.3,
                 }}>
                   WhatsApp
                 </Text>
@@ -811,25 +813,25 @@ export default function VenueDetail() {
               <Pressable
                 onPress={handleCall}
                 style={{
+                  flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: colors.ivory,
+                  backgroundColor: colors.terracotta,
                   borderRadius: radii.lg,
-                  paddingHorizontal: spacing.md,
-                  paddingVertical: spacing.sm,
+                  paddingVertical: spacing.md + 2,
                   justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: colors.border,
+                  gap: spacing.sm,
+                  ...shadows.card,
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="Appeler"
               >
-                <Phone size={16} color={colors.forest} strokeWidth={2} />
+                <Phone size={24} color={colors.white} strokeWidth={2} />
                 <Text style={{
-                  fontFamily: 'Inter-SemiBold',
-                  fontSize: 13,
-                  color: colors.forest,
-                  marginLeft: spacing.xs,
+                  fontFamily: 'Inter-Bold',
+                  fontSize: 15,
+                  color: colors.white,
+                  letterSpacing: 0.3,
                 }}>
                   Appeler
                 </Text>

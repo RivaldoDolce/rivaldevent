@@ -76,10 +76,10 @@ export default function FiltersScreen() {
   const { impact } = useHaptics();
 
   // -- Store global --
-  const { advancedFilters, setAdvancedFilters } = useExploreStore();
+  const { activeCategory: storeCategory, setActiveCategory, advancedFilters, setAdvancedFilters } = useExploreStore();
 
   // -- State local --
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [localCategory, setLocalCategory] = useState<string>(storeCategory);
   const [activeCity, setActiveCity] = useState<string>(advancedFilters.city);
   const [activeDate, setActiveDate] = useState<string>(advancedFilters.date);
   const [activePriceRange, setActivePriceRange] = useState<string>(advancedFilters.priceRange);
@@ -92,18 +92,20 @@ export default function FiltersScreen() {
 
   const handleApply = useCallback(() => {
     impact('medium');
-    // Sauvegarder les filtres dans le store global
+    // Sauvegarder les filtres et la categorie dans le store global
     setAdvancedFilters({
       city: activeCity,
       priceRange: activePriceRange,
       date: activeDate,
     });
+    // Mettre a jour la categorie dans le store
+    setActiveCategory(localCategory);
     router.back();
-  }, [impact, router, activeCity, activePriceRange, activeDate, setAdvancedFilters]);
+  }, [impact, router, activeCity, activePriceRange, activeDate, localCategory, setAdvancedFilters, setActiveCategory]);
 
   const handleClear = useCallback(() => {
     impact('light');
-    setActiveCategory('all');
+    setLocalCategory('all');
     setActiveCity('all');
     setActiveDate('all');
     setActivePriceRange('all');
@@ -241,7 +243,7 @@ export default function FiltersScreen() {
             <Tag size={18} color={colors.terracotta} strokeWidth={1.5} />
             <Text style={sectionTitleStyle}>Categories</Text>
           </View>
-          {renderChips(CATEGORIES, activeCategory, setActiveCategory, colors.terracotta)}
+          {renderChips(CATEGORIES, localCategory, setLocalCategory, colors.terracotta)}
         </View>
 
         {/* ============================================

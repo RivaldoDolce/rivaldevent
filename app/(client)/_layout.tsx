@@ -54,7 +54,7 @@ const TABS: readonly TabConfig[] = [
 // Seulement les routes qui EXISTENT reellement dans le filesystem
 const HIDDEN_TAB_ROUTES = [
   'home/[id]',
-  'event/[id]',
+  'explore/[id]',
   'tickets/[id]',
   'explore/venues/index',
   'explore/venues/[id]',

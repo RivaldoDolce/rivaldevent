@@ -38,7 +38,7 @@ import { ChevronLeft, SlidersHorizontal, Search, X, MapPin } from 'lucide-react-
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // Donnees mock
@@ -219,7 +219,10 @@ export default function VenuesScreen() {
   }, [impact, router]);
 
   const handleVenuePress = useCallback((venueId: string) => {
-    router.push(`/(client)/explore/venues/${venueId}`);
+    router.push({
+      pathname: ROUTES.VENUE_DETAIL,
+      params: { id: venueId },
+    } as any);
   }, [router]);
 
   const handleClearSearch = useCallback(() => {

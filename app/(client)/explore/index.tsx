@@ -54,7 +54,6 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
 import { VenueCard } from '@/components/venues/VenueCard';
-import { BottomSheet, type BottomSheetRef } from '@/components/ui/BottomSheet';
 import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
@@ -67,22 +66,16 @@ const GRID_IMAGE_HEIGHT = 140;
 const LIST_IMAGE_HEIGHT = 100;
 
 // ============================================================
-// Prix range labels (pour filtres avances dans BottomSheet)
+// Prix range labels (doit correspondre aux filtres du modal)
 // ============================================================
 
 const PRICE_RANGES = [
-  { id: 'all', label: 'Tous', min: 0, max: Infinity },
+  { id: 'all', label: 'Tous', min: 0, max: null },
   { id: 'free', label: 'Gratuit', min: 0, max: 0 },
-  { id: 'budget', label: '< 5 000', min: 1, max: 5000 },
-  { id: 'mid', label: '5k-15k', min: 5001, max: 15000 },
-  { id: 'premium', label: '15k+', min: 15001, max: Infinity },
-] as const;
-
-const DATE_FILTERS = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'today', label: 'Ce soir' },
-  { id: 'weekend', label: 'Ce week-end' },
-  { id: 'week', label: 'Cette semaine' },
+  { id: 'low', label: '< 5 000', min: 0, max: 5000 },
+  { id: 'mid', label: '5 000 - 15 000', min: 5000, max: 15000 },
+  { id: 'high', label: '15 000 - 50 000', min: 15000, max: 50000 },
+  { id: 'vip', label: '> 50 000', min: 50000, max: null },
 ] as const;
 
 // ============================================================
@@ -256,18 +249,12 @@ export default function ExploreScreen() {
   const params = useLocalSearchParams<{ autoFocus?: string; filterCategory?: string }>();
   const { impact } = useHaptics();
   const searchInputRef = useRef<TextInput>(null);
-  const bottomSheetRef = useRef<BottomSheetRef>(null);
-
-  // -- Store global pour filtres avances --
-  const { advancedFilters, setAdvancedFilters } = useExploreStore();
+  // -- Store global --
+  const { activeCategory, setActiveCategory, advancedFilters, setAdvancedFilters } = useExploreStore();
 
   // -- State local --
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState(
-    params.filterCategory ?? 'all',
-  );
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [showFiltersSheet, setShowFiltersSheet] = useState(false);
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
   useEffect(() => {
@@ -287,16 +274,16 @@ export default function ExploreScreen() {
     if (params.filterCategory && params.filterCategory !== activeCategory) {
       setActiveCategory(params.filterCategory);
     }
-  }, [params.filterCategory]);
+  }, [params.filterCategory, activeCategory, setActiveCategory]);
 
   // -- Handlers --
   const handleEventPress = useCallback((eventId: string) => {
     impact('light');
-    // Navigation vers la page detail partagee (pas sous l'onglet Home)
+    // Navigation vers le detail dans le dossier explore/
+    // pour que router.back() retourne a Explorer (pas a l'Accueil)
     router.push({
-      pathname: ROUTES.EVENT_DETAIL,
+      pathname: ROUTES.EXPLORE_EVENT_DETAIL,
       params: { id: eventId },
-      query: { from: 'explore' },
     } as any);
   }, [impact, router]);
 
@@ -334,22 +321,8 @@ export default function ExploreScreen() {
 
   const handleOpenFilters = useCallback(() => {
     impact('light');
-    // Ouvrir le BottomSheet de maniere declarative
-    bottomSheetRef.current?.expand();
-    setShowFiltersSheet(true);
-  }, [impact]);
-
-  // -- Callback du BottomSheet (memoise pour eviter les re-rendus infinis) --
-  const handleSheetChange = useCallback((index: number) => {
-    if (index < 0) {
-      setShowFiltersSheet(false);
-    }
-  }, []);
-
-  const handleApplyFilters = useCallback(() => {
-    impact('light');
-    setShowFiltersSheet(false);
-  }, [impact]);
+    router.push('/(modal)/filters');
+  }, [impact, router]);
 
   const handleResetFilters = useCallback(() => {
     impact('light');
@@ -382,16 +355,20 @@ export default function ExploreScreen() {
 
     // Filtre prix (depuis le store global)
     const priceRange = PRICE_RANGES.find((r) => r.id === advancedFilters.priceRange);
-    if (priceRange && priceRange.id !== 'all') {
-      result = result.filter((e) => e.price >= priceRange.min && e.price <= priceRange.max);
+    if (priceRange && advancedFilters.priceRange !== 'all') {
+      if (priceRange.max === null) {
+        result = result.filter((e) => e.price >= priceRange.min);
+      } else {
+        result = result.filter((e) => e.price >= priceRange.min && e.price <= priceRange.max);
+      }
     }
 
-    // Filtre date (depuis le store global)
+    // Filtre date (depuis le store global) - doit correspondre aux options du modal
     if (advancedFilters.date !== 'all') {
       const mockDateMap: Record<string, readonly string[]> = {
         today: ['1', '2', '3'] as const,
-        weekend: ['4', '5'] as const,
         week: ['1', '2', '3', '4', '5', '6'] as const,
+        month: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] as const,
       };
       const allowedIds = mockDateMap[advancedFilters.date];
       if (allowedIds) {
@@ -604,79 +581,6 @@ export default function ExploreScreen() {
         {/* Espacement final aeré */}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
-
-      {/* =============================================
-          BOTTOM SHEET : Filtres avances (prix + date)
-          ============================================= */}
-      <BottomSheet
-        ref={bottomSheetRef}
-        snapPoints={['50%']}
-        index={showFiltersSheet ? 0 : -1}
-        onChange={handleSheetChange}
-        testID="filters-bottom-sheet"
-      >
-        {/* Titre */}
-        <View style={sheetHeaderStyle}>
-          <Text style={sheetTitleStyle}>Filtres avances</Text>
-          <Pressable onPress={handleResetFilters} hitSlop={8} accessibilityLabel="Reinitialiser">
-            <Text style={sheetResetTextStyle}>Reinitialiser</Text>
-          </Pressable>
-        </View>
-
-        {/* Filtre prix */}
-        <Text style={sheetSectionLabelStyle}>Budget</Text>
-        <View style={sheetChipsRowStyle}>
-          {PRICE_RANGES.map((range) => {
-            const isActive = advancedFilters.priceRange === range.id;
-            return (
-              <Pressable
-                key={range.id}
-                onPress={() => setAdvancedFilters({ ...advancedFilters, priceRange: range.id })}
-                style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-              >
-                <Text style={isActive ? sheetChipActiveTextStyle : sheetChipInactiveTextStyle}>
-                  {range.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Espacement */}
-        <View style={{ height: spacing.md }} />
-
-        {/* Filtre date */}
-        <Text style={sheetSectionLabelStyle}>Date</Text>
-        <View style={sheetChipsRowStyle}>
-          {DATE_FILTERS.map((dateFilter) => {
-            const isActive = advancedFilters.date === dateFilter.id;
-            return (
-              <Pressable
-                key={dateFilter.id}
-                onPress={() => setAdvancedFilters({ ...advancedFilters, date: dateFilter.id })}
-                style={isActive ? sheetChipActiveStyle : sheetChipInactiveStyle}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-              >
-                <CalendarDays size={12} color={isActive ? colors.white : colors.stone} strokeWidth={1.5} />
-                <Text style={isActive ? sheetChipActiveTextStyle : sheetChipInactiveTextStyle}>
-                  {dateFilter.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Espacement */}
-        <View style={{ height: spacing.xl }} />
-
-        {/* Bouton Appliquer */}
-        <Pressable onPress={handleApplyFilters} style={sheetApplyButtonStyle}>
-          <Text style={sheetApplyButtonTextStyle}>Appliquer les filtres</Text>
-        </Pressable>
-      </BottomSheet>
     </View>
   );
 }
@@ -1102,96 +1006,6 @@ const emptyStateButtonStyle: ViewStyle = {
 };
 
 const emptyStateButtonTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 16,
-  lineHeight: 22,
-  color: colors.white,
-};
-
-// ============================================================
-// Styles - Bottom Sheet (Filtres avances)
-// ============================================================
-
-const sheetHeaderStyle: ViewStyle = {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: spacing.md,
-};
-
-const sheetTitleStyle: TextStyle = {
-  fontFamily: 'PlayfairDisplay-Bold',
-  fontSize: 20,
-  lineHeight: 26,
-  color: colors.onyx,
-};
-
-const sheetResetTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 14,
-  lineHeight: 20,
-  color: colors.terracotta,
-};
-
-const sheetSectionLabelStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 14,
-  lineHeight: 20,
-  color: colors.onyx,
-  marginBottom: spacing.sm,
-};
-
-const sheetChipsRowStyle: ViewStyle = {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: spacing.sm,
-};
-
-const sheetChipActiveStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.full,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.xs,
-};
-
-const sheetChipInactiveStyle: ViewStyle = {
-  backgroundColor: colors.ivory,
-  borderRadius: radii.full,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.sm,
-  borderWidth: 1,
-  borderColor: `${colors.stone}30`,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.xs,
-};
-
-const sheetChipActiveTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 13,
-  lineHeight: 18,
-  color: colors.white,
-};
-
-const sheetChipInactiveTextStyle: TextStyle = {
-  fontFamily: 'Inter-Medium',
-  fontSize: 13,
-  lineHeight: 18,
-  color: colors.onyx,
-};
-
-const sheetApplyButtonStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.md,
-  paddingHorizontal: spacing.xl,
-  paddingVertical: spacing.md,
-  alignItems: 'center',
-};
-
-const sheetApplyButtonTextStyle: TextStyle = {
   fontFamily: 'Inter-SemiBold',
   fontSize: 16,
   lineHeight: 22,

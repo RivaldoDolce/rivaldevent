@@ -23,6 +23,19 @@ import {
 } from '@/data/mock';
 
 // ============================================================
+// Helpers
+// ============================================================
+
+/**
+ * Verifie si un ID est un UUID valide.
+ * Les IDs mock ('1', '2', etc.) causent des erreurs Supabase.
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
+// ============================================================
 // Helpers mock -> types metier
 // ============================================================
 
@@ -139,6 +152,12 @@ export const venueService = {
    * Fallback mock si Supabase echoue.
    */
   async fetchVenueDetail(venueId: string): Promise<VenueWithPromotion | null> {
+    // Si l'ID n'est pas un UUID valide, on saute Supabase (donnees mock)
+    if (!isUuid(venueId)) {
+      logger.debug('[venueService] ID mock detecte, fallback direct:', venueId);
+      return mockDetailToVenueWithPromotion(getMockVenueDetailWithFallback(venueId));
+    }
+
     try {
       const { data, error } = await supabase
         .from('venues')

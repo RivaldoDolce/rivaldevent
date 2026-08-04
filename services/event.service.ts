@@ -22,6 +22,18 @@ import type { MockEventDetail } from '@/data/mock';
 // ============================================================
 
 /**
+ * Verifie si un ID est un UUID valide (format v4).
+ * Les IDs mock ('1', '2', 'tier-1-std', etc.) ne sont pas des UUIDs
+ * et causent des erreurs Supabase (invalid input syntax for type uuid).
+ * Quand l'ID n'est pas un UUID, on saute la requete Supabase
+ * et on passe directement au fallback mock.
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
+/**
  * Formate un prix en FCFA avec separateur de milliers.
  * Ex: 5000 -> "5 000 FCFA"
  */
@@ -149,6 +161,16 @@ export const eventService = {
    * Detail complet d'un evenement avec organisateur, lieu et tiers de billets.
    */
   async fetchEventDetail(eventId: string): Promise<EventWithAvailability | null> {
+    // Si l'ID n'est pas un UUID valide, on saute Supabase (donnees mock)
+    if (!isUuid(eventId)) {
+      logger.debug('[eventService] ID mock detecte, fallback direct:', eventId);
+      const mockDetail = getMockEventDetailWithFallback(eventId);
+      if (mockDetail) {
+        return mapMockDetailToEventWithAvailability(mockDetail);
+      }
+      return null;
+    }
+
     try {
       const { data, error } = await supabase
         .from('events')
@@ -241,6 +263,37 @@ export const eventService = {
    */
   async fetchSimilarEvents(eventId: string, category: string | null, limit = 6): Promise<EventListItem[]> {
     if (!category) return [];
+
+    // Si l'ID n'est pas un UUID valide, on saute Supabase (donnees mock)
+    if (!isUuid(eventId)) {
+      logger.debug('[eventService] ID mock detecte pour similar, fallback direct:', eventId);
+      return MOCK_EVENTS
+        .filter((e) => e.category === category && e.id !== eventId)
+        .slice(0, limit)
+        .map((mockEvent) => ({
+          id: mockEvent.id,
+          title: mockEvent.title,
+          description: null,
+          category: mockEvent.category,
+          event_type: mockEvent.category,
+          start_date: `2026-08-${parseInt(mockEvent.id, 10) + 10}T20:00:00Z`,
+          end_date: null,
+          address: mockEvent.location,
+          city: mockEvent.location.includes('Yaounde') ? 'Yaounde' : 'Douala',
+          cover_image: mockEvent.image,
+          images: [mockEvent.image],
+          status: 'published' as const,
+          is_featured: mockEvent.isFeatured,
+          organizer_id: null,
+          venue_id: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+          organizer_name: mockEvent.organizerName,
+          venue_name: null,
+          min_price: mockEvent.price,
+          available_tickets: 120,
+        }));
+    }
 
     try {
       const { data, error } = await supabase

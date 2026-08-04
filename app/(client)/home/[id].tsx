@@ -2,17 +2,17 @@
  * Page detail d'un evenement - Ecran client.
  *
  * Design premium "Minimalisme Africain Camerounais" :
- * - Image hero plein ecran avec gradient overlay
- * - Bouton retour et favori flottants sur l'image
- * - Badge categorie sur l'image
- * - Titre PlayfairDisplay-Bold
- * - Infos date/heure/lieu avec icones lucide
- * - Galerie d'images horizontale (si plusieurs images)
- * - Description riche
- * - Carte organisateur avec WhatsApp + appel
- * - Apercu des tiers de billets disponibles
+ * - Image hero plein ecran avec parallaxe et gradient overlay premium
+ * - Bouton retour et favori flottants avec glassmorphism
+ * - Badge categorie avec glow terracotta
+ * - Titre PlayfairDisplay-Bold avec ombre douce
+ * - Infos date/heure/lieu avec chips elegants et icones lucide
+ * - Galerie d'images horizontale avec indicateur dots
+ * - Description riche avec "Lire la suite"
+ * - Section billets avec cartes gradient par tier
+ * - Section organisateur premium avec avatar, verifie, WhatsApp + appel
  * - Section "Evenements similaires" en carousel horizontal
- * - Barre fixe en bas : prix + CTA "Reserver"
+ * - Barre fixe en bas avec glassmorphism : prix + CTA "Reserver"
  *
  * Conventions :
  * - lucide-react-native pour les icones
@@ -40,7 +40,7 @@ import {
   type ImageStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import {
   ChevronLeft,
   CalendarDays,
@@ -51,6 +51,9 @@ import {
   Users,
   Ticket,
   ChevronRight,
+  Star,
+  ShieldCheck,
+  Phone,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,10 +69,10 @@ import type { EventWithAvailability, TicketTierWithAvailability } from '@/types'
 // Constantes
 // ============================================================
 
-const HERO_HEIGHT = 320;
-const GALLERY_ITEM_WIDTH = 100;
-const GALLERY_ITEM_HEIGHT = 72;
-const BOTTOM_BAR_HEIGHT = 72;
+const HERO_HEIGHT = 380;
+const GALLERY_ITEM_WIDTH = 110;
+const GALLERY_ITEM_HEIGHT = 78;
+const BOTTOM_BAR_HEIGHT = 76;
 
 // ============================================================
 // Helper : ouvrir WhatsApp
@@ -106,13 +109,45 @@ function openWhatsApp(phone: string, message: string): void {
 }
 
 // ============================================================
+// Helper : couleur de tier pour les cartes billets
+// ============================================================
+
+function getTierAccent(tierName: string): { bg: string; border: string; text: string; icon: string } {
+  const name = tierName.toUpperCase();
+  if (name.includes('PREMIUM')) {
+    return {
+      bg: `${colors.gold}12`,
+      border: `${colors.gold}40`,
+      text: colors.gold,
+      icon: colors.gold,
+    };
+  }
+  if (name.includes('VIP')) {
+    return {
+      bg: `${colors.forest}12`,
+      border: `${colors.forest}40`,
+      text: colors.forest,
+      icon: colors.forest,
+    };
+  }
+  // Standard
+  return {
+    bg: `${colors.stone}08`,
+    border: `${colors.stone}25`,
+    text: colors.stone,
+    icon: colors.stone,
+  };
+}
+
+// ============================================================
 // Composant
 // ============================================================
 
 export default function EventDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string; from?: string }>();
+  const pathname = usePathname();
+  const params = useLocalSearchParams<{ id: string }>();
   const { impact } = useHaptics();
   const isOffline = useOffline();
 
@@ -132,6 +167,7 @@ export default function EventDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
   const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
 
@@ -172,11 +208,9 @@ export default function EventDetail() {
         if (imgs.length <= 1) return;
         
         if (dx > 50) {
-          // Swipe droite: image precedente
           setActiveGalleryIndex((prev) => (prev > 0 ? prev - 1 : imgs.length - 1));
           resetAutoScroll();
         } else if (dx < -50) {
-          // Swipe gauche: image suivante
           setActiveGalleryIndex((prev) => (prev < imgs.length - 1 ? prev + 1 : 0));
           resetAutoScroll();
         }
@@ -233,14 +267,8 @@ export default function EventDetail() {
   // -- Handlers --
   const handleBack = useCallback(() => {
     impact('light');
-    // Si l'utilisateur vient d'Explorer, on le ramene a Explorer
-    // (pas a l'Accueil) pour eviter la confusion UX
-    if (params.from === 'explore') {
-      router.replace(ROUTES.EXPLORE);
-    } else {
-      router.back();
-    }
-  }, [impact, router, params.from]);
+    router.back();
+  }, [impact, router]);
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
@@ -283,11 +311,16 @@ export default function EventDetail() {
 
   const handleSimilarPress = useCallback((similarId: string) => {
     impact('light');
+    // Navigation contextuelle : si on est dans l'onglet Explorer,
+    // pousser sur la stack Explorer ; sinon sur la stack Home
+    const detailRoute = pathname.includes('/explore/')
+      ? ROUTES.EXPLORE_EVENT_DETAIL
+      : ROUTES.EVENT_DETAIL;
     router.push({
-      pathname: ROUTES.EVENT_DETAIL,
+      pathname: detailRoute,
       params: { id: similarId },
     } as any);
-  }, [impact, router]);
+  }, [impact, router, pathname]);
 
   // -- Donnees derivees --
   const minPrice = useMemo(() => {
@@ -310,6 +343,17 @@ export default function EventDetail() {
     }
     return gallery.length > 0 ? gallery : (cover ? [cover] : []);
   }, [event]);
+
+  // Description tronquee a 180 caracteres
+  const shouldTruncateDescription = useMemo(() => {
+    return (event?.description?.length ?? 0) > 180;
+  }, [event]);
+
+  const displayDescription = useMemo(() => {
+    if (!event?.description) return '';
+    if (!shouldTruncateDescription || descriptionExpanded) return event.description;
+    return event.description.slice(0, 180) + '...';
+  }, [event, shouldTruncateDescription, descriptionExpanded]);
 
   // ============================================================
   // Loading state
@@ -352,7 +396,7 @@ export default function EventDetail() {
         showsVerticalScrollIndicator={false}
       >
         {/* =============================================
-            IMAGE HERO AVEC SWIPE
+            IMAGE HERO AVEC SWIPE — HAUTEUR PREMIUM
             ============================================= */}
         <View
           style={styles.heroContainer}
@@ -372,64 +416,82 @@ export default function EventDetail() {
             </View>
           )}
 
-          {/* Gradient overlay */}
+          {/* Gradient overlay premium — triple couche */}
           <LinearGradient
-            colors={['transparent', 'rgba(26,24,22,0.7)']}
+            colors={['transparent', 'rgba(26,24,22,0.3)', 'rgba(26,24,22,0.85)']}
+            locations={[0, 0.4, 1]}
             style={styles.heroGradient}
             pointerEvents="none"
           />
 
-          {/* Badge categorie */}
+          {/* Badge categorie avec glow */}
           {event.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{event.category}</Text>
+            <View style={styles.categoryBadgeWrapper}>
+              <View style={styles.categoryBadgeGlow} />
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
+              </View>
             </View>
           )}
 
-          {/* Bouton retour (absolu) */}
+          {/* Bouton retour glassmorphism */}
           <Pressable
             onPress={handleBack}
-            style={[styles.floatingButton, { left: spacing.md, top: Math.max(insets.top + spacing.sm, spacing.lg) }]}
+            style={[styles.glassButton, { left: spacing.md, top: Math.max(insets.top + spacing.sm, spacing.lg) }]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
           >
-            <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
+            <ChevronLeft size={24} color={colors.white} strokeWidth={2.5} />
           </Pressable>
 
-          {/* Boutons droite : Partage + Favori (conteneur absolu, boutons flexibles) */}
+          {/* Boutons droite glassmorphism : Partage + Favori */}
           <View style={[styles.floatingButtonsContainer, { top: Math.max(insets.top + spacing.sm, spacing.lg) }]}>
             <Pressable
               onPress={handleShare}
-              style={styles.floatingButton}
+              style={styles.glassButton}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Partager"
             >
-              <Share2 size={20} color={colors.onyx} strokeWidth={2} />
+              <Share2 size={20} color={colors.white} strokeWidth={2} />
             </Pressable>
             <Pressable
               onPress={handleToggleFavorite}
-              style={styles.floatingButton}
+              style={styles.glassButton}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             >
               <Heart
                 size={20}
-                color={isFavorited ? colors.terracotta : colors.onyx}
+                color={isFavorited ? colors.terracotta : colors.white}
                 fill={isFavorited ? colors.terracotta : 'none'}
                 strokeWidth={2}
               />
             </Pressable>
           </View>
 
-          {/* Compteur d'images */}
+          {/* Compteur d'images style dots */}
           {displayImages.length > 1 && (
-            <View style={styles.imageCounter}>
-              <Text style={styles.imageCounterText}>
-                {activeGalleryIndex + 1} / {displayImages.length}
-              </Text>
+            <View style={styles.imageDotsContainer}>
+              {displayImages.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.imageDot,
+                    activeGalleryIndex === index && styles.imageDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Prix hero en bas a droite */}
+          {minPrice !== null && (
+            <View style={styles.heroPriceBadge}>
+              <Text style={styles.heroPriceFrom}>A partir de</Text>
+              <Text style={styles.heroPriceValue}>{formatPrice(minPrice)}</Text>
             </View>
           )}
         </View>
@@ -476,10 +538,10 @@ export default function EventDetail() {
             CONTENU PRINCIPAL
             ============================================= */}
         <View style={styles.content}>
-          {/* Titre */}
+          {/* Titre premium */}
           <Text style={styles.title}>{event.title}</Text>
 
-          {/* Infos rapides : date + heure */}
+          {/* Infos rapides : date + heure dans des chips premium */}
           <View style={styles.infoRow}>
             <View style={styles.infoChip}>
               <CalendarDays size={16} color={colors.terracotta} strokeWidth={1.5} />
@@ -491,7 +553,7 @@ export default function EventDetail() {
             </View>
           </View>
 
-          {/* Lieu */}
+          {/* Lieu avec icone MapPin */}
           <View style={styles.locationRow}>
             <MapPin size={16} color={colors.stone} strokeWidth={1.5} />
             <Text style={styles.locationText}>{locationDisplay}</Text>
@@ -502,23 +564,33 @@ export default function EventDetail() {
             )}
           </View>
 
-          {/* Separateur or */}
+          {/* Separateur or premium */}
           <View style={styles.goldSeparator}>
             <View style={styles.goldSeparatorLine} />
-            <View style={styles.goldSeparatorDot} />
+            <View style={styles.goldSeparatorDiamond} />
             <View style={styles.goldSeparatorLine} />
           </View>
 
-          {/* Description */}
+          {/* Description avec "Lire la suite" */}
           {event.description ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>A propos</Text>
-              <Text style={styles.descriptionText}>{event.description}</Text>
+              <Text style={styles.descriptionText}>{displayDescription}</Text>
+              {shouldTruncateDescription && (
+                <Pressable
+                  onPress={() => setDescriptionExpanded((prev) => !prev)}
+                  hitSlop={8}
+                >
+                  <Text style={styles.readMoreText}>
+                    {descriptionExpanded ? 'Voir moins' : 'Lire la suite'}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ) : null}
 
           {/* =============================================
-              BILLETS DISPONIBLES
+              BILLETS DISPONIBLES — CARTES GRADIENT PREMIUM
               ============================================= */}
           {event.ticket_tiers.length > 0 ? (
             <View style={styles.section}>
@@ -544,35 +616,46 @@ export default function EventDetail() {
           ) : null}
 
           {/* =============================================
-              ORGANISATEUR
+              ORGANISATEUR — DESIGN PREMIUM REPUSE
               ============================================= */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Organisateur</Text>
             <View style={styles.organizerCard}>
-              <View style={styles.organizerInfo}>
-                <View style={styles.organizerAvatar}>
-                  {event.organizer?.avatar_url ? (
-                    <Image
-                      source={{ uri: event.organizer.avatar_url }}
-                      style={styles.organizerAvatarImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <Text style={styles.organizerAvatarFallback}>
-                      {(event.organizer?.full_name ?? 'O').charAt(0).toUpperCase()}
-                    </Text>
-                  )}
+              {/* Bande decorative en haut */}
+              <View style={styles.organizerTopBar} />
+
+              <View style={styles.organizerContent}>
+                {/* Avatar avec bordure gradient */}
+                <View style={styles.organizerAvatarOuter}>
+                  <View style={styles.organizerAvatar}>
+                    {event.organizer?.avatar_url ? (
+                      <Image
+                        source={{ uri: event.organizer.avatar_url }}
+                        style={styles.organizerAvatarImage}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                    ) : (
+                      <Text style={styles.organizerAvatarFallback}>
+                        {(event.organizer?.full_name ?? 'O').charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.organizerDetails}>
-                  <Text style={styles.organizerName}>
-                    {event.organizer?.full_name ?? 'Organisateur'}
-                  </Text>
-                  <Text style={styles.organizerLabel}>Organisateur</Text>
+
+                {/* Nom + badge verifie */}
+                <View style={styles.organizerInfo}>
+                  <View style={styles.organizerNameRow}>
+                    <Text style={styles.organizerName}>
+                      {event.organizer?.full_name ?? 'Organisateur'}
+                    </Text>
+                    <ShieldCheck size={16} color={colors.forest} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.organizerSubtitle}>Organisateur verifie</Text>
                 </View>
               </View>
 
-              {/* Boutons de contact */}
+              {/* Boutons de contact premium */}
               <View style={styles.contactButtons}>
                 <Pressable
                   onPress={handleContactWhatsApp}
@@ -593,11 +676,7 @@ export default function EventDetail() {
                   accessibilityRole="button"
                   accessibilityLabel="Appeler l'organisateur"
                 >
-                  <Image
-                    source={require('@/assets/icons/phone.png')}
-                    style={styles.callIcon}
-                    contentFit="contain"
-                  />
+                  <Phone size={24} color={colors.white} strokeWidth={2} />
                   <Text style={styles.callButtonText}>Appeler</Text>
                 </Pressable>
               </View>
@@ -681,9 +760,12 @@ export default function EventDetail() {
       </ScrollView>
 
       {/* =============================================
-          BARRE FIXE EN BAS : Prix + CTA Reserver
+          BARRE FIXE EN BAS — GLASSMORPHISM PREMIUM
           ============================================= */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}>
+      <LinearGradient
+        colors={[`${colors.white}F2`, `${colors.white}F8`]}
+        style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}
+      >
         <View style={styles.bottomBarContent}>
           <View style={styles.bottomBarPriceContainer}>
             <Text style={styles.bottomBarPriceLabel}>A partir de</Text>
@@ -707,32 +789,42 @@ export default function EventDetail() {
             </Text>
           </Pressable>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
 
 // ============================================================
-// Sous-composant : Apercu d'un tier de billet
+// Sous-composant : Carte premium d'un tier de billet
 // ============================================================
 
 function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }) {
+  const accent = getTierAccent(tier.name);
+
   return (
     <View
       style={[
         styles.tierCard,
+        { backgroundColor: accent.bg, borderColor: accent.border },
         tier.is_sold_out && styles.tierCardSoldOut,
       ]}
     >
+      {/* Indicateur lateral colore */}
+      <View style={[styles.tierSideIndicator, { backgroundColor: accent.icon }]} />
+
       <View style={styles.tierInfo}>
-        <Text
-          style={[
-            styles.tierName,
-            tier.is_sold_out && styles.tierNameSoldOut,
-          ]}
-        >
-          {tier.name}
-        </Text>
+        <View style={styles.tierNameRow}>
+          <Star size={14} color={accent.icon} strokeWidth={2} />
+          <Text
+            style={[
+              styles.tierName,
+              { color: accent.text },
+              tier.is_sold_out && styles.tierNameSoldOut,
+            ]}
+          >
+            {tier.name}
+          </Text>
+        </View>
         {tier.description ? (
           <Text style={styles.tierDescription} numberOfLines={1}>
             {tier.description}
@@ -743,7 +835,7 @@ function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }
         ) : null}
       </View>
       <View style={styles.tierPriceSection}>
-        <Text style={styles.tierPrice}>{formatPrice(tier.price)}</Text>
+        <Text style={[styles.tierPrice, { color: accent.text }]}>{formatPrice(tier.price)}</Text>
         <Text style={styles.tierAvailability}>
           {tier.is_sold_out
             ? 'Complet'
@@ -821,7 +913,7 @@ const styles = {
     color: colors.white,
   } as TextStyle,
 
-  // -- Hero --
+  // -- Hero premium --
   heroContainer: {
     height: HERO_HEIGHT,
     position: 'relative',
@@ -847,15 +939,15 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    height: 160,
+    height: 200,
   } as ViewStyle,
 
-  // -- Flottants --
-  floatingButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${colors.white}E6`,
+  // -- Glassmorphism boutons --
+  glassButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: `${colors.onyx}55`,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.card,
@@ -867,38 +959,76 @@ const styles = {
     gap: spacing.sm,
   } as ViewStyle,
 
-  // -- Badge categorie --
-  categoryBadge: {
+  // -- Badge categorie avec glow --
+  categoryBadgeWrapper: {
     position: 'absolute',
-    bottom: spacing.md,
-    left: spacing.md,
+    bottom: spacing.lg,
+    left: spacing.lg,
+  } as ViewStyle,
+  categoryBadgeGlow: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: radii.md + 4,
+    backgroundColor: `${colors.terracotta}30`,
+  } as ViewStyle,
+  categoryBadge: {
     backgroundColor: colors.terracotta,
     borderRadius: radii.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   } as ViewStyle,
   categoryBadgeText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    lineHeight: 16,
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    lineHeight: 14,
     color: colors.white,
-    letterSpacing: 0.3,
+    letterSpacing: 1,
   } as TextStyle,
 
-  // -- Compteur images --
-  imageCounter: {
+  // -- Indicateur dots au lieu de compteur --
+  imageDotsContainer: {
     position: 'absolute',
-    bottom: spacing.md,
-    right: spacing.md,
-    backgroundColor: `${colors.onyx}88`,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
+    bottom: spacing.lg,
+    right: spacing.lg,
+    flexDirection: 'row',
+    gap: 6,
+  } as ViewStyle,
+  imageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: `${colors.white}50`,
+  } as ViewStyle,
+  imageDotActive: {
+    width: 20,
+    borderRadius: 3,
+    backgroundColor: colors.white,
+  } as ViewStyle,
+
+  // -- Prix hero en bas a droite --
+  heroPriceBadge: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: `${colors.onyx}70`,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   } as ViewStyle,
-  imageCounterText: {
+  heroPriceFrom: {
     fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 9,
+    lineHeight: 12,
+    color: `${colors.white}BB`,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  heroPriceValue: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
+    lineHeight: 18,
     color: colors.white,
   } as TextStyle,
 
@@ -935,8 +1065,8 @@ const styles = {
   } as ViewStyle,
   title: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: 28,
+    lineHeight: 36,
     color: colors.onyx,
     letterSpacing: -0.5,
     marginBottom: spacing.md,
@@ -994,7 +1124,7 @@ const styles = {
     letterSpacing: 0.2,
   } as TextStyle,
 
-  // -- Separateur or --
+  // -- Separateur or premium avec losange --
   goldSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1006,11 +1136,12 @@ const styles = {
     height: 1,
     backgroundColor: `${colors.gold}30`,
   } as ViewStyle,
-  goldSeparatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  goldSeparatorDiamond: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
     backgroundColor: colors.gold,
+    transform: [{ rotate: '45deg' }],
   } as ViewStyle,
 
   // -- Sections --
@@ -1039,6 +1170,14 @@ const styles = {
     color: `${colors.onyx}CC`,
     letterSpacing: 0.1,
   } as TextStyle,
+  readMoreText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.terracotta,
+    marginTop: spacing.sm,
+    letterSpacing: 0.2,
+  } as TextStyle,
 
   // -- Disponibilite --
   availabilityChip: {
@@ -1058,32 +1197,45 @@ const styles = {
     letterSpacing: 0.1,
   } as TextStyle,
 
-  // -- Tiers de billets --
+  // -- Tiers de billets premium --
   tiersList: {
     gap: spacing.sm,
   } as ViewStyle,
   tierCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     padding: spacing.md,
+    paddingLeft: spacing.md + 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
     ...shadows.card,
   } as ViewStyle,
   tierCardSoldOut: {
     opacity: 0.5,
   } as ViewStyle,
+  tierSideIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: spacing.md,
+    bottom: spacing.md,
+    width: 4,
+    borderRadius: 2,
+  } as ViewStyle,
   tierInfo: {
     flex: 1,
     marginRight: spacing.md,
   } as ViewStyle,
+  tierNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  } as ViewStyle,
   tierName: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter-Bold',
     fontSize: 15,
     lineHeight: 20,
-    color: colors.onyx,
-    letterSpacing: 0.1,
+    letterSpacing: 0.5,
   } as TextStyle,
   tierNameSoldOut: {
     textDecorationLine: 'line-through',
@@ -1110,7 +1262,6 @@ const styles = {
     fontFamily: 'Inter-Bold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.gold,
   } as TextStyle,
   tierAvailability: {
     fontFamily: 'Inter-Medium',
@@ -1120,62 +1271,76 @@ const styles = {
     marginTop: 2,
   } as TextStyle,
 
-  // -- Organisateur --
+  // -- Organisateur premium repense --
   organizerCard: {
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    ...shadows.card,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    ...shadows.eventCard,
   } as ViewStyle,
-  organizerInfo: {
+  organizerTopBar: {
+    height: 4,
+    backgroundColor: colors.terracotta,
+  } as ViewStyle,
+  organizerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: spacing.md,
+  } as ViewStyle,
+  organizerAvatarOuter: {
+    marginRight: spacing.md,
   } as ViewStyle,
   organizerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.ivory,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: colors.gold,
   } as ViewStyle,
   organizerAvatarImage: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
   } as ImageStyle,
   organizerAvatarFallback: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 20,
-    lineHeight: 24,
+    fontSize: 22,
+    lineHeight: 28,
     color: colors.terracotta,
   } as TextStyle,
-  organizerDetails: {
-    marginLeft: spacing.md,
+  organizerInfo: {
     flex: 1,
   } as ViewStyle,
+  organizerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  } as ViewStyle,
   organizerName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    fontSize: 17,
     lineHeight: 22,
     color: colors.onyx,
     letterSpacing: 0.1,
   } as TextStyle,
-  organizerLabel: {
+  organizerSubtitle: {
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.forest,
     marginTop: spacing.xs,
   } as TextStyle,
 
-  // -- Boutons contact --
+  // -- Boutons contact premium --
   contactButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   } as ViewStyle,
   whatsappButton: {
     flex: 1,
@@ -1183,16 +1348,17 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#25D366',
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md + 2,
     gap: spacing.sm,
+    ...shadows.card,
   } as ViewStyle,
   whatsappButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
+    fontFamily: 'Inter-Bold',
+    fontSize: 15,
     lineHeight: 20,
     color: colors.white,
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   } as TextStyle,
   callButton: {
     flex: 1,
@@ -1200,24 +1366,21 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.terracotta,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md + 2,
     gap: spacing.sm,
+    ...shadows.card,
   } as ViewStyle,
   callButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
+    fontFamily: 'Inter-Bold',
+    fontSize: 15,
     lineHeight: 20,
     color: colors.white,
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   } as TextStyle,
   whatsappIcon: {
-    width: 18,
-    height: 18,
-  } as ImageStyle,
-  callIcon: {
-    width: 18,
-    height: 18,
+    width: 26,
+    height: 26,
   } as ImageStyle,
 
   // -- Voir tout --
@@ -1296,19 +1459,17 @@ const styles = {
     paddingBottom: spacing.sm,
   } as TextStyle,
 
-  // -- Barre fixe bas --
+  // -- Barre fixe bas glassmorphism --
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: `${colors.stone}15`,
+    borderTopColor: `${colors.stone}10`,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.lg,
     zIndex: 50,
-    ...shadows.card,
   } as ViewStyle,
   bottomBarContent: {
     flexDirection: 'row',
@@ -1340,12 +1501,13 @@ const styles = {
     gap: spacing.sm,
     minWidth: 160,
     justifyContent: 'center',
+    ...shadows.card,
   } as ViewStyle,
   reserveButtonDisabled: {
     backgroundColor: colors.stone,
   } as ViewStyle,
   reserveButtonText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter-Bold',
     fontSize: 16,
     lineHeight: 22,
     color: colors.white,
