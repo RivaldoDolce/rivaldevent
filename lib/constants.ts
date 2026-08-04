@@ -139,6 +139,7 @@ export const ROUTES = {
   OTP: '/(auth)/otp' as const,
   HOME: '/(client)/home' as const,
   EVENT_DETAIL: '/(client)/home/[id]' as const,
+  HOME_VENUE_DETAIL: '/(client)/home/venues/[id]' as const,
   EXPLORE_EVENT_DETAIL: '/(client)/explore/[id]' as const,
   EXPLORE: '/(client)/explore' as const,
   VENUES: '/(client)/explore/venues' as const,

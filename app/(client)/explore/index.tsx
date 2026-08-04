@@ -284,7 +284,7 @@ export default function ExploreScreen() {
     router.push({
       pathname: ROUTES.EXPLORE_EVENT_DETAIL,
       params: { id: eventId },
-    } as any);
+    });
   }, [impact, router]);
 
   const handleReserve = useCallback((eventId: string) => {
@@ -292,7 +292,7 @@ export default function ExploreScreen() {
     router.push({
       pathname: ROUTES.PURCHASE_TICKETS,
       params: { id: eventId },
-    } as any);
+    });
   }, [impact, router]);
 
   const handleVenuePress = useCallback((venueId: string) => {
@@ -300,7 +300,7 @@ export default function ExploreScreen() {
     router.push({
       pathname: ROUTES.VENUE_DETAIL,
       params: { id: venueId },
-    } as any);
+    });
   }, [impact, router]);
 
   const handleClearSearch = useCallback(() => {
@@ -312,7 +312,7 @@ export default function ExploreScreen() {
   const handleCategoryPress = useCallback((categoryId: string) => {
     impact('light');
     setActiveCategory(categoryId);
-  }, [impact]);
+  }, [impact, setActiveCategory]);
 
   const handleViewModeToggle = useCallback(() => {
     impact('light');

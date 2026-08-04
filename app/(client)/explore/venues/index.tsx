@@ -222,7 +222,7 @@ export default function VenuesScreen() {
     router.push({
       pathname: ROUTES.VENUE_DETAIL,
       params: { id: venueId },
-    } as any);
+    });
   }, [router]);
 
   const handleClearSearch = useCallback(() => {

@@ -33,6 +33,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  type ImageRequireSource,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -59,7 +60,7 @@ import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 interface CategoryIconCard {
   readonly id: string;
   readonly label: string;
-  readonly iconSource: any;
+  readonly iconSource: ImageRequireSource;
 }
 
 // ============================================================
@@ -96,7 +97,7 @@ export default function HomeScreen() {
     router.push({
       pathname: ROUTES.EVENT_DETAIL,
       params: { id: eventId },
-    } as any);
+    });
   }, [impact, router]);
 
   const handleReserve = useCallback((eventId: string) => {
@@ -104,14 +105,14 @@ export default function HomeScreen() {
     router.push({
       pathname: ROUTES.PURCHASE_TICKETS,
       params: { id: eventId },
-    } as any);
+    });
   }, [impact, router]);
 
   const handleVenuePress = useCallback((venueId: string) => {
     router.push({
-      pathname: ROUTES.VENUE_DETAIL,
+      pathname: ROUTES.HOME_VENUE_DETAIL,
       params: { id: venueId },
-    } as any);
+    });
   }, [router]);
 
   const handleSearchPress = useCallback(() => {
@@ -136,14 +137,14 @@ export default function HomeScreen() {
     router.push({
       pathname: ROUTES.EVENT_DETAIL,
       params: { id: eventId },
-    } as any);
+    });
   }, [router]);
 
   const handleFeaturedReserve = useCallback((eventId: string) => {
     router.push({
       pathname: ROUTES.PURCHASE_TICKETS,
       params: { id: eventId },
-    } as any);
+    });
   }, [router]);
 
   const handleNotificationPress = useCallback(() => {
@@ -160,7 +161,7 @@ export default function HomeScreen() {
       router.push({
         pathname: ROUTES.EVENT_DETAIL,
         params: { id: notification.eventId },
-      } as any);
+      });
     }
   }, [router]);
 

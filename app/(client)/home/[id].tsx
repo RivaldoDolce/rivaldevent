@@ -69,7 +69,7 @@ import type { EventWithAvailability, TicketTierWithAvailability } from '@/types'
 // Constantes
 // ============================================================
 
-const HERO_HEIGHT = 380;
+const HERO_HEIGHT = 300;
 const GALLERY_ITEM_WIDTH = 110;
 const GALLERY_ITEM_HEIGHT = 78;
 const BOTTOM_BAR_HEIGHT = 76;
@@ -291,7 +291,7 @@ export default function EventDetail() {
     router.push({
       pathname: ROUTES.PURCHASE_TICKETS,
       params: { id: eventId },
-    } as any);
+    });
   }, [impact, router, eventId, isOffline]);
 
   const handleContactWhatsApp = useCallback(() => {
@@ -319,7 +319,7 @@ export default function EventDetail() {
     router.push({
       pathname: detailRoute,
       params: { id: similarId },
-    } as any);
+    });
   }, [impact, router, pathname]);
 
   // -- Donnees derivees --
