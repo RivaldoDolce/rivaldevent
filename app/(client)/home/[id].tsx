@@ -615,6 +615,24 @@ export default function EventDetail() {
                   <TierPreviewCard key={tier.id} tier={tier} />
                 ))}
               </View>
+
+              <View style={styles.reserveInlineSection}>
+                <Text style={styles.reserveInlineLabel}>Reservation rapide</Text>
+                <Pressable
+                  onPress={handleReserve}
+                  style={[
+                    styles.reserveInlineButton,
+                    totalAvailable === 0 && styles.reserveButtonDisabled,
+                  ]}
+                  disabled={totalAvailable === 0}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reserver des billets"
+                >
+                  <Text style={styles.reserveInlineButtonText}>
+                    {totalAvailable === 0 ? 'Complet' : 'Reserver'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           ) : null}
 
@@ -778,7 +796,7 @@ export default function EventDetail() {
           ============================================= */}
       <LinearGradient
         colors={[`${colors.white}F2`, `${colors.white}F8`]}
-        style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}
+        style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md, paddingHorizontal: spacing.md }]}
       >
         <View style={styles.bottomBarContent}>
           <View style={styles.bottomBarPriceContainer}>
@@ -1537,7 +1555,8 @@ const styles = {
     borderTopColor: `${colors.stone}10`,
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.lg,
-    zIndex: 50,
+    zIndex: 100,
+    elevation: 12,
   } as ViewStyle,
   bottomBarContent: {
     flexDirection: 'row',
@@ -1558,6 +1577,32 @@ const styles = {
     fontSize: 20,
     lineHeight: 26,
     color: colors.gold,
+  } as TextStyle,
+  reserveInlineSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  } as ViewStyle,
+  reserveInlineLabel: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+  } as TextStyle,
+  reserveInlineButton: {
+    backgroundColor: colors.terracotta,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    ...shadows.card,
+  } as ViewStyle,
+  reserveInlineButtonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.white,
   } as TextStyle,
   reserveButton: {
     flexDirection: 'row',
