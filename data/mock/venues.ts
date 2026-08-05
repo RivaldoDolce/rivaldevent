@@ -12,7 +12,7 @@
  * as const sur les tableaux immuables.
  */
 
-import type { MockVenue, MockVenueDetail, MockOrganizer, MockVenuePromotion } from './types';
+import type { MockVenue, MockVenueDetail, MockOrganizer, MockVenuePromotion, MockCategory } from './types';
 
 // ============================================================
 // Proprietaires mock (references dans les lieux)
@@ -34,6 +34,19 @@ const MOCK_VENUE_OWNERS: readonly MockOrganizer[] = [
 ] as const;
 
 // ============================================================
+// Categories de lieux (chips sur la page Lieux)
+// ============================================================
+
+export const VENUE_CATEGORIES: readonly MockCategory[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'lounge', label: 'Lounges' },
+  { id: 'reception', label: 'Receptions' },
+  { id: 'conference', label: 'Conferences' },
+  { id: 'sports', label: 'Stades' },
+  { id: 'spectacle', label: 'Spectacles' },
+] as const;
+
+// ============================================================
 // VENUES : cartes pour le carrousel "Lieux a decouvrir"
 // ============================================================
 
@@ -45,6 +58,10 @@ export const MOCK_VENUES: readonly MockVenue[] = [
     location: 'Bastos, Yaounde',
     rating: 4.7,
     badge: 'Or Savane',
+    category: 'lounge',
+    capacity_max: 300,
+    price_per_day: 75000,
+    event_types: ['soiree', 'gala', 'conference', 'cocktail', 'diner'],
   },
   {
     id: '2',
@@ -53,6 +70,10 @@ export const MOCK_VENUES: readonly MockVenue[] = [
     location: 'Bonapriso, Douala',
     rating: 4.5,
     badge: null,
+    category: 'reception',
+    capacity_max: 250,
+    price_per_day: 60000,
+    event_types: ['wedding', 'cocktail', 'diner', 'gala'],
   },
   {
     id: '3',
@@ -61,6 +82,10 @@ export const MOCK_VENUES: readonly MockVenue[] = [
     location: 'Mont Febe, Yaounde',
     rating: 4.8,
     badge: 'Premium',
+    category: 'reception',
+    capacity_max: 500,
+    price_per_day: 120000,
+    event_types: ['concert', 'conference', 'gala', 'wedding', 'festival', 'exposition'],
   },
   {
     id: '4',
@@ -69,6 +94,10 @@ export const MOCK_VENUES: readonly MockVenue[] = [
     location: 'Japoma, Douala',
     rating: 4.3,
     badge: null,
+    category: 'sports',
+    capacity_max: 50000,
+    price_per_day: 300000,
+    event_types: ['sport', 'concert', 'festival'],
   },
   {
     id: '5',
@@ -77,6 +106,10 @@ export const MOCK_VENUES: readonly MockVenue[] = [
     location: 'Buea, Sud-Ouest',
     rating: 4.6,
     badge: 'Recommande',
+    category: 'conference',
+    capacity_max: 150,
+    price_per_day: 45000,
+    event_types: ['conference', 'exposition', 'atelier', 'seminaire'],
   },
 ] as const;
 

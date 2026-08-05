@@ -21,6 +21,7 @@ export default function ModalLayout() {
       }}
     >
       <Stack.Screen name="filters" />
+      <Stack.Screen name="venue-filters" />
       <Stack.Screen name="qr-fullscreen" />
     </Stack>
   );

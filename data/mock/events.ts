@@ -208,7 +208,7 @@ export const MOCK_EVENTS: readonly MockEvent[] = [
 
 /**
  * Tiers de billets pour l'evenement "Soiree Afrobeats Yaounde" (id: '1').
- * 3 tiers : Standard, VIP, VVIP.
+ * 3 tiers : Standard, VIP, PREMIUM.
  */
 const tiersEvent1: readonly MockTicketTier[] = [
   {
@@ -238,9 +238,9 @@ const tiersEvent1: readonly MockTicketTier[] = [
     is_low_stock: true,
   },
   {
-    id: 'tier-1-vvip',
+    id: 'tier-1-prem',
     event_id: '1',
-    name: 'VVIP',
+    name: 'PREMIUM',
     price: 50000,
     quantity_total: 20,
     quantity_sold: 18,
@@ -368,7 +368,7 @@ export function buildMockEventDetailFromList(id: string): MockEventDetail | null
   const venueIndex = parseInt(event.id, 10) - 1;
   const venue = MOCK_VENUE_SUMMARIES[venueIndex] ?? null;
 
-  // Tiers par defaut : Standard (50% du prix) + VIP (3x) + VVIP (10x)
+  // Tiers par defaut : Standard (50% du prix) + VIP (3x) + PREMIUM (10x)
   const defaultTiers: readonly MockTicketTier[] = [
     {
       id: `tier-${event.id}-std`,
@@ -397,13 +397,13 @@ export function buildMockEventDetailFromList(id: string): MockEventDetail | null
       is_low_stock: false,
     },
     {
-      id: `tier-${event.id}-vvip`,
+      id: `tier-${event.id}-prem`,
       event_id: event.id,
-      name: 'VVIP',
+      name: 'PREMIUM',
       price: event.price * 10,
       quantity_total: 10,
       quantity_sold: 8,
-      description: 'Acces VVIP, table reservee',
+      description: 'Acces PREMIUM, table reservee',
       benefits: ['Table reservee', 'Service premium', 'Parking VIP'],
       available_quantity: 2,
       is_sold_out: false,

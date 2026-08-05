@@ -17,7 +17,7 @@ export { Badge } from './Badge';
 export { Avatar } from './Avatar';
 export { Skeleton } from './Skeleton';
 export { BottomSheet } from './BottomSheet';
-export { TabBar } from './TabBar';
+export { default as TabBar } from './TabBar';
 export { Header } from './Header';
 export { LoadingScreen } from './LoadingScreen';
 export { EmptyState } from './EmptyState';

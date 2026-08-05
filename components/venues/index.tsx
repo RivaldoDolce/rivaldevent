@@ -1,1 +1,1 @@
-export { default as VenueCard } from './VenueCard';
+export { VenueCard } from './VenueCard';
