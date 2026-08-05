@@ -196,7 +196,7 @@ export default function EventDetail() {
   // -- Gestion PanResponder pour swipe horizontal sur les images --
   useEffect(() => {
     panResponderRef.current = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10,
       onPanResponderRelease: (_, { dx }) => {
         const imgs = event?.cover_image
@@ -398,23 +398,26 @@ export default function EventDetail() {
         {/* =============================================
             IMAGE HERO AVEC SWIPE — HAUTEUR PREMIUM
             ============================================= */}
-        <View
-          style={styles.heroContainer}
-          {...(panResponderRef.current ? panResponderRef.current.panHandlers : {})}
-        >
-          {displayImages.length > 0 ? (
-            <Image
-              source={{ uri: displayImages[activeGalleryIndex] ?? '' }}
-              style={styles.heroImage}
-              contentFit="cover"
-              transition={400}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <Text style={styles.heroPlaceholderText}>{event.title.charAt(0)}</Text>
-            </View>
-          )}
+        <View style={styles.heroContainer}>
+          {/* Zone swipeable : uniquement l'image (les boutons restent cliquables) */}
+          <View
+            style={styles.heroSwipeArea}
+            {...(panResponderRef.current ? panResponderRef.current.panHandlers : {})}
+          >
+            {displayImages.length > 0 ? (
+              <Image
+                source={{ uri: displayImages[activeGalleryIndex] ?? '' }}
+                style={styles.heroImage}
+                contentFit="cover"
+                transition={400}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={[styles.heroImage, styles.heroPlaceholder]}>
+                <Text style={styles.heroPlaceholderText}>{event.title.charAt(0)}</Text>
+              </View>
+            )}
+          </View>
 
           {/* Gradient overlay premium — triple couche */}
           <LinearGradient
@@ -434,19 +437,19 @@ export default function EventDetail() {
             </View>
           )}
 
-          {/* Bouton retour glassmorphism */}
+          {/* Bouton retour — style page detail lieu */}
           <Pressable
             onPress={handleBack}
-            style={[styles.glassButton, { left: spacing.md, top: Math.max(insets.top + spacing.sm, spacing.lg) }]}
+            style={[styles.glassButton, { left: spacing.md, top: insets.top + spacing.sm }]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
           >
-            <ChevronLeft size={24} color={colors.white} strokeWidth={2.5} />
+            <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
           </Pressable>
 
           {/* Boutons droite glassmorphism : Partage + Favori */}
-          <View style={[styles.floatingButtonsContainer, { top: Math.max(insets.top + spacing.sm, spacing.lg) }]}>
+          <View style={[styles.floatingButtonsContainer, { top: insets.top + spacing.sm }]}>
             <Pressable
               onPress={handleShare}
               style={styles.glassButton}
@@ -454,7 +457,7 @@ export default function EventDetail() {
               accessibilityRole="button"
               accessibilityLabel="Partager"
             >
-              <Share2 size={20} color={colors.white} strokeWidth={2} />
+              <Share2 size={20} color={colors.onyx} strokeWidth={2} />
             </Pressable>
             <Pressable
               onPress={handleToggleFavorite}
@@ -465,7 +468,7 @@ export default function EventDetail() {
             >
               <Heart
                 size={20}
-                color={isFavorited ? colors.terracotta : colors.white}
+                color={isFavorited ? colors.terracotta : colors.onyx}
                 fill={isFavorited ? colors.terracotta : 'none'}
                 strokeWidth={2}
               />
@@ -619,14 +622,23 @@ export default function EventDetail() {
               ORGANISATEUR — DESIGN PREMIUM REPUSE
               ============================================= */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Organisateur</Text>
             <View style={styles.organizerCard}>
-              {/* Bande decorative en haut */}
-              <View style={styles.organizerTopBar} />
+              {/* En-tete : libelle a l'interieur du carde */}
+              <View style={styles.organizerCardHeader}>
+                <Text style={styles.organizerCardTitle}>Organisateur</Text>
+                <View style={styles.organizerHeaderBadge}>
+                  <ShieldCheck size={15} color={colors.forest} strokeWidth={2} />
+                </View>
+              </View>
 
-              <View style={styles.organizerContent}>
-                {/* Avatar avec bordure gradient */}
-                <View style={styles.organizerAvatarOuter}>
+              {/* Separateur subtil avec accent or */}
+              <View style={styles.organizerDivider}>
+                <View style={styles.organizerDividerAccent} />
+              </View>
+
+              {/* Identite : avatar + nom, bien aere */}
+              <View style={styles.organizerBody}>
+                <View style={styles.organizerAvatarWrapper}>
                   <View style={styles.organizerAvatar}>
                     {event.organizer?.avatar_url ? (
                       <Image
@@ -641,21 +653,23 @@ export default function EventDetail() {
                       </Text>
                     )}
                   </View>
+                  <View style={styles.organizerVerifiedBadge}>
+                    <ShieldCheck size={12} color={colors.white} strokeWidth={2.5} />
+                  </View>
                 </View>
 
-                {/* Nom + badge verifie */}
-                <View style={styles.organizerInfo}>
-                  <View style={styles.organizerNameRow}>
-                    <Text style={styles.organizerName}>
-                      {event.organizer?.full_name ?? 'Organisateur'}
-                    </Text>
-                    <ShieldCheck size={16} color={colors.forest} strokeWidth={2} />
+                <View style={styles.organizerIdentity}>
+                  <Text style={styles.organizerName}>
+                    {event.organizer?.full_name ?? 'Organisateur'}
+                  </Text>
+                  <View style={styles.verifiedChip}>
+                    <ShieldCheck size={12} color={colors.forest} strokeWidth={2} />
+                    <Text style={styles.verifiedText}>Organisateur verifie</Text>
                   </View>
-                  <Text style={styles.organizerSubtitle}>Organisateur verifie</Text>
                 </View>
               </View>
 
-              {/* Boutons de contact premium */}
+              {/* Boutons de contact premium (design intact) */}
               <View style={styles.contactButtons}>
                 <Pressable
                   onPress={handleContactWhatsApp}
@@ -919,6 +933,9 @@ const styles = {
     position: 'relative',
     overflow: 'hidden',
   } as ViewStyle,
+  heroSwipeArea: {
+    ...StyleSheet.absoluteFillObject,
+  } as ViewStyle,
   heroImage: {
     width: '100%',
     height: HERO_HEIGHT,
@@ -944,10 +961,10 @@ const styles = {
 
   // -- Glassmorphism boutons --
   glassButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${colors.onyx}55`,
+    width: 40,
+    height: 40,
+    borderRadius: radii.full,
+    backgroundColor: colors.white + 'CC',
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.card,
@@ -1278,61 +1295,112 @@ const styles = {
     overflow: 'hidden',
     ...shadows.eventCard,
   } as ViewStyle,
-  organizerTopBar: {
-    height: 4,
-    backgroundColor: colors.terracotta,
+  organizerCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   } as ViewStyle,
-  organizerContent: {
+  organizerCardTitle: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
+    letterSpacing: -0.3,
+  } as TextStyle,
+  organizerHeaderBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: `${colors.forest}12`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  organizerDivider: {
+    height: 1,
+    backgroundColor: `${colors.stone}15`,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  } as ViewStyle,
+  organizerDividerAccent: {
+    position: 'absolute',
+    left: 0,
+    top: -1,
+    bottom: 0,
+    width: 48,
+    backgroundColor: `${colors.gold}60`,
+  } as ViewStyle,
+  organizerBody: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.lg,
-    paddingBottom: spacing.md,
   } as ViewStyle,
-  organizerAvatarOuter: {
+  organizerAvatarWrapper: {
     marginRight: spacing.md,
   } as ViewStyle,
   organizerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.ivory,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: colors.gold,
+    ...shadows.card,
   } as ViewStyle,
   organizerAvatarImage: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
   } as ImageStyle,
   organizerAvatarFallback: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 24,
+    lineHeight: 30,
     color: colors.terracotta,
   } as TextStyle,
-  organizerInfo: {
+  organizerVerifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.forest,
+    borderWidth: 2,
+    borderColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  organizerIdentity: {
     flex: 1,
   } as ViewStyle,
-  organizerNameRow: {
+  organizerName: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
+    letterSpacing: -0.2,
+  } as TextStyle,
+  verifiedChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: `${colors.forest}10`,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.sm,
   } as ViewStyle,
-  organizerName: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 17,
-    lineHeight: 22,
-    color: colors.onyx,
-    letterSpacing: 0.1,
-  } as TextStyle,
-  organizerSubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
+  verifiedText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 11,
+    lineHeight: 14,
     color: colors.forest,
-    marginTop: spacing.xs,
+    letterSpacing: 0.2,
   } as TextStyle,
 
   // -- Boutons contact premium --

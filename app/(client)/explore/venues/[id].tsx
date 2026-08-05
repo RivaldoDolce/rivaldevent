@@ -26,7 +26,7 @@
  * - Commentaires en francais
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,7 +44,6 @@ import {
   MapPin,
   Users,
   Phone,
-  MessageCircle,
   Star,
   Wifi,
   Music,
@@ -55,6 +55,7 @@ import {
   CalendarDays,
   Tag,
   Home,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -165,6 +166,8 @@ export default function VenueDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
 
   // -- Chargement des donnees --
   useEffect(() => {
@@ -242,6 +245,48 @@ export default function VenueDetail() {
     return venue.images.length > 0 ? venue.images : (venue.address ? [venue.address] : []);
   }, [venue]);
 
+  // -- Auto-scroll du carrousel d'images --
+  const resetAutoScroll = useCallback(() => {
+    if (galleryAutoScrollRef.current) {
+      clearTimeout(galleryAutoScrollRef.current);
+    }
+    if (!venue || displayImages.length <= 1) return;
+
+    galleryAutoScrollRef.current = setTimeout(() => {
+      setActiveGalleryIndex((prev) => (prev < displayImages.length - 1 ? prev + 1 : 0));
+      resetAutoScroll();
+    }, 4000);
+  }, [venue, displayImages]);
+
+  // -- Swipe horizontal pour changer d'image (comme page detail evenement) --
+  useEffect(() => {
+    panResponderRef.current = PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, { dx }) => Math.abs(dx) > 10,
+      onPanResponderRelease: (_, { dx }) => {
+        if (displayImages.length <= 1) return;
+
+        if (dx > 50) {
+          setActiveGalleryIndex((prev) => (prev > 0 ? prev - 1 : displayImages.length - 1));
+          resetAutoScroll();
+        } else if (dx < -50) {
+          setActiveGalleryIndex((prev) => (prev < displayImages.length - 1 ? prev + 1 : 0));
+          resetAutoScroll();
+        }
+      },
+    });
+  }, [displayImages, resetAutoScroll]);
+
+  // -- Lancer l'auto-scroll au montage et quand le lieu change --
+  useEffect(() => {
+    resetAutoScroll();
+    return () => {
+      if (galleryAutoScrollRef.current) {
+        clearTimeout(galleryAutoScrollRef.current);
+      }
+    };
+  }, [resetAutoScroll]);
+
   const capacityDisplay = useMemo(() => {
     if (!venue) return '';
     if (venue.capacity_min && venue.capacity_max) {
@@ -310,22 +355,28 @@ export default function VenueDetail() {
         {/* =============================================
             IMAGE HERO
             ============================================= */}
-        <View style={{ height: HERO_HEIGHT, position: 'relative' }}>
-          {displayImages.length > 0 ? (
-            <Image
-              source={{ uri: displayImages[activeGalleryIndex] ?? displayImages[0] ?? '' }}
-              style={{ width: '100%', height: HERO_HEIGHT }}
-              contentFit="cover"
-              transition={400}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={{ width: '100%', height: HERO_HEIGHT, backgroundColor: colors.ivory, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontFamily: 'PlayfairDisplay-Bold', fontSize: 48, color: colors.stone }}>
-                {venue.name.charAt(0)}
-              </Text>
-            </View>
-          )}
+        <View style={{ height: HERO_HEIGHT, position: 'relative', overflow: 'hidden' }}>
+          {/* Zone swipeable : uniquement l'image (les boutons restent cliquables) */}
+          <View
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            {...(panResponderRef.current ? panResponderRef.current.panHandlers : {})}
+          >
+            {displayImages.length > 0 ? (
+              <Image
+                source={{ uri: displayImages[activeGalleryIndex] ?? displayImages[0] ?? '' }}
+                style={{ width: '100%', height: HERO_HEIGHT }}
+                contentFit="cover"
+                transition={400}
+                cachePolicy="memory-disk"
+              />
+            ) : (
+              <View style={{ width: '100%', height: HERO_HEIGHT, backgroundColor: colors.ivory, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontFamily: 'PlayfairDisplay-Bold', fontSize: 48, color: colors.stone }}>
+                  {venue.name.charAt(0)}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Gradient overlay */}
           <LinearGradient
@@ -726,115 +777,56 @@ export default function VenueDetail() {
           )}
 
           {/* =============================================
-              PROPRIETAIRE
+              PROPRIETAIRE — CARTE PREMIUM
               ============================================= */}
-          <View style={{
-            backgroundColor: colors.white,
-            borderRadius: radii.lg,
-            padding: spacing.md,
-            marginBottom: spacing.lg,
-            ...shadows.card,
-          }}>
-            <Text style={{
-              fontFamily: 'PlayfairDisplay-SemiBold',
-              fontSize: 18,
-              lineHeight: 24,
-              color: colors.onyx,
-              marginBottom: spacing.md,
-            }}>
-              Proprietaire
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: radii.full,
-                backgroundColor: colors.ivory,
-                justifyContent: 'center',
-                alignItems: 'center',
-                overflow: 'hidden',
-              }}>
-                <Text style={{
-                  fontFamily: 'PlayfairDisplay-Bold',
-                  fontSize: 18,
-                  color: colors.forest,
-                }}>
-                  P
-                </Text>
+          <View style={ownerStyles.card}>
+            {/* En-tete : libelle a l'interieur du carde */}
+            <View style={ownerStyles.header}>
+              <Text style={ownerStyles.title}>Proprietaire</Text>
+              <View style={ownerStyles.headerBadge}>
+                <ShieldCheck size={15} color={colors.forest} strokeWidth={2} />
               </View>
-              <View style={{ marginLeft: spacing.md, flex: 1 }}>
-                <Text style={{
-                  fontFamily: 'Inter-SemiBold',
-                  fontSize: 15,
-                  lineHeight: 20,
-                  color: colors.text,
-                }}>
-                  Proprietaire du lieu
-                </Text>
-                <Text style={{
-                  fontFamily: 'Inter-Regular',
-                  fontSize: 13,
-                  lineHeight: 18,
-                  color: colors.stone,
-                }}>
-                  Contact disponible sur demande
-                </Text>
+            </View>
+
+            {/* Separateur subtil avec accent or */}
+            <View style={ownerStyles.divider}>
+              <View style={ownerStyles.dividerAccent} />
+            </View>
+
+            {/* Identite : avatar + nom, bien aere */}
+            <View style={ownerStyles.body}>
+              <View style={ownerStyles.avatar}>
+                <Text style={ownerStyles.avatarText}>P</Text>
+              </View>
+              <View style={ownerStyles.identity}>
+                <Text style={ownerStyles.name}>Proprietaire du lieu</Text>
+                <Text style={ownerStyles.detail}>Contact disponible sur demande</Text>
               </View>
             </View>
 
             {/* Boutons de contact premium */}
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md }}>
+            <View style={ownerStyles.actions}>
               <Pressable
                 onPress={handleContactWhatsApp}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#25D366',
-                  borderRadius: radii.lg,
-                  paddingVertical: spacing.md + 2,
-                  justifyContent: 'center',
-                  gap: spacing.sm,
-                  ...shadows.card,
-                }}
+                style={ownerStyles.whatsappButton}
                 accessibilityRole="button"
                 accessibilityLabel="Contacter via WhatsApp"
               >
-                <MessageCircle size={24} color={colors.white} strokeWidth={2} />
-                <Text style={{
-                  fontFamily: 'Inter-Bold',
-                  fontSize: 15,
-                  color: colors.white,
-                  letterSpacing: 0.3,
-                }}>
-                  WhatsApp
-                </Text>
+                <Image
+                  source={require('@/assets/icons/WhatsApp.svg')}
+                  style={ownerStyles.whatsappIcon}
+                  contentFit="contain"
+                />
+                <Text style={ownerStyles.buttonText}>WhatsApp</Text>
               </Pressable>
               <Pressable
                 onPress={handleCall}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: colors.terracotta,
-                  borderRadius: radii.lg,
-                  paddingVertical: spacing.md + 2,
-                  justifyContent: 'center',
-                  gap: spacing.sm,
-                  ...shadows.card,
-                }}
+                style={ownerStyles.callButton}
                 accessibilityRole="button"
                 accessibilityLabel="Appeler"
               >
-                <Phone size={24} color={colors.white} strokeWidth={2} />
-                <Text style={{
-                  fontFamily: 'Inter-Bold',
-                  fontSize: 15,
-                  color: colors.white,
-                  letterSpacing: 0.3,
-                }}>
-                  Appeler
-                </Text>
+                <Phone size={22} color={colors.white} strokeWidth={2} />
+                <Text style={ownerStyles.buttonText}>Appeler</Text>
               </Pressable>
             </View>
           </View>
@@ -947,3 +939,133 @@ export default function VenueDetail() {
     </View>
   );
 }
+
+// ============================================================
+// Styles — Carte Proprietaire premium
+// ============================================================
+
+const ownerStyles = {
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    overflow: 'hidden' as const,
+    marginBottom: spacing.lg,
+    ...shadows.eventCard,
+  },
+  header: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  title: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
+    letterSpacing: -0.3,
+  },
+  headerBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: `${colors.forest}12`,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: `${colors.stone}15`,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
+  dividerAccent: {
+    position: 'absolute' as const,
+    left: 0,
+    top: -1,
+    bottom: 0,
+    width: 48,
+    backgroundColor: `${colors.gold}60`,
+  },
+  body: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    padding: spacing.lg,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.ivory,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    overflow: 'hidden' as const,
+    borderWidth: 3,
+    borderColor: colors.gold,
+    ...shadows.card,
+  },
+  avatarText: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.terracotta,
+  },
+  identity: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  name: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
+    letterSpacing: -0.2,
+  },
+  detail: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone,
+    marginTop: spacing.xs,
+  },
+  actions: {
+    flexDirection: 'row' as const,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  whatsappButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: '#25D366',
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md + 2,
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  whatsappIcon: {
+    width: 26,
+    height: 26,
+  },
+  callButton: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: colors.terracotta,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md + 2,
+    gap: spacing.sm,
+    ...shadows.card,
+  },
+  buttonText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.white,
+    letterSpacing: 0.3,
+  },
+};
