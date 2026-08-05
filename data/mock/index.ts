@@ -59,6 +59,7 @@ export {
 export {
   MOCK_VENUES,
   MOCK_VENUE_DETAILS,
+  VENUE_CATEGORIES,
   getMockVenueDetailById,
   buildMockVenueDetailFromList,
   getMockVenueDetailWithFallback,

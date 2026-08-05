@@ -43,21 +43,52 @@ import { useHaptics } from '@/hooks/useHaptics';
 
 // Donnees mock
 import type { MockVenue } from '@/data/mock';
-import { MOCK_VENUES } from '@/data/mock';
+import { MOCK_VENUES, VENUE_CATEGORIES } from '@/data/mock';
 
 // Store global pour filtres
 import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
-// Villes disponibles dans les mock (pour les chips)
+// Plages de capacite (max personnes) - doit correspondre au modal
 // ============================================================
 
-const CITY_FILTERS: readonly { readonly id: string; readonly label: string }[] = [
-  { id: 'all', label: 'Toutes' },
-  { id: 'Yaounde', label: 'Yaounde' },
-  { id: 'Douala', label: 'Douala' },
-  { id: 'Buea', label: 'Buea' },
-] as const;
+function matchesCapacity(max: number | null, rangeId: string): boolean {
+  if (rangeId === 'all') return true;
+  if (max === null) return false;
+  switch (rangeId) {
+    case 'small':
+      return max < 100;
+    case 'medium':
+      return max >= 100 && max <= 300;
+    case 'large':
+      return max > 300 && max <= 500;
+    case 'xlarge':
+      return max > 500;
+    default:
+      return true;
+  }
+}
+
+// ============================================================
+// Plages de prix par jour (FCFA) - doit correspondre au modal
+// ============================================================
+
+function matchesPricePerDay(price: number | null, rangeId: string): boolean {
+  if (rangeId === 'all') return true;
+  if (price === null) return false;
+  switch (rangeId) {
+    case 'budget':
+      return price < 50000;
+    case 'mid':
+      return price >= 50000 && price <= 100000;
+    case 'high':
+      return price > 100000 && price <= 200000;
+    case 'luxury':
+      return price > 200000;
+    default:
+      return true;
+  }
+}
 
 // ============================================================
 // Composant VenueGridCard - carte verticale pour la grille
@@ -200,11 +231,12 @@ export default function VenuesScreen() {
   const { impact } = useHaptics();
 
   // -- Store global --
-  const { advancedFilters } = useExploreStore();
+  const { venueFilters, setVenueFilters } = useExploreStore();
 
-  // -- State local pour recherche --
+  // -- State local pour recherche + categorie --
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
 
   // -- Handlers --
   const handleBack = useCallback(() => {
@@ -212,11 +244,10 @@ export default function VenuesScreen() {
     router.back();
   }, [impact, router]);
 
-  const handleCityPress = useCallback(() => {
+  const handleCategoryPress = useCallback((categoryId: string) => {
     impact('light');
-    // Navigation vers le modal filtre pour changer la ville
-    router.push('/(modal)/filters');
-  }, [impact, router]);
+    setActiveCategory(categoryId);
+  }, [impact]);
 
   const handleVenuePress = useCallback((venueId: string) => {
     router.push({
@@ -232,16 +263,67 @@ export default function VenuesScreen() {
 
   const handleFilterPress = useCallback(() => {
     impact('light');
-    router.push('/(modal)/filters');
+    router.push('/(modal)/venue-filters');
   }, [impact, router]);
 
-  // -- Filtrer les lieux par ville (du store) + recherche --
+  // -- Reinitialiser tous les filtres (recherche, categorie, avances) --
+  const handleResetAll = useCallback(() => {
+    impact('light');
+    setSearchQuery('');
+    setActiveCategory('all');
+    setVenueFilters({
+      city: 'all',
+      capacityRange: 'all',
+      eventType: 'all',
+      pricePerDayRange: 'all',
+      prestige: 'all',
+    });
+  }, [impact, setVenueFilters]);
+
+  // -- Nombre de filtres avances actifs (badge sur l'icone) --
+  const activeVenueFilterCount = useMemo(() => {
+    const values = [
+      venueFilters.city,
+      venueFilters.capacityRange,
+      venueFilters.eventType,
+      venueFilters.pricePerDayRange,
+      venueFilters.prestige,
+    ];
+    return values.filter((value) => value !== 'all').length;
+  }, [venueFilters]);
+
+  // -- Filtrer les lieux : categorie + recherche + filtres avances dedies --
   const filteredVenues = useMemo(() => {
     let result = MOCK_VENUES;
 
-    // Filtre par ville depuis le store global
-    if (advancedFilters.city !== 'all') {
-      result = result.filter((v) => v.location.includes(advancedFilters.city));
+    // Filtre par categorie de lieu (chips sous la barre de recherche)
+    if (activeCategory !== 'all') {
+      result = result.filter((v) => v.category === activeCategory);
+    }
+
+    // Filtre par ville (depuis le modal filtres lieux)
+    if (venueFilters.city !== 'all') {
+      result = result.filter((v) => v.location.includes(venueFilters.city));
+    }
+
+    // Filtre par capacite maximale
+    if (venueFilters.capacityRange !== 'all') {
+      result = result.filter((v) => matchesCapacity(v.capacity_max, venueFilters.capacityRange));
+    }
+
+    // Filtre par type d'evenement associe
+    if (venueFilters.eventType !== 'all') {
+      result = result.filter((v) => v.event_types.includes(venueFilters.eventType));
+    }
+
+    // Filtre par tarif par jour
+    if (venueFilters.pricePerDayRange !== 'all') {
+      result = result.filter((v) => matchesPricePerDay(v.price_per_day, venueFilters.pricePerDayRange));
+    }
+
+    // Filtre par prestige (badge)
+    if (venueFilters.prestige !== 'all') {
+      result = result.filter((v) => v.badge === venueFilters.prestige);
     }
 
     // Filtre par recherche
@@ -254,7 +336,7 @@ export default function VenuesScreen() {
     }
 
     return result;
-  }, [advancedFilters.city, searchQuery]);
+  }, [activeCategory, venueFilters, searchQuery]);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -308,7 +390,7 @@ export default function VenuesScreen() {
     marginLeft: spacing.sm,
   };
 
-  const cityChipsContainerStyle: ViewStyle = {
+  const categoryChipsContainerStyle: ViewStyle = {
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
     paddingBottom: spacing.md,
@@ -380,6 +462,22 @@ export default function VenuesScreen() {
     lineHeight: 20,
     color: colors.stone,
     textAlign: 'center',
+    marginBottom: spacing.lg,
+  };
+
+  const emptyButtonStyle: ViewStyle = {
+    backgroundColor: colors.terracotta,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+  };
+
+  const emptyButtonTextStyle: TextStyle = {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.white,
+    letterSpacing: 0.2,
   };
 
   return (
@@ -408,7 +506,32 @@ export default function VenuesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Filtres"
           >
-            <SlidersHorizontal size={22} color={colors.forest} strokeWidth={1.5} />
+            <View style={{ position: 'relative' }}>
+              <SlidersHorizontal size={22} color={colors.forest} strokeWidth={1.5} />
+              {activeVenueFilterCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -8,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: colors.terracotta,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: spacing.xs,
+                }}>
+                  <Text style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 10,
+                    lineHeight: 12,
+                    color: colors.white,
+                  }}>
+                    {activeVenueFilterCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </Pressable>
         </View>
 
@@ -441,26 +564,26 @@ export default function VenuesScreen() {
         </View>
 
         {/* ============================================
-            3. CHIP FILTRES VILLE
+            3. CHIPS CATEGORIES DE LIEUX (filtre direct)
             ============================================ */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={cityChipsContainerStyle}
+          style={categoryChipsContainerStyle}
           contentContainerStyle={{ paddingRight: spacing.lg }}
         >
-          {CITY_FILTERS.map((city) => {
-            const isActive = advancedFilters.city === city.id;
+          {VENUE_CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.id;
             return (
               <Pressable
-                key={city.id}
-                onPress={handleCityPress}
+                key={cat.id}
+                onPress={() => handleCategoryPress(cat.id)}
                 style={isActive ? chipActiveStyle : chipInactiveStyle}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
               >
                 <Text style={isActive ? chipActiveTextStyle : chipInactiveTextStyle}>
-                  {city.label}
+                  {cat.label}
                 </Text>
               </Pressable>
             );
@@ -509,8 +632,16 @@ export default function VenuesScreen() {
           <View style={emptyContainerStyle}>
             <Text style={emptyTitleStyle}>Aucun lieu trouve</Text>
             <Text style={emptyTextStyle}>
-              Essayez une autre ville ou modifiez votre recherche.
+              Essayez une autre categorie, une autre ville ou modifiez vos filtres.
             </Text>
+            <Pressable
+              onPress={handleResetAll}
+              style={emptyButtonStyle}
+              accessibilityRole="button"
+              accessibilityLabel="Reinitialiser la recherche et les filtres"
+            >
+              <Text style={emptyButtonTextStyle}>Reinitialiser</Text>
+            </Pressable>
           </View>
         )}
 

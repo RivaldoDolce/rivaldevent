@@ -255,7 +255,7 @@ export default function VenueDetail() {
     galleryAutoScrollRef.current = setTimeout(() => {
       setActiveGalleryIndex((prev) => (prev < displayImages.length - 1 ? prev + 1 : 0));
       resetAutoScroll();
-    }, 4000);
+    }, 2000);
   }, [venue, displayImages]);
 
   // -- Swipe horizontal pour changer d'image (comme page detail evenement) --

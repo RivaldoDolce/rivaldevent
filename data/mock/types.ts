@@ -111,7 +111,7 @@ export interface MockOrganizer {
 // ============================================================
 
 /**
- * Lieu simplifie pour les cartes horizontales (home feed).
+ * Lieu simplifie pour les cartes horizontales (home feed) et la grille lieux.
  * Aligne partiellement sur Venue de types/models.ts.
  */
 export interface MockVenue {
@@ -121,6 +121,10 @@ export interface MockVenue {
   readonly location: string;
   readonly rating: number;
   readonly badge: string | null;
+  readonly category: string;
+  readonly capacity_max: number | null;
+  readonly price_per_day: number | null;
+  readonly event_types: readonly string[];
 }
 
 /**

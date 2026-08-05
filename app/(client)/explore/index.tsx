@@ -269,12 +269,14 @@ export default function ExploreScreen() {
     return undefined;
   }, [params.autoFocus]);
 
-  // -- Mise a jour du filtre categorie si navigation depuis Home --
+  // -- Appliquer le filtre categorie venant de l'Accueil UNE SEULE FOIS --
+  // Important : ce filtre ne doit pas se re-appliquer quand l'utilisateur
+  // change de categorie directement sur cette page (sinon son choix est ecrase).
   useEffect(() => {
-    if (params.filterCategory && params.filterCategory !== activeCategory) {
+    if (params.filterCategory) {
       setActiveCategory(params.filterCategory);
     }
-  }, [params.filterCategory, activeCategory, setActiveCategory]);
+  }, [params.filterCategory, setActiveCategory]);
 
   // -- Handlers --
   const handleEventPress = useCallback((eventId: string) => {
@@ -332,6 +334,16 @@ export default function ExploreScreen() {
       date: 'all',
     });
   }, [impact, setAdvancedFilters]);
+
+  // -- Nombre de filtres avances actifs (badge sur l'icone) --
+  const activeAdvancedFilterCount = useMemo(() => {
+    const values = [
+      advancedFilters.city,
+      advancedFilters.priceRange,
+      advancedFilters.date,
+    ];
+    return values.filter((value) => value !== 'all').length;
+  }, [advancedFilters]);
 
   // -- Filtrage des evenements --
   const filteredEvents = useMemo(() => {
@@ -419,7 +431,32 @@ export default function ExploreScreen() {
             accessibilityRole="button"
             accessibilityLabel="Filtres avances"
           >
-            <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.5} />
+            <View style={{ position: 'relative' }}>
+              <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.5} />
+              {activeAdvancedFilterCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -8,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: colors.terracotta,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingHorizontal: spacing.xs,
+                }}>
+                  <Text style={{
+                    fontFamily: 'Inter-Bold',
+                    fontSize: 10,
+                    lineHeight: 12,
+                    color: colors.white,
+                  }}>
+                    {activeAdvancedFilterCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </Pressable>
         </View>
 
