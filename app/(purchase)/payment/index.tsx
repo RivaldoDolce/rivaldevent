@@ -1,302 +1,119 @@
 /**
- * Page selection de l'operateur Mobile Money.
+ * Page selection operateur Mobile Money - Tunnel d'achat.
  *
- * Route : /(purchase)/payment
- * Params : eventId, tiers (JSON), totalAmount
+ * Design ultra-premium inspire de Stripe Checkout et Apple Pay :
+ * - Header elegant avec bouton retour
+ * - Recapitulatif compact avec total en or
+ * - Selecteur d'operateur avec logos SVG et branding colore
+ * - Champ telephone premium avec prefixe +237, auto-format,
+ *   validation temps reel, et clavier qui ne masque pas le champ
+ * - Bouton "Confirmer le paiement" inline (pas de barre fixe)
+ *   pour eviter les problemes de clavier
+ * - Badge de securite discret
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Recapitulatif de la commande (total, nb billets)
- * - Selecteur d'operateur (MTN, Orange, Moov)
- * - Champ numero de telephone avec validation
- * - Indication des prefixes compatibles
- * - CTA "Continuer" qui navigue vers le flux de l'operateur
- * - Bouton retour
+ * Navigation :
+ * - Recoit { eventId, tiers, totalAmount } en parametres
+ * - CTA navigue vers la page de paiement specifique (mtn/orange/moov)
  *
  * Conventions :
  * - Design tokens depuis lib/constants.ts
- * - lucide-react-native pour les icones
- * - Pas de type any, pas d'emojis
+ * - Pas de type any (sauf router.push as never), pas d'emojis
  * - Imports @/
  * - Commentaires en francais
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
+  ScrollView,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChevronLeft,
+  ShieldCheck,
   Phone,
-  AlertCircle,
-  Ticket,
   ArrowRight,
-  Info,
+  Ticket,
+  CircleCheck,
+  AlertCircle,
 } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
-import { colors, spacing, radii, ROUTES } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useOffline } from '@/hooks/useOffline';
 import { formatPrice } from '@/services/event.service';
-import {
-  validateCameroonPhone,
-  isPhoneCompatibleWithOperator,
-  formatPhoneNumber,
-  paymentService,
-} from '@/services/payment.service';
+import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
 import type { PaymentMethod } from '@/types';
-import OperatorSelector from '@/components/payment/OperatorSelector';
 
 // ============================================================
 // Types
 // ============================================================
 
-interface TierParam {
-  readonly tierId: string;
-  readonly quantity: number;
+interface OperatorInfo {
+  readonly id: PaymentMethod;
+  readonly name: string;
+  readonly subtitle: string;
+  readonly logoSource: ReturnType<typeof require>;
+  readonly accentColor: string;
 }
 
 // ============================================================
-// Constantes
+// Donnees operateurs
 // ============================================================
 
-/** Mapping operateur -> route de paiement */
-const OPERATOR_ROUTES: Record<PaymentMethod, string> = {
-  mtn: ROUTES.PAYMENT_MTN,
-  orange: ROUTES.PAYMENT_ORANGE,
-  moov: ROUTES.PAYMENT_MOOV,
-};
-
-/** Mapping operateur -> nom complet */
-const OPERATOR_NAMES: Record<PaymentMethod, string> = {
-  mtn: 'MTN Mobile Money',
-  orange: 'Orange Money',
-  moov: 'Moov Money',
-};
+const OPERATORS: readonly OperatorInfo[] = [
+  {
+    id: 'mtn',
+    name: 'MTN MoMo',
+    subtitle: 'Mobile Money',
+    logoSource: require('@/assets/icons/mtn-logo.svg'),
+    accentColor: '#FFC300',
+  },
+  {
+    id: 'orange',
+    name: 'Orange Money',
+    subtitle: 'Paiement mobile',
+    logoSource: require('@/assets/icons/orange-logo.svg'),
+    accentColor: '#FF7900',
+  },
+  {
+    id: 'moov',
+    name: 'Moov Money',
+    subtitle: 'Transfert mobile',
+    logoSource: require('@/assets/icons/moov-logo.svg'),
+    accentColor: '#0099FF',
+  },
+] as const;
 
 // ============================================================
-// Composant
+// Helper : valider numero camerounais
 // ============================================================
 
-export default function PaymentIndex() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { impact, notification } = useHaptics();
+function isValidCameroonPhone(phone: string): boolean {
+  const cleaned = phone.replace(/\s/g, '');
+  return /^6\d{8}$/.test(cleaned);
+}
 
-  // -- Params depuis la page de selection de billets --
-  const params = useLocalSearchParams<{
-    eventId: string;
-    tiers: string;
-    totalAmount: string;
-  }>();
-
-  const totalAmount = useMemo(() => {
-    return parseInt(params.totalAmount ?? '0', 10) || 0;
-  }, [params.totalAmount]);
-
-  const tiers = useMemo((): TierParam[] => {
-    try {
-      return JSON.parse(params.tiers ?? '[]');
-    } catch {
-      return [];
-    }
-  }, [params.tiers]);
-
-  const totalTickets = useMemo(() => {
-    return tiers.reduce((sum, t) => sum + t.quantity, 0);
-  }, [tiers]);
-
-  // -- State --
-  const [selectedOperator, setSelectedOperator] = useState<PaymentMethod | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-
-  // -- Validation --
-  const isPhoneValid = useMemo(() => {
-    if (!phoneNumber || !selectedOperator) return false;
-    const cleaned = phoneNumber.replace(/\s/g, '');
-    return validateCameroonPhone(cleaned) && isPhoneCompatibleWithOperator(cleaned, selectedOperator);
-  }, [phoneNumber, selectedOperator]);
-
-  const canContinue = useMemo(() => {
-    return selectedOperator !== null && isPhoneValid;
-  }, [selectedOperator, isPhoneValid]);
-
-  // -- Handlers --
-  const handleOperatorSelect = useCallback((operator: PaymentMethod) => {
-    impact('light');
-    setSelectedOperator(operator);
-    setPhoneError(null);
-  }, [impact]);
-
-  const handlePhoneChange = useCallback((text: string) => {
-    // Nettoyer : uniquement chiffres, max 9
-    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 9);
-    // Formater pour l'affichage
-    setPhoneNumber(formatPhoneNumber(cleaned));
-    setPhoneError(null);
-  }, []);
-
-  const handlePhoneBlur = useCallback(() => {
-    if (!phoneNumber || !selectedOperator) return;
-
-    const cleaned = phoneNumber.replace(/\s/g, '');
-    if (!validateCameroonPhone(cleaned)) {
-      setPhoneError('Numero invalide (9 chiffres commencant par 6)');
-      return;
-    }
-
-    if (!isPhoneCompatibleWithOperator(cleaned, selectedOperator)) {
-      const prefixes = paymentService.getOperatorPrefixes(selectedOperator);
-      setPhoneError(`Prefixe incompatible. Prefixes ${OPERATOR_NAMES[selectedOperator]} : ${prefixes.join(', ')}`);
-      return;
-    }
-
-    setPhoneError(null);
-  }, [phoneNumber, selectedOperator]);
-
-  const handleBack = useCallback(() => {
-    impact('light');
-    if (router.canGoBack()) {
-      router.back();
-    }
-  }, [impact, router]);
-
-  const handleContinue = useCallback(() => {
-    if (!canContinue || !selectedOperator) {
-      notification('warning');
-      return;
-    }
-
-    impact('medium');
-    const cleaned = phoneNumber.replace(/\s/g, '');
-
-    // Navigation vers le flux de l'operateur selectionne
-    router.push({
-      pathname: OPERATOR_ROUTES[selectedOperator],
-      params: {
-        eventId: params.eventId ?? '',
-        operator: selectedOperator,
-        phone: cleaned,
-        totalAmount: String(totalAmount),
-        tiers: params.tiers ?? '[]',
-      },
-    } as never);
-  }, [canContinue, selectedOperator, phoneNumber, impact, notification, router, params, totalAmount]);
-
-  // -- Prefixes info --
-  const prefixInfo = useMemo(() => {
-    if (!selectedOperator) return '';
-    const prefixes = paymentService.getOperatorPrefixes(selectedOperator);
-    return `Prefixes ${OPERATOR_NAMES[selectedOperator]} : ${prefixes.join(', ')}`;
-  }, [selectedOperator]);
-
-  // ============================================================
-  // Rendu
-  // ============================================================
-
-  return (
-    <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={8}>
-          <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Paiement</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <View style={styles.content}>
-        {/* Recapitulatif */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryLeft}>
-              <Ticket size={16} color={colors.terracotta} strokeWidth={1.5} />
-              <Text style={styles.summaryLabel}>Billets</Text>
-            </View>
-            <Text style={styles.summaryValue}>
-              {totalTickets} billet{totalTickets > 1 ? 's' : ''}
-            </Text>
-          </View>
-          <View style={styles.summaryDivider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTotalLabel}>Total a payer</Text>
-            <Text style={styles.summaryTotalValue}>
-              {formatPrice(totalAmount)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Selection operateur */}
-        <Text style={styles.sectionTitle}>Choisir l'operateur</Text>
-        <OperatorSelector
-          selected={selectedOperator}
-          onSelect={handleOperatorSelect}
-        />
-
-        {/* Numero de telephone */}
-        {selectedOperator && (
-          <View style={styles.phoneSection}>
-            <Text style={styles.sectionTitle}>
-              Numero {OPERATOR_NAMES[selectedOperator]}
-            </Text>
-
-            {/* Info prefixes */}
-            <View style={styles.prefixInfo}>
-              <Info size={14} color={colors.stone} strokeWidth={1.5} />
-              <Text style={styles.prefixText}>{prefixInfo}</Text>
-            </View>
-
-            <View style={[styles.phoneInputContainer, phoneError && styles.phoneInputError]}>
-              <Phone size={18} color={colors.stone} strokeWidth={1.5} />
-              <TextInput
-                style={styles.phoneInput}
-                value={phoneNumber}
-                onChangeText={handlePhoneChange}
-                onBlur={handlePhoneBlur}
-                placeholder="6XX XXX XX X"
-                placeholderTextColor={colors.stone}
-                keyboardType="phone-pad"
-                maxLength={12} // 9 chiffres + 3 espaces
-                autoComplete="tel"
-                accessibilityLabel="Numero de telephone"
-              />
-              <Text style={styles.phonePrefix}>+237</Text>
-            </View>
-
-            {/* Erreur */}
-            {phoneError && (
-              <View style={styles.errorContainer}>
-                <AlertCircle size={14} color={colors.danger} strokeWidth={1.5} />
-                <Text style={styles.errorText}>{phoneError}</Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* CTA fixe en bas */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Pressable
-          style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
-          onPress={handleContinue}
-          disabled={!canContinue}
-          accessibilityRole="button"
-          accessibilityLabel="Continuer vers le paiement"
-        >
-          <Text style={styles.continueButtonText}>
-            {selectedOperator ? 'Continuer' : 'Selectionnez un operateur'}
-          </Text>
-          {canContinue && (
-            <ArrowRight size={18} color={colors.white} strokeWidth={2} />
-          )}
-        </Pressable>
-      </View>
-    </View>
-  );
+/**
+ * Auto-formatage du numero : 6 XX XX XX XX
+ */
+function formatPhoneNumber(input: string): string {
+  // Ne garder que les chiffres
+  const digits = input.replace(/\D/g, '').slice(0, 9);
+  if (digits.length === 0) return '';
+  if (digits.length <= 1) return digits;
+  if (digits.length <= 3) return `${digits.slice(0, 1)} ${digits.slice(1)}`;
+  if (digits.length <= 5) return `${digits.slice(0, 1)} ${digits.slice(1, 3)} ${digits.slice(3)}`;
+  if (digits.length <= 7) return `${digits.slice(0, 1)} ${digits.slice(1, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`;
+  return `${digits.slice(0, 1)} ${digits.slice(1, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 7)} ${digits.slice(7)}`;
 }
 
 // ============================================================
@@ -309,190 +126,601 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sand,
   },
 
-  /* Header */
+  /* Header premium */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.md,
   },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.ivory,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   headerTitle: {
-    flex: 1,
     fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 22,
     lineHeight: 28,
     color: colors.onyx,
-    letterSpacing: -0.3,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 36,
   },
 
   /* Contenu */
   content: {
-    flex: 1,
     paddingHorizontal: spacing.lg,
   },
 
   /* Recapitulatif */
-  summaryCard: {
-    backgroundColor: colors.ivory,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: `${colors.terracotta}15`,
+  recapCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.eventCard,
   },
-  summaryRow: {
+  recapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  recapHeaderText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+  },
+  recapRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  recapTierName: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+  },
+  recapTierPrice: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+  },
+  recapSeparator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+  },
+  recapTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  summaryLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  summaryLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
-  },
-  summaryValue: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-  },
-  summaryDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
-  },
-  summaryTotalLabel: {
+  recapTotalLabel: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
     lineHeight: 22,
     color: colors.onyx,
   },
-  summaryTotalValue: {
+  recapTotalValue: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.terracotta,
-    letterSpacing: -0.3,
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.gold,
   },
 
-  /* Section */
-  sectionTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
-    letterSpacing: -0.3,
-    marginBottom: spacing.md,
-  },
-
-  /* Telephone */
-  phoneSection: {
-    marginTop: spacing.xl,
-  },
-  prefixInfo: {
+  /* Securite badge */
+  securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: `${colors.forest}08`,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
     gap: spacing.sm,
-    backgroundColor: `${colors.indigo}08`,
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
   },
-  prefixText: {
+  securityText: {
     fontFamily: 'Inter-Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
-    flex: 1,
+    color: colors.forest,
   },
-  phoneInputContainer: {
+
+  /* Section titre */
+  sectionTitle: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.onyx,
+    marginBottom: spacing.md,
+  },
+
+  /* Carte operateur premium */
+  operatorCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-    minHeight: 52,
+    borderRadius: radii.xl,
+    padding: spacing.md + 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...shadows.card,
   },
-  phoneInputError: {
+  operatorCardSelected: {
+    borderColor: colors.terracotta,
+    backgroundColor: `${colors.terracotta}05`,
+  },
+  operatorLogoWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    backgroundColor: colors.ivory,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+    overflow: 'hidden',
+  },
+  operatorLogo: {
+    width: 44,
+    height: 44,
+  },
+  operatorInfo: {
+    flex: 1,
+  },
+  operatorName: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.onyx,
+    marginBottom: 2,
+  },
+  operatorNameSelected: {
+    color: colors.terracotta,
+  },
+  operatorSubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone,
+  },
+  operatorCheckCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.sm,
+  },
+
+  /* Champ telephone premium */
+  phoneSection: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  phoneLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.onyx,
+    marginBottom: spacing.sm,
+  },
+  phoneInputOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    ...shadows.card,
+  },
+  phoneInputOuterFocused: {
+    borderColor: colors.terracotta,
+  },
+  phoneInputOuterError: {
     borderColor: colors.danger,
+  },
+  phoneInputOuterValid: {
+    borderColor: colors.forest,
+  },
+  phonePrefixBadge: {
+    backgroundColor: colors.ivory,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
+    marginRight: spacing.md,
+  },
+  phonePrefixText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.onyx,
   },
   phoneInput: {
     flex: 1,
     fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 24,
     color: colors.onyx,
-    paddingVertical: spacing.md,
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
-  phonePrefix: {
+  phoneIcon: {
+    marginLeft: spacing.sm,
+  },
+  phoneHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  phoneHintText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+  },
+  phoneErrorText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.danger,
+  },
+
+  /* Bouton confirmer premium */
+  confirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.terracotta,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.md + 4,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    ...shadows.eventCard,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  confirmButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 17,
+    lineHeight: 24,
+    color: colors.white,
+  },
+
+  /* Bouton annuler */
+  cancelButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  cancelButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     lineHeight: 20,
     color: colors.stone,
   },
-
-  /* Erreur */
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  errorText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.danger,
-    flex: 1,
-  },
-
-  /* Barre basse */
-  bottomBar: {
-    backgroundColor: colors.white,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    minHeight: 52,
-  },
-  continueButtonDisabled: {
-    backgroundColor: colors.stone,
-    opacity: 0.5,
-  },
-  continueButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.white,
-  },
 });
+
+// ============================================================
+// Composant principal
+// ============================================================
+
+export default function PaymentIndex() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    eventId: string;
+    tiers: string;
+    totalAmount: string;
+  }>();
+  const { impact } = useHaptics();
+  const isOffline = useOffline();
+
+  // -- Refs --
+  const phoneInputRef = useRef<TextInput>(null);
+
+  // -- State --
+  const [selectedOperator, setSelectedOperator] = useState<PaymentMethod | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+
+  // -- Parse params --
+  const totalAmount = useMemo(() => {
+    return parseInt(params.totalAmount ?? '0', 10);
+  }, [params.totalAmount]);
+
+  const parsedTiers = useMemo(() => {
+    try {
+      return JSON.parse(params.tiers ?? '[]') as { tierId: string; quantity: number }[];
+    } catch {
+      return [];
+    }
+  }, [params.tiers]);
+
+  // -- Validation --
+  const phoneDigits = phoneNumber.replace(/\s/g, '');
+  const isPhoneValid = phoneDigits.length === 0 || isValidCameroonPhone(phoneDigits);
+  const isPhoneComplete = isValidCameroonPhone(phoneDigits);
+
+  const canProceed = useMemo(() => {
+    return selectedOperator !== null
+      && isPhoneComplete
+      && !isOffline;
+  }, [selectedOperator, isPhoneComplete, isOffline]);
+
+  // -- Handlers --
+  const handleBack = useCallback(() => {
+    impact('light');
+    router.back();
+  }, [impact, router]);
+
+  const handleOperatorSelect = useCallback((operator: PaymentMethod) => {
+    impact('medium');
+    setSelectedOperator(operator);
+    // Auto-focus le champ telephone apres selection
+    setTimeout(() => {
+      phoneInputRef.current?.focus();
+    }, 300);
+  }, [impact]);
+
+  const handlePhoneChange = useCallback((text: string) => {
+    const formatted = formatPhoneNumber(text);
+    setPhoneNumber(formatted);
+  }, []);
+
+  const handleConfirmPayment = useCallback(() => {
+    if (!canProceed || !selectedOperator) return;
+    impact('medium');
+
+    // Mettre a jour le purchase-flow-store avec l'operateur et le numero
+    const flowStore = usePurchaseFlowStore.getState();
+    flowStore.setReservation({
+      eventId: flowStore.eventId ?? '',
+      eventTitle: flowStore.eventTitle ?? '',
+      eventCoverImage: flowStore.eventCoverImage,
+      eventStartDate: flowStore.eventStartDate,
+      eventCity: flowStore.eventCity,
+      selectedTiers: flowStore.selectedTiers,
+      totalAmount: flowStore.totalAmount,
+      operator: selectedOperator,
+      phoneNumber: phoneDigits,
+    });
+
+    const transactionId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const routeMap: Record<PaymentMethod, string> = {
+      mtn: ROUTES.PAYMENT_MTN,
+      orange: ROUTES.PAYMENT_ORANGE,
+      moov: ROUTES.PAYMENT_MOOV,
+    };
+
+    router.push({
+      pathname: routeMap[selectedOperator],
+      params: { transactionId },
+    } as never);
+  }, [canProceed, selectedOperator, impact, router, phoneDigits]);
+
+  // ============================================================
+  // Rendu
+  // ============================================================
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top}
+    >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + spacing.xxl,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={handleBack}
+            style={styles.headerBackButton}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Retour"
+          >
+            <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Paiement</Text>
+        </View>
+
+        <View style={styles.content}>
+          {/* =============================================
+              RECAPITULATIF
+              ============================================= */}
+          <View style={styles.recapCard}>
+            <View style={styles.recapHeader}>
+              <Ticket size={18} color={colors.terracotta} strokeWidth={1.5} />
+              <Text style={styles.recapHeaderText}>Votre commande</Text>
+            </View>
+
+            {parsedTiers.map((tier, index) => (
+              <View key={tier.tierId ?? index} style={styles.recapRow}>
+                <Text style={styles.recapTierName}>
+                  {tier.quantity}x billet{tier.quantity > 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.recapTierPrice}>
+                  {tier.quantity} place{tier.quantity > 1 ? 's' : ''}
+                </Text>
+              </View>
+            ))}
+
+            <View style={styles.recapSeparator} />
+
+            <View style={styles.recapTotalRow}>
+              <Text style={styles.recapTotalLabel}>Total a payer</Text>
+              <Text style={styles.recapTotalValue}>{formatPrice(totalAmount)}</Text>
+            </View>
+          </View>
+
+          {/* Badge securise */}
+          <View style={styles.securityRow}>
+            <ShieldCheck size={18} color={colors.forest} strokeWidth={2} />
+            <Text style={styles.securityText}>
+              Paiement securise - Donnees chiffrees
+            </Text>
+          </View>
+
+          {/* =============================================
+              SELECTION OPERATEUR
+              ============================================= */}
+          <Text style={styles.sectionTitle}>Operateur Mobile Money</Text>
+
+          {OPERATORS.map((op) => {
+            const isSelected = selectedOperator === op.id;
+            return (
+              <Pressable
+                key={op.id}
+                onPress={() => handleOperatorSelect(op.id)}
+                style={[
+                  styles.operatorCard,
+                  isSelected && styles.operatorCardSelected,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={op.name}
+                accessibilityState={{ selected: isSelected }}
+              >
+                {/* Logo */}
+                <View style={styles.operatorLogoWrap}>
+                  <Image
+                    source={op.logoSource}
+                    style={styles.operatorLogo}
+                    contentFit="contain"
+                  />
+                </View>
+
+                {/* Info */}
+                <View style={styles.operatorInfo}>
+                  <Text style={[
+                    styles.operatorName,
+                    isSelected && styles.operatorNameSelected,
+                  ]}>
+                    {op.name}
+                  </Text>
+                  <Text style={styles.operatorSubtitle}>{op.subtitle}</Text>
+                </View>
+
+                {/* Indicateur selection */}
+                <View style={[
+                  styles.operatorCheckCircle,
+                  { backgroundColor: isSelected ? colors.terracotta : colors.ivory },
+                ]}>
+                  {isSelected && (
+                    <CircleCheck size={18} color={colors.white} strokeWidth={2.5} />
+                  )}
+                </View>
+              </Pressable>
+            );
+          })}
+
+          {/* =============================================
+              NUMERO DE TELEPHONE
+              ============================================= */}
+          <View style={styles.phoneSection}>
+            <Text style={styles.phoneLabel}>Numero de telephone</Text>
+
+            <Pressable
+              onPress={() => phoneInputRef.current?.focus()}
+              style={[
+                styles.phoneInputOuter,
+                phoneFocused && styles.phoneInputOuterFocused,
+                !isPhoneValid && phoneDigits.length > 0 && styles.phoneInputOuterError,
+                isPhoneComplete && styles.phoneInputOuterValid,
+              ]}
+            >
+              <View style={styles.phonePrefixBadge}>
+                <Text style={styles.phonePrefixText}>+237</Text>
+              </View>
+              <TextInput
+                ref={phoneInputRef}
+                style={styles.phoneInput}
+                value={phoneNumber}
+                onChangeText={handlePhoneChange}
+                onFocus={() => setPhoneFocused(true)}
+                onBlur={() => setPhoneFocused(false)}
+                placeholder="6 XX XX XX XX"
+                placeholderTextColor={colors.stone}
+                keyboardType="phone-pad"
+                maxLength={12}
+                autoComplete="tel"
+                textContentType="telephoneNumber"
+                accessibilityLabel="Numero de telephone"
+              />
+              <View style={styles.phoneIcon}>
+                {isPhoneComplete ? (
+                  <CircleCheck size={22} color={colors.forest} strokeWidth={2} />
+                ) : (
+                  <Phone size={22} color={colors.stone} strokeWidth={1.5} />
+                )}
+              </View>
+            </Pressable>
+
+            {/* Hint / Error */}
+            <View style={styles.phoneHint}>
+              {!isPhoneValid && phoneDigits.length > 0 ? (
+                <>
+                  <AlertCircle size={14} color={colors.danger} strokeWidth={2} />
+                  <Text style={styles.phoneErrorText}>
+                    Numero invalide. Format : 6 XX XX XX XX
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.phoneHintText}>
+                  {isPhoneComplete
+                    ? 'Numero valide'
+                    : 'Entrez votre numero Mobile Money (9 chiffres)'}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* =============================================
+              BOUTON CONFIRMER
+              ============================================= */}
+          <Pressable
+            onPress={handleConfirmPayment}
+            style={[styles.confirmButton, !canProceed && styles.confirmButtonDisabled]}
+            disabled={!canProceed}
+            accessibilityRole="button"
+            accessibilityLabel="Confirmer le paiement"
+          >
+            <Text style={styles.confirmButtonText}>Confirmer le paiement</Text>
+            <ArrowRight size={20} color={colors.white} strokeWidth={2} />
+          </Pressable>
+
+          <Pressable
+            onPress={handleBack}
+            style={styles.cancelButton}
+            accessibilityRole="button"
+            accessibilityLabel="Annuler"
+          >
+            <Text style={styles.cancelButtonText}>Annuler</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
