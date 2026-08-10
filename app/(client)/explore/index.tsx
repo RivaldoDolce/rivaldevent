@@ -403,7 +403,7 @@ export default function ExploreScreen() {
           HEADER STICKY : Recherche + Toggle vue + Filtres categories
           (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
           ============================================= */}
-      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.xl }]}>
         {/* Barre de recherche active */}
         <View style={searchContainerStyle}>
           <Search size={20} color={colors.muted} strokeWidth={1.5} />

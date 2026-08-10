@@ -361,10 +361,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.white}AA`,
   },
-  tierQualityIcon: {
-    width: 34,
-    height: 34,
-  },
   tierNameArea: {
     flex: 1,
     marginRight: spacing.md,

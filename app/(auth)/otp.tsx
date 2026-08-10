@@ -160,7 +160,7 @@ export default function OtpScreen() {
   return (
     <View style={styles.container}>
       {/* Barre du haut avec retour */}
-      <View style={[styles.topBar, { paddingTop: insets.top }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable
           onPress={() => {
             impact('light');

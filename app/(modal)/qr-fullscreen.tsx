@@ -35,7 +35,22 @@ import { X, Shield } from 'lucide-react-native';
 import { colors, spacing, radii } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice } from '@/services/event.service';
+import { useTicketsStore } from '@/stores/tickets-store';
 import { getMockTicketById } from '@/data/mock';
+import type { PurchasedTicket } from '@/stores/tickets-store';
+import type { MockTicket } from '@/data/mock';
+
+// ============================================================
+// Types
+// ============================================================
+
+/** Billet issu du store (achat reel) ou des donnees mock (developpement) */
+type TicketView = (PurchasedTicket | MockTicket) & {
+  readonly qr_code?: string | null;
+  readonly qr_secret?: string | null;
+  readonly scanned_at?: string | null;
+  readonly buyer_id?: string | null;
+};
 
 // ============================================================
 // Constantes
@@ -53,11 +68,16 @@ export default function QRFullscreen() {
   const { ticketId } = useLocalSearchParams<{ ticketId: string }>();
   const { impact } = useHaptics();
 
-  // -- Donnees du billet --
-  const ticket = useMemo(() => {
+  // -- Donnees du billet : store d'abord, repli mock --
+  const purchasedTicket = useTicketsStore((state) =>
+    state.tickets.find((t) => t.id === ticketId),
+  );
+
+  const ticket = useMemo<TicketView | null>(() => {
+    if (purchasedTicket) return purchasedTicket;
     if (!ticketId) return null;
     return getMockTicketById(ticketId);
-  }, [ticketId]);
+  }, [purchasedTicket, ticketId]);
 
   // -- Handler --
   const handleClose = useCallback(() => {

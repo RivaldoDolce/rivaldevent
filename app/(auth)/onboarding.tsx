@@ -83,7 +83,7 @@ export default function OnboardingScreen() {
   const currentSlide = SLIDES[currentIndex];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
       {/* Header */}
       <View style={styles.header}>
         {/* Logo de l'app au lieu du cercle d'etoiles */}

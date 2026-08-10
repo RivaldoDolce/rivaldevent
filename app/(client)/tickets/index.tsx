@@ -1,22 +1,19 @@
 /**
  * Page "Mes billets" - Espace client.
  *
- * Design ultra-premium inspire de Apple Wallet et Passbook :
- * - Header premium avec titre elegant
+ * Design ultra-premium inspire de Apple Wallet :
+ * - Header premium avec titre elegant + compteur actif
  * - Onglets filtre : Tous / Valides / Utilises / Expires
- *   avec compteur dynamique et indicateur actif
- * - Cartes de billets style "boarding pass" avec :
- *   - Image evenement en haut (cover)
- *   - Zone d'info avec titre, date, lieu
- *   - Ligne perforee decorative
- *   - Zone bas avec tier, prix, statut, operateur
- *   - Ombre et coins arrondis
+ * - Barre de contexte dediee : compteur d'evenements + bascule
+ *   LISTE / GRILLE (segmentee, distincte du bouton unique de l'explore)
+ * - Billets REGROUPES PAR EVENEMENT : une seule carte par evenement
+ * - Mode LISTE (defaut) : carte compacte "ticket" avec liseret de
+ *   statut colore, vignette cercelee d'or, chips gammes, total or
+ * - Mode GRILLE : cartes 2 colonnes avec cover + pied de statut colore
  * - Etat vide elegant avec illustration et CTA
- * - Espacement genereux, scroll fluide
- * - Pas de donnees mock - billets reels depuis le store
  *
  * Navigation :
- * - Tap sur un billet → detail billet (tickets/[id])
+ * - Tap sur une carte → billets de l'evenement (tickets/event/[eventId])
  *
  * Conventions :
  * - Design tokens depuis lib/constants.ts
@@ -40,27 +37,34 @@ import { useRouter } from 'expo-router';
 import {
   Ticket,
   CalendarDays,
-  MapPin,
   ChevronRight,
   Sparkles,
   CircleCheck,
   CircleX,
   Clock,
+  Rows3,
+  LayoutGrid,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+
+import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
+import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
+import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice, formatDate } from '@/services/event.service';
 import { useTicketsStore } from '@/stores/tickets-store';
-import type { PurchasedTicket } from '@/stores/tickets-store';
+import type { PurchasedTicket, TicketEventSummary } from '@/stores/tickets-store';
 
 // ============================================================
 // Types
 // ============================================================
 
 type TicketFilter = 'all' | 'valid' | 'used' | 'expired';
+type TicketStatus = 'valid' | 'used' | 'expired' | 'pending';
+type ViewMode = 'list' | 'grid';
 
 interface FilterTab {
   readonly key: TicketFilter;
@@ -68,9 +72,21 @@ interface FilterTab {
   readonly icon: React.ReactNode;
 }
 
-// ============================================================
-// Constantes
-// ============================================================
+/** Groupe de billets pour un meme evenement */
+interface TicketGroup {
+  readonly eventId: string;
+  readonly event: TicketEventSummary;
+  readonly tickets: readonly PurchasedTicket[];
+  readonly totalQuantity: number;
+  readonly totalAmount: number;
+  readonly status: TicketStatus;
+}
+
+interface TierQualityInfo {
+  readonly icon: React.ComponentType<{ width?: number; height?: number }>;
+  readonly label: string;
+  readonly color: string;
+}
 
 // ============================================================
 // Helpers
@@ -79,10 +95,22 @@ interface FilterTab {
 /**
  * Determine le statut d'affichage d'un billet.
  */
-function getTicketDisplayStatus(ticket: PurchasedTicket): 'valid' | 'used' | 'expired' | 'pending' {
+function getTicketDisplayStatus(ticket: PurchasedTicket): TicketStatus {
   if (ticket.payment_status === 'pending') return 'pending';
   if (ticket.is_scanned) return 'used';
   if (ticket.expires_at && new Date(ticket.expires_at) < new Date()) return 'expired';
+  return 'valid';
+}
+
+/**
+ * Statut global d'un groupe : la priorite va au statut qui
+ * merite l'attention de l'utilisateur (pending > valid > used > expired).
+ */
+function getGroupStatus(tickets: readonly PurchasedTicket[]): TicketStatus {
+  const statuses = tickets.map((t) => getTicketDisplayStatus(t));
+  if (statuses.some((s) => s === 'pending')) return 'pending';
+  if (statuses.every((s) => s === 'used')) return 'used';
+  if (statuses.every((s) => s === 'expired')) return 'expired';
   return 'valid';
 }
 
@@ -96,61 +124,300 @@ function getStatusConfig(status: string): { color: string; bg: string; label: st
         color: colors.forest,
         bg: `${colors.forest}15`,
         label: 'Valide',
-        icon: <CircleCheck size={12} color={colors.forest} strokeWidth={2.5} />,
+        icon: <CircleCheck size={11} color={colors.forest} strokeWidth={2.5} />,
       };
     case 'used':
       return {
         color: colors.stone,
         bg: `${colors.stone}15`,
         label: 'Utilise',
-        icon: <CircleX size={12} color={colors.stone} strokeWidth={2.5} />,
+        icon: <CircleX size={11} color={colors.stone} strokeWidth={2.5} />,
       };
     case 'expired':
       return {
         color: colors.danger,
         bg: `${colors.danger}15`,
         label: 'Expire',
-        icon: <CircleX size={12} color={colors.danger} strokeWidth={2.5} />,
+        icon: <CircleX size={11} color={colors.danger} strokeWidth={2.5} />,
       };
     case 'pending':
       return {
         color: colors.mango,
         bg: `${colors.mango}15`,
         label: 'En attente',
-        icon: <Clock size={12} color={colors.mango} strokeWidth={2.5} />,
+        icon: <Clock size={11} color={colors.mango} strokeWidth={2.5} />,
       };
     default:
       return {
         color: colors.stone,
         bg: `${colors.stone}15`,
         label: status,
-        icon: <CircleCheck size={12} color={colors.stone} strokeWidth={2.5} />,
+        icon: <CircleCheck size={11} color={colors.stone} strokeWidth={2.5} />,
       };
   }
 }
 
 /**
- * Nom de l'operateur pour le badge.
+ * Badge SVG + couleur selon la gamme du billet.
  */
-function getOperatorName(method: string): string {
-  switch (method) {
-    case 'mtn': return 'MTN';
-    case 'orange': return 'Orange';
-    case 'moov': return 'Moov';
-    default: return '';
+function getTierQualityInfo(name: string): TierQualityInfo {
+  const lower = name.toLowerCase();
+  if (lower.includes('vvip') || lower.includes('premium')) {
+    return { icon: QualityPremiumIcon, label: 'PREMIUM', color: colors.gold };
   }
+  if (lower.includes('vip')) {
+    return { icon: QualityVipIcon, label: 'VIP', color: colors.terracotta };
+  }
+  return { icon: QualityStandardIcon, label: 'STANDARD', color: colors.forest };
 }
 
 /**
- * Couleur de l'operateur.
+ * Construit la ligne meta "date · ville" d'un evenement.
  */
-function getOperatorColor(method: string): string {
-  switch (method) {
-    case 'mtn': return '#FFC300';
-    case 'orange': return '#FF7900';
-    case 'moov': return '#0099FF';
-    default: return colors.stone;
+function buildEventMeta(event: TicketEventSummary): string | null {
+  const parts = [
+    event.start_date ? formatDate(event.start_date) : null,
+    event.city,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' \u00B7 ') : null;
+}
+
+// ============================================================
+// Sous-composants
+// ============================================================
+
+/**
+ * Pastille de statut compacte (inline ou flottante sur une image).
+ */
+function StatusPill({ status, floating = false }: { status: TicketStatus; floating?: boolean }) {
+  const config = getStatusConfig(status);
+  return (
+    <View
+      style={[
+        styles.statusPill,
+        floating && styles.statusPillFloating,
+        { backgroundColor: floating ? 'rgba(255,255,255,0.94)' : config.bg },
+        floating && { borderColor: `${config.color}33` },
+      ]}
+    >
+      {config.icon}
+      <Text style={[styles.statusPillText, { color: config.color }]}>{config.label}</Text>
+    </View>
+  );
+}
+
+/**
+ * Chips des gammes achetees (2 max + "+n").
+ */
+function TierChips({ tickets }: { tickets: readonly PurchasedTicket[] }) {
+  const visible = tickets.slice(0, 2);
+  const extra = tickets.length - visible.length;
+  return (
+    <View style={styles.chipsRow}>
+      {visible.map((t) => {
+        const quality = getTierQualityInfo(t.tier.name);
+        return (
+          <View key={t.id} style={[styles.chip, { backgroundColor: `${quality.color}14` }]}>
+            <Text style={[styles.chipText, { color: quality.color }]} numberOfLines={1}>
+              {t.quantity}x {t.tier.name}
+            </Text>
+          </View>
+        );
+      })}
+      {extra > 0 && (
+        <View style={[styles.chip, styles.chipMore]}>
+          <Text style={[styles.chipText, styles.chipMoreText]}>+{extra}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Vignette evenement (image ou placeholder) avec cerclage or.
+ */
+function EventThumb({
+  cover,
+  size = 68,
+  outerStyle,
+}: {
+  cover: string | null;
+  size?: number;
+  outerStyle?: { marginLeft?: number; marginVertical?: number };
+}) {
+  const style = { width: size, height: size, borderRadius: size / 3 };
+  if (cover) {
+    return (
+      <Image
+        source={{ uri: cover }}
+        style={[style, styles.thumbRing, outerStyle]}
+        contentFit="cover"
+        transition={200}
+        cachePolicy="memory-disk"
+      />
+    );
   }
+  return (
+    <View style={[style, styles.thumbPlaceholder, styles.thumbRing, outerStyle]}>
+      <Ticket size={size * 0.34} color={colors.stone} strokeWidth={1.2} />
+    </View>
+  );
+}
+
+/**
+ * Carte compacte horizontale "ticket" (mode liste).
+ *
+ * Structure : liseret de statut + vignette + infos, puis liseret
+ * perfore avec losange or, puis pied (quantite · total · chevron).
+ */
+function ListGroupCard({
+  group,
+  onPress,
+}: {
+  group: TicketGroup;
+  onPress: (eventId: string) => void;
+}) {
+  const meta = buildEventMeta(group.event);
+  const statusConfig = getStatusConfig(group.status);
+  return (
+    <Pressable
+      onPress={() => onPress(group.eventId)}
+      style={({ pressed }) => [styles.listCard, pressed && styles.cardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`Billets pour ${group.event.title}`}
+    >
+      {/* Liseret de statut */}
+      <View style={[styles.listAccent, { backgroundColor: statusConfig.color }]} />
+
+      {/* Colonne principale */}
+      <View style={styles.listColumn}>
+        {/* Vignette + infos */}
+        <View style={styles.listTopRow}>
+          <EventThumb cover={group.event.cover_image} />
+
+          <View style={styles.listBody}>
+            <View style={styles.listTitleRow}>
+              <Text style={styles.listTitle} numberOfLines={1}>
+                {group.event.title}
+              </Text>
+              <StatusPill status={group.status} />
+            </View>
+
+            {meta && (
+              <View style={styles.listMetaRow}>
+                <CalendarDays size={11} color={colors.terracotta} strokeWidth={1.5} />
+                <Text style={styles.listMetaText} numberOfLines={1}>
+                  {meta}
+                </Text>
+              </View>
+            )}
+
+            <TierChips tickets={group.tickets} />
+          </View>
+        </View>
+
+        {/* Liseret perfore avec losange or */}
+        <View style={styles.perfRow}>
+          <View style={styles.perfLine} />
+          <View style={styles.perfDiamond} />
+          <View style={styles.perfLine} />
+        </View>
+
+        {/* Pied : quantite · total · chevron */}
+        <View style={styles.listFooterRow}>
+          <Text style={styles.listQuantity}>
+            {group.totalQuantity} billet{group.totalQuantity > 1 ? 's' : ''}
+          </Text>
+          <Text style={styles.listTotal}>{formatPrice(group.totalAmount)}</Text>
+          <View style={styles.listChevron}>
+            <ChevronRight size={15} color={colors.stone} strokeWidth={2} />
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * Carte 2 colonnes avec cover (mode grille).
+ *
+ * Structure : cover + statut flottant, puis infos, liseret perfore
+ * avec losange or, pied (quantite · total) et barre de statut.
+ */
+function GridGroupCard({
+  group,
+  onPress,
+}: {
+  group: TicketGroup;
+  onPress: (eventId: string) => void;
+}) {
+  const meta = buildEventMeta(group.event);
+  const statusConfig = getStatusConfig(group.status);
+  return (
+    <Pressable
+      onPress={() => onPress(group.eventId)}
+      style={({ pressed }) => [styles.gridCard, pressed && styles.cardPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`Billets pour ${group.event.title}`}
+    >
+      {/* Cover image + overlay + statut flottant */}
+      <View style={styles.gridCover}>
+        {group.event.cover_image ? (
+          <>
+            <Image
+              source={{ uri: group.event.cover_image }}
+              style={styles.gridCoverImage}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+            <LinearGradient
+              colors={['rgba(26,24,22,0)', 'rgba(26,24,22,0.45)']}
+              style={styles.gridCoverOverlay}
+              pointerEvents="none"
+            />
+          </>
+        ) : (
+          <View style={styles.gridCoverPlaceholder}>
+            <Ticket size={24} color={colors.stone} strokeWidth={1.2} />
+          </View>
+        )}
+        <StatusPill status={group.status} floating />
+      </View>
+
+      {/* Corps compact */}
+      <View style={styles.gridBody}>
+        <Text style={styles.gridTitle} numberOfLines={2}>
+          {group.event.title}
+        </Text>
+        {meta && (
+          <Text style={styles.gridMeta} numberOfLines={1}>
+            {meta}
+          </Text>
+        )}
+
+        <TierChips tickets={group.tickets} />
+
+        {/* Liseret perfore avec losange or */}
+        <View style={styles.perfRow}>
+          <View style={styles.perfLine} />
+          <View style={styles.perfDiamond} />
+          <View style={styles.perfLine} />
+        </View>
+
+        {/* Pied : quantite + total */}
+        <View style={styles.gridFooterRow}>
+          <Text style={styles.gridQuantity}>
+            {group.totalQuantity} billet{group.totalQuantity > 1 ? 's' : ''}
+          </Text>
+          <Text style={styles.gridTotal}>{formatPrice(group.totalAmount)}</Text>
+        </View>
+      </View>
+
+      {/* Barre de statut */}
+      <View style={[styles.gridAccent, { backgroundColor: statusConfig.color }]} />
+    </Pressable>
+  );
 }
 
 // ============================================================
@@ -186,12 +453,11 @@ const styles = StyleSheet.create({
     color: colors.stone,
   },
 
-  /* Onglets filtre premium */
-  tabsContainer: {
-    flexDirection: 'row',
+  /* Onglets filtre */
+  tabsContent: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   tab: {
     flexDirection: 'row',
@@ -234,158 +500,298 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.white}30`,
   },
 
+  /* Barre de contexte : compteur + toggle LISTE / GRILLE */
+  contextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  contextCount: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone,
+  },
+  contextHairline: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.ivory,
+    borderRadius: radii.full,
+    padding: 3,
+  },
+  viewToggleBtn: {
+    width: 36,
+    height: 32,
+    borderRadius: radii.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  viewToggleBtnActive: {
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+
   /* Contenu */
   content: {
     paddingHorizontal: spacing.lg,
   },
 
-  /* Carte billet style boarding pass */
-  ticketCard: {
+  /* --- Carte LISTE (compacte, type ticket) --- */
+  listCard: {
+    flexDirection: 'row',
     backgroundColor: colors.white,
     borderRadius: radii.xl,
-    marginBottom: spacing.lg,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}40`,
     overflow: 'hidden',
+    marginBottom: spacing.md,
     ...shadows.eventCard,
   },
-
-  /* Cover image du billet */
-  ticketCover: {
-    width: '100%',
-    height: 140,
-    position: 'relative',
+  cardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
   },
-  ticketCoverImage: {
-    width: '100%',
-    height: 140,
+  listAccent: {
+    alignSelf: 'stretch',
+    width: 4,
   },
-  ticketCoverOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
+  listColumn: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
-  ticketCoverPlaceholder: {
-    width: '100%',
-    height: 140,
+  listTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  thumbRing: {
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}45`,
+  },
+  thumbPlaceholder: {
+    backgroundColor: colors.ivory,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listBody: {
+    flex: 1,
+  },
+  listTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  listTitle: {
+    flex: 1,
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.onyx,
+    letterSpacing: -0.2,
+  },
+  listMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 3,
+  },
+  listMetaText: {
+    flex: 1,
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+  },
+  listFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  listQuantity: {
+    flex: 1,
+    fontFamily: 'Inter-Regular',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.stone,
+  },
+  listTotal: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.gold,
+  },
+  listChevron: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.ivory,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  /* Status badge flottant sur l'image */
-  statusBadgeFloating: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
+  /* --- Pastille statut compacte --- */
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 1,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  statusPillFloating: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    borderWidth: 1,
+    shadowColor: colors.onyx,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statusPillText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 0.2,
+  },
+
+  /* --- Chips gammes --- */
+  chipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.xs,
+    marginTop: spacing.sm,
   },
-  statusBadgeText: {
+  chip: {
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  chipText: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 15,
-    letterSpacing: 0.3,
+    fontSize: 10,
+    lineHeight: 14,
+    flexShrink: 1,
+  },
+  chipMore: {
+    backgroundColor: colors.ivory,
+  },
+  chipMoreText: {
+    color: colors.stone,
   },
 
-  /* Corps du billet */
-  ticketBody: {
-    padding: spacing.lg,
-  },
-
-  /* Titre evenement */
-  ticketEventTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
+  /* --- Liseret perfore partage (liste + grille) --- */
+  perfRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.sm,
   },
-
-  /* Meta info rows */
-  ticketMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs + 1,
+  perfLine: {
+    flex: 1,
+    height: 1,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: `${colors.onyx}22`,
   },
-  ticketMetaText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-  },
-
-  /* Ligne perforee decorative */
-  perforatedLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.md,
-    gap: 0,
-  },
-  perforatedDot: {
+  perfDiamond: {
     width: 6,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.gold,
+    transform: [{ rotate: '45deg' }],
+    marginHorizontal: spacing.sm,
   },
 
-  /* Zone du bas : tier + prix + operateur */
-  ticketBottomZone: {
+  /* --- Carte GRILLE (2 colonnes) --- */
+  gridContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  gridCard: {
+    width: '48.5%',
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}40`,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    ...shadows.eventCard,
+  },
+  gridCover: {
+    height: 100,
+    position: 'relative',
+    backgroundColor: colors.ivory,
+  },
+  gridCoverImage: {
+    width: '100%',
+    height: 100,
+  },
+  gridCoverOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 48,
+  },
+  gridCoverPlaceholder: {
+    width: '100%',
+    height: 100,
+    backgroundColor: colors.ivory,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  ticketTierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 1,
-    gap: spacing.xs,
+  gridBody: {
+    padding: spacing.md,
+    paddingBottom: 0,
   },
-  ticketTierName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  ticketRightArea: {
-    alignItems: 'flex-end',
-  },
-  ticketPrice: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 18,
-    lineHeight: 24,
+  gridTitle: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 15,
+    lineHeight: 20,
     color: colors.onyx,
+    letterSpacing: -0.2,
+    marginBottom: 2,
   },
-  ticketOperatorBadge: {
+  gridMeta: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+    marginBottom: spacing.sm,
+  },
+  gridFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.xs,
-    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
   },
-  ticketOperatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  ticketOperatorText: {
-    fontFamily: 'Inter-Medium',
+  gridQuantity: {
+    fontFamily: 'Inter-Regular',
     fontSize: 11,
     lineHeight: 15,
     color: colors.stone,
   },
-
-  /* Chevron indicateur */
-  chevronIndicator: {
-    position: 'absolute',
-    right: spacing.md,
-    top: '50%',
-    marginTop: -10,
+  gridTotal: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.gold,
+  },
+  gridAccent: {
+    height: 3,
   },
 
   /* Etat vide premium */
@@ -449,35 +855,91 @@ export default function TicketsList() {
   const tickets = useTicketsStore((state) => state.tickets);
 
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
-  // -- Donnees filtree --
-  const filteredTickets = useMemo(() => {
-    if (activeFilter === 'all') return tickets;
+  // -- Regroupement des billets par evenement --
+  const groups = useMemo<TicketGroup[]>(() => {
+    const byEvent = new Map<string, {
+      event: TicketEventSummary;
+      tickets: PurchasedTicket[];
+      totalQuantity: number;
+      totalAmount: number;
+      statuses: TicketStatus[];
+      lastCreatedAt: string;
+    }>();
 
-    return tickets.filter((ticket) => {
-      const status = getTicketDisplayStatus(ticket);
-      switch (activeFilter) {
-        case 'valid': return status === 'valid';
-        case 'used': return status === 'used';
-        case 'expired': return status === 'expired' || status === 'pending';
-        default: return true;
+    for (const ticket of tickets) {
+      const current = byEvent.get(ticket.event_id);
+      if (current) {
+        current.tickets.push(ticket);
+        current.totalQuantity += ticket.quantity;
+        current.totalAmount += ticket.total_price;
+        current.statuses.push(getTicketDisplayStatus(ticket));
+        if (ticket.created_at > current.lastCreatedAt) {
+          current.lastCreatedAt = ticket.created_at;
+        }
+      } else {
+        byEvent.set(ticket.event_id, {
+          event: ticket.event,
+          tickets: [ticket],
+          totalQuantity: ticket.quantity,
+          totalAmount: ticket.total_price,
+          statuses: [getTicketDisplayStatus(ticket)],
+          lastCreatedAt: ticket.created_at,
+        });
       }
-    });
-  }, [tickets, activeFilter]);
+    }
 
-  // -- Compteurs --
-  const ticketCounts = useMemo(() => {
+    return Array.from(byEvent.entries())
+      .map(([eventId, group]): TicketGroup => ({
+        eventId,
+        event: group.event,
+        tickets: group.tickets.sort((a, b) =>
+          b.created_at.localeCompare(a.created_at),
+        ),
+        totalQuantity: group.totalQuantity,
+        totalAmount: group.totalAmount,
+        status: getGroupStatus(group.tickets),
+      }))
+      .sort((a, b) => b.tickets[0].created_at.localeCompare(a.tickets[0].created_at));
+  }, [tickets]);
+
+  // -- Groupes filtres --
+  const filteredGroups = useMemo(() => {
+    if (activeFilter === 'all') return groups;
+    return groups.filter((group) => {
+      if (activeFilter === 'expired') {
+        return group.status === 'expired' || group.status === 'pending';
+      }
+      return group.status === activeFilter;
+    });
+  }, [groups, activeFilter]);
+
+  // -- Compteurs (nombre de groupes par statut) --
+  const groupCounts = useMemo(() => {
     let valid = 0;
     let used = 0;
     let expired = 0;
-    for (const t of tickets) {
-      const status = getTicketDisplayStatus(t);
-      if (status === 'valid') valid++;
-      else if (status === 'used') used++;
+    for (const group of groups) {
+      if (group.status === 'valid') valid++;
+      else if (group.status === 'used') used++;
       else expired++;
     }
-    return { valid, used, expired, total: tickets.length };
+    return { valid, used, expired, total: groups.length };
+  }, [groups]);
+
+  // -- Nombre de billets actifs (pour la pastille du header) --
+  const activeTicketCount = useMemo(() => {
+    let count = 0;
+    for (const ticket of tickets) {
+      if (getTicketDisplayStatus(ticket) === 'valid') count++;
+    }
+    return count;
   }, [tickets]);
+
+  const totalQuantity = useMemo(() => {
+    return groups.reduce((sum, group) => sum + group.totalQuantity, 0);
+  }, [groups]);
 
   // -- Handlers --
   const handleFilterChange = useCallback((filter: TicketFilter) => {
@@ -485,11 +947,17 @@ export default function TicketsList() {
     setActiveFilter(filter);
   }, [impact]);
 
-  const handleTicketPress = useCallback((ticketId: string) => {
+  const handleToggleMode = useCallback((mode: ViewMode) => {
+    if (mode === viewMode) return;
+    impact('light');
+    setViewMode(mode);
+  }, [impact, viewMode]);
+
+  const handleGroupPress = useCallback((eventId: string) => {
     impact('light');
     router.push({
-      pathname: ROUTES.TICKET_DETAIL,
-      params: { id: ticketId },
+      pathname: ROUTES.TICKET_EVENT,
+      params: { eventId },
     } as never);
   }, [impact, router]);
 
@@ -508,12 +976,12 @@ export default function TicketsList() {
 
   const getCountForFilter = useCallback((key: TicketFilter): number => {
     switch (key) {
-      case 'all': return ticketCounts.total;
-      case 'valid': return ticketCounts.valid;
-      case 'used': return ticketCounts.used;
-      case 'expired': return ticketCounts.expired;
+      case 'all': return groupCounts.total;
+      case 'valid': return groupCounts.valid;
+      case 'used': return groupCounts.used;
+      case 'expired': return groupCounts.expired;
     }
-  }, [ticketCounts]);
+  }, [groupCounts]);
 
   // ============================================================
   // Rendu
@@ -524,7 +992,7 @@ export default function TicketsList() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top,
+          paddingTop: insets.top + spacing.sm,
           paddingBottom: insets.bottom + spacing.xxxl + 20,
         }}
         showsVerticalScrollIndicator={false}
@@ -537,14 +1005,14 @@ export default function TicketsList() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Sparkles size={16} color={colors.gold} strokeWidth={1.5} />
                 <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 13, lineHeight: 18, color: colors.gold }}>
-                  {ticketCounts.valid} actif{ticketCounts.valid > 1 ? 's' : ''}
+                  {activeTicketCount} actif{activeTicketCount > 1 ? 's' : ''}
                 </Text>
               </View>
             )}
           </View>
           <Text style={styles.headerSubtitle}>
-            {tickets.length > 0
-              ? `${tickets.length} billet${tickets.length > 1 ? 's' : ''} au total`
+            {groups.length > 0
+              ? `${groups.length} evenement${groups.length > 1 ? 's' : ''} · ${totalQuantity} billet${totalQuantity > 1 ? 's' : ''}`
               : 'Vos billets achetes apparaitront ici'}
           </Text>
         </View>
@@ -553,7 +1021,7 @@ export default function TicketsList() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContainer}
+          contentContainerStyle={styles.tabsContent}
         >
           {filterTabs.map((tab) => {
             const isActive = activeFilter === tab.key;
@@ -577,25 +1045,63 @@ export default function TicketsList() {
           })}
         </ScrollView>
 
-        {/* Liste des billets */}
+        {/* Barre de contexte : compteur + bascule LISTE / GRILLE */}
+        <View style={styles.contextRow}>
+          <Text style={styles.contextCount}>
+            {filteredGroups.length} evenement{filteredGroups.length > 1 ? 's' : ''}
+          </Text>
+          <View style={styles.contextHairline} />
+          <View style={styles.viewToggle}>
+            <Pressable
+              onPress={() => handleToggleMode('list')}
+              style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
+              accessibilityRole="button"
+              accessibilityLabel="Vue liste"
+              accessibilityState={{ selected: viewMode === 'list' }}
+              hitSlop={4}
+            >
+              <Rows3
+                size={16}
+                color={viewMode === 'list' ? colors.onyx : colors.stone}
+                strokeWidth={2}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => handleToggleMode('grid')}
+              style={[styles.viewToggleBtn, viewMode === 'grid' && styles.viewToggleBtnActive]}
+              accessibilityRole="button"
+              accessibilityLabel="Vue grille"
+              accessibilityState={{ selected: viewMode === 'grid' }}
+              hitSlop={4}
+            >
+              <LayoutGrid
+                size={16}
+                color={viewMode === 'grid' ? colors.onyx : colors.stone}
+                strokeWidth={2}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Liste des groupes (evenements) */}
         <View style={styles.content}>
-          {filteredTickets.length === 0 ? (
+          {filteredGroups.length === 0 ? (
             /* Etat vide premium */
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconWrap}>
                 <Ticket size={40} color={colors.terracotta} strokeWidth={1.5} />
               </View>
               <Text style={styles.emptyTitle}>
-                {tickets.length === 0
+                {groups.length === 0
                   ? 'Aucun billet pour le moment'
                   : 'Aucun billet dans cette categorie'}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {tickets.length === 0
+                {groups.length === 0
                   ? 'Reservez des billets lors de vos prochains evenements et retrouvez-les ici.'
                   : 'Changez de filtre pour voir vos autres billets.'}
               </Text>
-              {tickets.length === 0 && (
+              {groups.length === 0 && (
                 <Pressable
                   onPress={handleExplore}
                   style={styles.emptyCtaButton}
@@ -608,107 +1114,15 @@ export default function TicketsList() {
               )}
             </View>
           ) : (
-            filteredTickets.map((ticket) => {
-              const displayStatus = getTicketDisplayStatus(ticket);
-              const statusConfig = getStatusConfig(displayStatus);
-              const operator = getOperatorName(ticket.payment_method);
-              const operatorColor = getOperatorColor(ticket.payment_method);
-
-              return (
-                <Pressable
-                  key={ticket.id}
-                  onPress={() => handleTicketPress(ticket.id)}
-                  style={styles.ticketCard}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Billet ${ticket.event.title}`}
-                >
-                  {/* Cover image avec overlay */}
-                  <View style={styles.ticketCover}>
-                    {ticket.event.cover_image ? (
-                      <>
-                        <Image
-                          source={{ uri: ticket.event.cover_image }}
-                          style={styles.ticketCoverImage}
-                          contentFit="cover"
-                          transition={300}
-                          cachePolicy="memory-disk"
-                        />
-                        <LinearGradient
-                          colors={['rgba(26,24,22,0.0)', 'rgba(26,24,22,0.5)']}
-                          style={styles.ticketCoverOverlay}
-                          pointerEvents="none"
-                        />
-                      </>
-                    ) : (
-                      <View style={styles.ticketCoverPlaceholder}>
-                        <Ticket size={32} color={colors.stone} strokeWidth={1} />
-                      </View>
-                    )}
-
-                    {/* Badge statut flottant */}
-                    <View style={[styles.statusBadgeFloating, { backgroundColor: statusConfig.bg }]}>
-                      {statusConfig.icon}
-                      <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
-                        {statusConfig.label}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Corps du billet */}
-                  <View style={styles.ticketBody}>
-                    {/* Titre evenement */}
-                    <Text style={styles.ticketEventTitle} numberOfLines={2}>
-                      {ticket.event.title}
-                    </Text>
-
-                    {/* Date + Lieu */}
-                    {ticket.event.start_date && (
-                      <View style={styles.ticketMetaRow}>
-                        <CalendarDays size={14} color={colors.terracotta} strokeWidth={1.5} />
-                        <Text style={styles.ticketMetaText}>
-                          {formatDate(ticket.event.start_date)}
-                        </Text>
-                      </View>
-                    )}
-                    {ticket.event.city && (
-                      <View style={styles.ticketMetaRow}>
-                        <MapPin size={14} color={colors.terracotta} strokeWidth={1.5} />
-                        <Text style={styles.ticketMetaText}>{ticket.event.city}</Text>
-                      </View>
-                    )}
-
-                    {/* Ligne perforee decorative */}
-                    <View style={styles.perforatedLine}>
-                      {Array.from({ length: 40 }, (_, i) => (
-                        <View key={i} style={styles.perforatedDot} />
-                      ))}
-                    </View>
-
-                    {/* Zone du bas : tier + prix + operateur */}
-                    <View style={styles.ticketBottomZone}>
-                      <View style={[styles.ticketTierBadge, { backgroundColor: `${colors.gold}15` }]}>
-                        <Ticket size={14} color={colors.gold} strokeWidth={1.5} />
-                        <Text style={[styles.ticketTierName, { color: colors.gold }]}>
-                          {ticket.tier.name}
-                        </Text>
-                      </View>
-
-                      <View style={styles.ticketRightArea}>
-                        <Text style={styles.ticketPrice}>
-                          {formatPrice(ticket.total_price)}
-                        </Text>
-                        {operator && (
-                          <View style={styles.ticketOperatorBadge}>
-                            <View style={[styles.ticketOperatorDot, { backgroundColor: operatorColor }]} />
-                            <Text style={styles.ticketOperatorText}>{operator}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })
+            <View style={viewMode === 'grid' ? styles.gridContainer : undefined}>
+              {filteredGroups.map((group) =>
+                viewMode === 'grid' ? (
+                  <GridGroupCard key={group.eventId} group={group} onPress={handleGroupPress} />
+                ) : (
+                  <ListGroupCard key={group.eventId} group={group} onPress={handleGroupPress} />
+                ),
+              )}
+            </View>
           )}
         </View>
       </ScrollView>

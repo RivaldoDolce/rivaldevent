@@ -9,7 +9,7 @@ export default function SwitchSeller() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.sand }}
       contentContainerStyle={{
-        paddingTop: insets.top,
+        paddingTop: insets.top + spacing.md,
         paddingBottom: Math.max(insets.bottom, spacing.lg),
         paddingHorizontal: spacing.lg,
       }}

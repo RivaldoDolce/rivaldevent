@@ -807,7 +807,7 @@ export default function PaymentIndex() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top,
+          paddingTop: insets.top + spacing.md,
           paddingBottom: insets.bottom + spacing.xxl,
         }}
         showsVerticalScrollIndicator={false}
