@@ -21,7 +21,7 @@
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { APP_CONFIG } from '@/lib/constants';
-import type { RegisterRequest, ApiResponse } from '@/types';
+import type { RegisterRequest, ApiResponse, Profile } from '@/types';
 import type { Session } from '@supabase/supabase-js';
 
 interface OtpDeliveryResult {
@@ -329,6 +329,41 @@ export const authService = {
     } catch (err) {
       logger.debug('toggleSellerMode error:', err);
       return false;
+    }
+  },
+
+  /**
+   * Met a jour les informations du profil (nom complet, telephone).
+   */
+  async updateProfile(
+    userId: string,
+    payload: { readonly full_name: string; readonly phone?: string | null }
+  ): Promise<ApiResponse<Profile>> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: payload.full_name.trim(),
+          phone: payload.phone && payload.phone.length > 0 ? payload.phone : null,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq('id', userId)
+        .select('*')
+        .single();
+
+      if (error) {
+        logger.debug('updateProfile error:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      logger.debug('updateProfile success');
+      return { data: data as unknown as Profile, error: null };
+    } catch (err) {
+      logger.debug('updateProfile exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
     }
   },
 

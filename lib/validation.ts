@@ -76,6 +76,24 @@ export const otpSchema = z.object({
 });
 
 // ============================================================
+// PROFIL
+// ============================================================
+
+export const profileSchema = z.object({
+  full_name: z
+    .string()
+    .min(1, 'Nom complet requis')
+    .min(2, 'Minimum 2 caractères')
+    .max(80, 'Maximum 80 caractères'),
+  phone: z
+    .string()
+    .regex(/^[0-9]{0,9}$/, 'Chiffres uniquement')
+    .refine((value) => value === '' || /^6[0-9]{8}$/.test(value), {
+      message: 'Format invalide (6XXXXXXXX)',
+    }),
+});
+
+// ============================================================
 // Inférence de types
 // ============================================================
 
@@ -83,3 +101,4 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type PhoneLoginInput = z.infer<typeof phoneLoginSchema>;
 export type OtpInput = z.infer<typeof otpSchema>;
+export type ProfileInput = z.infer<typeof profileSchema>;
