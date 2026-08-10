@@ -57,6 +57,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useRouter } from 'expo-router';
 import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
+import { useFavoritesStore } from '@/stores/favorites-store';
 
 // ============================================================
 // Types (categories icones pour les cartes de navigation)
@@ -92,6 +93,10 @@ export default function HomeScreen() {
   const { profile } = useAuth();
 
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Favoris : etat global partage (home, detail, explorer, profil)
+  const isEventFavorited = useFavoritesStore((s) => s.isEventFavorited);
+  const toggleEvent = useFavoritesStore((s) => s.toggleEvent);
 
   // Compteur de notifications non lues
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(3);
@@ -461,9 +466,8 @@ export default function HomeScreen() {
               isFeatured={event.isFeatured}
               onPress={() => handleEventPress(event.id)}
               onReserve={() => handleReserve(event.id)}
-              onToggleFavorite={() => {
-                // TODO: brancher la logique favoris avec TanStack Query
-              }}
+              isFavorited={isEventFavorited(event.id)}
+              onToggleFavorite={() => toggleEvent(event.id)}
             />
           ))}
         </View>

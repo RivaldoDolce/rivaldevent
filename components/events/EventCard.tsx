@@ -13,7 +13,7 @@
  * Utilise lucide-react-native pour les icones.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -92,6 +92,11 @@ export const EventCard = React.memo(function EventCard({
   const { impact } = useHaptics();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [favorited, setFavorited] = useState(isFavorited);
+
+  // -- Synchronisation avec la prop (favoris globaux) --
+  useEffect(() => {
+    setFavorited(isFavorited);
+  }, [isFavorited]);
 
   // -- Press animation --
   const handlePressIn = useCallback(() => {

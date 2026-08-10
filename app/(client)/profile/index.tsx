@@ -176,7 +176,7 @@ export default function ClientProfileScreen() {
           label: 'Favoris',
           icon: <Heart size={19} color={colors.terracotta} strokeWidth={1.75} />,
           accent: `${colors.terracotta}12`,
-          onPress: () => router.push(ROUTES.EXPLORE),
+          onPress: () => router.push(ROUTES.FAVORITES),
         },
         {
           label: 'Parametres',

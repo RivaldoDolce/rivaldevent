@@ -156,6 +156,7 @@ export const ROUTES = {
   PROFILE: '/(client)/profile' as const,
   PROFILE_EDIT: '/(client)/profile/edit' as const,
   PROFILE_SETTINGS: '/(client)/profile/settings' as const,
+  FAVORITES: '/(client)/favorites' as const,
   SWITCH_SELLER: '/(client)/profile/switch-seller' as const,
   SELLER_HOME: '/(seller)/home' as const,
   SELLER_EXPLORE: '/(seller)/explore' as const,

@@ -66,6 +66,7 @@ import { colors, spacing, radii, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { venueService } from '@/services/venue.service';
+import { useFavoritesStore } from '@/stores/favorites-store';
 import { formatPrice } from '@/services/event.service';
 import { logger } from '@/lib/logger';
 import type { VenueWithPromotion } from '@/types';
@@ -166,10 +167,14 @@ export default function VenueDetail() {
   // -- State --
   const [venue, setVenue] = useState<VenueWithPromotion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
   const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+
+  // -- Favoris (etat global partage) --
+  const venueIds = useFavoritesStore((s) => s.venueIds);
+  const toggleVenue = useFavoritesStore((s) => s.toggleVenue);
+  const isFavorited = venueIds.includes(venueId ?? '');
 
   // -- Chargement des donnees --
   useEffect(() => {
@@ -206,9 +211,10 @@ export default function VenueDetail() {
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
-    setIsFavorited((prev) => !prev);
-    // TODO: brancher le service favoris (Roadmap)
-  }, [impact]);
+    if (venueId) {
+      toggleVenue(venueId);
+    }
+  }, [impact, toggleVenue, venueId]);
 
   const handleShare = () => {
     impact('light');

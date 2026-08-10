@@ -64,6 +64,7 @@ import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { eventService, formatPrice, formatDate, formatTime } from '@/services/event.service';
+import { useFavoritesStore } from '@/stores/favorites-store';
 import { logger } from '@/lib/logger';
 import type { EventWithAvailability, TicketTierWithAvailability } from '@/types';
 
@@ -167,11 +168,15 @@ export default function EventDetail() {
     category: string | null;
   }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
   const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+
+  // -- Favoris (etat global partage) --
+  const eventIds = useFavoritesStore((s) => s.eventIds);
+  const toggleEvent = useFavoritesStore((s) => s.toggleEvent);
+  const isFavorited = eventIds.includes(eventId ?? '');
 
   // -- Auto-scroll du carrousel d'images --
   const resetAutoScroll = useCallback(() => {
@@ -274,9 +279,10 @@ export default function EventDetail() {
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
-    setIsFavorited((prev) => !prev);
-    // TODO: brancher le service favoris (Roadmap #8)
-  }, [impact]);
+    if (eventId) {
+      toggleEvent(eventId);
+    }
+  }, [impact, toggleEvent, eventId]);
 
   const handleShare = useCallback(() => {
     impact('light');
