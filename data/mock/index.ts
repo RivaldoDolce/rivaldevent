@@ -96,3 +96,18 @@ export {
   getMockTransactionsByUser,
   getMockTransactionsByType,
 } from './transactions';
+
+// ============================================================
+// VENDEUR (dashboard, evenements, ventes, portefeuille)
+// ============================================================
+
+export {
+  MOCK_SELLER_EVENTS,
+  MOCK_SELLER_SALES,
+  MOCK_SELLER_WALLET,
+} from './seller';
+
+export type {
+  MockSellerEvent,
+  MockSellerSale,
+} from './types';

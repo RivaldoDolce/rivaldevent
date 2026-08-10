@@ -317,3 +317,37 @@ export interface MockRecentSale {
   readonly total_price: number;
   readonly purchased_at: string;
 }
+
+/**
+ * Evenement organise (portefeuille vendeur).
+ * Aligne sur Event de types/models.ts (sous-ensemble).
+ */
+export interface MockSellerEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly image: string;
+  readonly start_date: string;
+  readonly city: string;
+  readonly venue: string;
+  readonly category: string;
+  readonly status: 'published' | 'draft' | 'completed';
+  readonly capacity: number;
+  readonly tickets_sold: number;
+  readonly revenue: number;
+}
+
+/**
+ * Vente de billet cote organisateur.
+ */
+export interface MockSellerSale {
+  readonly id: string;
+  readonly event_id: string;
+  readonly event_title: string;
+  readonly buyer_name: string;
+  readonly tier_name: string;
+  readonly quantity: number;
+  readonly total_price: number;
+  readonly status: 'completed' | 'pending' | 'failed';
+  readonly is_scanned: boolean;
+  readonly purchased_at: string;
+}
