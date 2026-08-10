@@ -60,6 +60,8 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
+
 import { colors, spacing, radii, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
@@ -812,11 +814,7 @@ export default function VenueDetail() {
                 accessibilityRole="button"
                 accessibilityLabel="Contacter via WhatsApp"
               >
-                <Image
-                  source={require('@/assets/icons/WhatsApp.svg')}
-                  style={ownerStyles.whatsappIcon}
-                  contentFit="contain"
-                />
+                <WhatsAppIcon width={26} height={26} />
                 <Text style={ownerStyles.buttonText}>WhatsApp</Text>
               </Pressable>
               <Pressable

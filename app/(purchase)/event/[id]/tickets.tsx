@@ -1,14 +1,17 @@
 /**
  * Page selection de billets - Tunnel d'achat.
  *
- * Design ultra-premium inspire de Fever, DICE et Eventbrite :
- * - Hero image plein ecran (280px) avec gradient cinematique
- * - Titre evenement en blanc superpose sur l'image
- * - Chips date/lieu elegantes
- * - Cartes de tiers spacieuses avec barre d'accent coloree,
- *   prix en or, benefits en chips, selecteur quantite premium
- * - Recapitulatif elegant avec animation
- * - Barre fixe glassmorphism en bas avec total + CTA "Payer"
+ * Design ultra-premium inspire de Fever, DICE et des flux checkout
+ * de Ticketmaster / AXS :
+ * - Hero image plein ecran (280px) avec gradient cinematique,
+ *   surtitre or et titre evenement en blanc
+ * - Cartes de tiers style "accréditation premium" :
+ *   badge qualite SVG (VIP/Premium/Standard) sur tuile teintee,
+ *   nom en Playfair, prix en or, benefits en chips,
+ *   selecteur quantite pilule premium
+ * - Recapitulatif elegant avec icones qualite
+ * - Dock de paiement flottant : panneau sombre, filet or,
+ *   total en Playfair + CTA terracotta "Payer"
  * - Espacement genereux, typographie soignee
  *
  * Navigation :
@@ -52,6 +55,10 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
+import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
+import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
+
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
@@ -66,21 +73,47 @@ import type { MockEventDetail } from '@/data/mock';
 // ============================================================
 
 const HERO_HEIGHT = 280;
-const BOTTOM_BAR_HEIGHT = 88;
+const BOTTOM_BAR_HEIGHT = 84;
 
 // ============================================================
-// Helper : couleur d'accent selon le tier
+// Types
 // ============================================================
 
-function getTierAccent(name: string): { readonly color: string; readonly bg: string; readonly label: string } {
+interface TierQuality {
+  readonly source: React.ComponentType<{ width?: number; height?: number }>;
+  readonly label: string;
+  readonly color: string;
+  readonly bg: string;
+}
+
+// ============================================================
+// Helper : qualite du tier (badge SVG + couleur d'accent)
+// ============================================================
+
+function getTierQuality(name: string): TierQuality {
   const lower = name.toLowerCase();
   if (lower.includes('vvip') || lower.includes('premium')) {
-    return { color: colors.gold, bg: `${colors.gold}18`, label: 'PREMIUM' };
+    return {
+      source: QualityPremiumIcon,
+      label: 'PREMIUM',
+      color: colors.gold,
+      bg: `${colors.gold}18`,
+    };
   }
   if (lower.includes('vip')) {
-    return { color: colors.terracotta, bg: `${colors.terracotta}18`, label: 'VIP' };
+    return {
+      source: QualityVipIcon,
+      label: 'VIP',
+      color: colors.terracotta,
+      bg: `${colors.terracotta}18`,
+    };
   }
-  return { color: colors.forest, bg: `${colors.forest}18`, label: 'STANDARD' };
+  return {
+    source: QualityStandardIcon,
+    label: 'STANDARD',
+    color: colors.forest,
+    bg: `${colors.forest}18`,
+  };
 }
 
 // ============================================================
@@ -180,6 +213,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
   },
+  heroOverline: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 2,
+    color: colors.gold,
+    marginBottom: spacing.xs,
+  },
   heroTitle: {
     fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 26,
@@ -231,14 +272,24 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     gap: spacing.sm,
+  },
+  sectionIconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: `${colors.terracotta}12`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.xs,
   },
   sectionTitle: {
     fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 22,
+    lineHeight: 28,
     color: colors.onyx,
+    letterSpacing: -0.3,
   },
   sectionSubtitle: {
     fontFamily: 'Inter-Regular',
@@ -248,65 +299,123 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
+  /* Info bar */
+  infoBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.forest}08`,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: `${colors.forest}15`,
+  },
+  infoBarText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.forest,
+    flex: 1,
+  },
+
   /* -- Carte de tier premium -- */
   tierCard: {
     backgroundColor: colors.white,
     borderRadius: radii.xl,
     marginBottom: spacing.md,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: `${colors.gold}22`,
     ...shadows.eventCard,
   },
-  tierAccentBar: {
-    height: 4,
-    width: '100%',
+  tierCardGradient: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+  },
+  /* Bandeau superieur en degrade - halo de qualite (au-dessus de la carte) */
+  tierAccentBand: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    zIndex: 2,
   },
   tierCardBody: {
     padding: spacing.lg,
   },
   tierTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.sm,
+  },
+  tierQualityTile: {
+    width: 50,
+    height: 50,
+    borderRadius: radii.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: `${colors.white}AA`,
+  },
+  tierQualityIcon: {
+    width: 34,
+    height: 34,
   },
   tierNameArea: {
     flex: 1,
     marginRight: spacing.md,
   },
+  tierName: {
+    flexShrink: 1,
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.onyx,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
   tierLabelBadge: {
+    flexShrink: 0,
+    alignSelf: 'flex-start',
     borderRadius: radii.sm,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-    marginBottom: spacing.xs,
+    paddingVertical: 3,
+    borderWidth: 1,
   },
   tierLabelText: {
     fontFamily: 'Inter-Bold',
     fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 1,
-  },
-  tierName: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.onyx,
+    lineHeight: 13,
+    letterSpacing: 0.8,
   },
   tierPriceArea: {
     alignItems: 'flex-end',
   },
+  tierPriceChip: {
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: `${colors.gold}38`,
+    backgroundColor: `${colors.gold}0F`,
+  },
   tierPriceLabel: {
     fontFamily: 'Inter-Regular',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10,
+    lineHeight: 14,
     color: colors.stone,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   tierPrice: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 26,
     color: colors.gold,
+    letterSpacing: -0.2,
   },
 
   /* Description du tier */
@@ -329,10 +438,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.ivory,
-    borderRadius: radii.md,
+    borderRadius: radii.full,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs + 1,
     gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: `${colors.border}`,
+  },
+  benefitCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: `${colors.forest}18`,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   benefitText: {
     fontFamily: 'Inter-Medium',
@@ -347,17 +466,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: `${colors.gold}1F`,
     paddingTop: spacing.md,
   },
   stockInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  stockDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   stockText: {
     fontFamily: 'Inter-Regular',
     fontSize: 12,
     lineHeight: 16,
     color: colors.stone,
+    flexShrink: 1,
   },
   stockBadge: {
     alignSelf: 'flex-start',
@@ -371,29 +499,34 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 
-  /* Selecteur quantite premium */
+  /* Selecteur quantite premium - pilule dans pilule */
   quantitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.ivory,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}33`,
+    padding: 4,
   },
   qtyButton: {
     width: 44,
     height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.search,
   },
   qtyButtonDisabled: {
-    opacity: 0.3,
+    opacity: 0.4,
   },
   qtyNumber: {
     fontFamily: 'Inter-Bold',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 17,
+    lineHeight: 24,
     color: colors.onyx,
-    minWidth: 44,
+    minWidth: 42,
     textAlign: 'center',
   },
 
@@ -418,21 +551,47 @@ const styles = StyleSheet.create({
 
   /* Recapitulatif */
   recapCard: {
-    backgroundColor: colors.white,
     borderRadius: radii.xl,
-    padding: spacing.lg,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: `${colors.gold}30`,
+    ...shadows.card,
+  },
+  recapCardInner: {
+    padding: spacing.lg,
+  },
+  recapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  recapHeaderIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: `${colors.gold}1F`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recapHeaderText: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
   },
   recapRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
+  recapQualityIconWrap: {
+    marginRight: spacing.sm,
+  },
   recapTierName: {
+    flex: 1,
     fontFamily: 'Inter-Regular',
     fontSize: 14,
     lineHeight: 20,
@@ -467,72 +626,84 @@ const styles = StyleSheet.create({
     color: colors.gold,
   },
 
-  /* Barre fixe bas glassmorphism */
+  /* =============================================
+     Dock de paiement - panneau flottant premium
+     ============================================= */
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
   },
-  bottomBarInner: {
+  dockOuter: {
+    paddingHorizontal: spacing.md,
+  },
+  dockPanel: {
+    borderRadius: radii.xxl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    ...shadows.eventCard,
+  },
+  dockRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  bottomSummary: {
-    flexDirection: 'column',
+  dockSummary: {
+    flex: 1,
+    marginRight: spacing.md,
   },
-  bottomTicketCount: {
+  dockCaption: {
     fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}99`,
+    fontSize: 11,
+    lineHeight: 15,
+    color: `${colors.white}80`,
+    marginBottom: 1,
   },
-  bottomTotal: {
+  dockTotal: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.white,
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.goldBright,
   },
-  bottomCtaButton: {
+  dockTotalEmpty: {
+    color: `${colors.white}55`,
+  },
+  /* CTA or degrade - pilule */
+  dockCtaButton: {
+    borderRadius: radii.full,
+    minWidth: 132,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  dockCtaInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.xl,
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md + 2,
-    gap: spacing.sm,
-    ...shadows.eventCard,
+    borderRadius: radii.full,
   },
-  bottomCtaText: {
+  dockCtaText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
     lineHeight: 24,
-    color: colors.white,
+    color: colors.onyx,
   },
-  bottomCtaDisabled: {
-    opacity: 0.5,
+  dockCtaTextDisabled: {
+    color: colors.stone,
   },
-
-  /* Info bar */
-  infoBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: `${colors.forest}08`,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  infoBarText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.forest,
-    flex: 1,
+  dockCtaDisabled: {
+    shadowOpacity: 0,
+    elevation: 0,
+    opacity: 0.85,
   },
 });
 
@@ -740,7 +911,7 @@ export default function SelectTickets() {
             colors={[
               'rgba(26,24,22,0.0)',
               'rgba(26,24,22,0.3)',
-              'rgba(26,24,22,0.85)',
+              'rgba(26,24,22,0.88)',
             ]}
             locations={[0.0, 0.4, 1.0]}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -760,6 +931,7 @@ export default function SelectTickets() {
 
           {/* Contenu superpose */}
           <View style={[styles.heroContent, { paddingBottom: spacing.lg }]}>
+            <Text style={styles.heroOverline}>BILLETERIE</Text>
             <Text style={styles.heroTitle}>{eventDetail.title}</Text>
             <View style={styles.heroChipsRow}>
               <View style={styles.heroChip}>
@@ -780,7 +952,12 @@ export default function SelectTickets() {
         <View style={styles.content} onLayout={_handleContentLayout}>
           {/* Section Choix des billets */}
           <View style={styles.sectionHeader}>
-            <Ticket size={22} color={colors.terracotta} strokeWidth={1.5} />
+            <LinearGradient
+              colors={[`${colors.terracotta}1F`, `${colors.terracotta}0D`]}
+              style={styles.sectionIconTile}
+            >
+              <Ticket size={20} color={colors.terracotta} strokeWidth={1.75} />
+            </LinearGradient>
             <Text style={styles.sectionTitle}>Choix des billets</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
@@ -788,26 +965,32 @@ export default function SelectTickets() {
           </Text>
 
           {/* Info bar */}
-          <View style={styles.infoBar}>
+          <LinearGradient
+            colors={[`${colors.forest}12`, `${colors.forest}06`]}
+            style={styles.infoBar}
+          >
             <Info size={16} color={colors.forest} strokeWidth={2} />
             <Text style={styles.infoBarText}>
               Les prix sont indiques par billet. Vous pouvez selectionner plusieurs types de billets.
             </Text>
-          </View>
+          </LinearGradient>
 
           {/* Evenement epuise */}
           {eventDetail.is_sold_out ? (
-            <View style={styles.soldOutBanner}>
+            <LinearGradient
+              colors={[`${colors.danger}12`, `${colors.danger}05`]}
+              style={styles.soldOutBanner}
+            >
               <Ticket size={24} color={colors.danger} strokeWidth={1.5} />
               <Text style={styles.soldOutText}>
                 Tous les billets sont epuises pour cet evenement
               </Text>
-            </View>
+            </LinearGradient>
           ) : (
             /* Cartes de tiers premium */
             <View>
               {eventDetail.ticket_tiers.map((tier) => {
-                const accent = getTierAccent(tier.name);
+                const quality = getTierQuality(tier.name);
                 const currentQty = quantities[tier.id] ?? 0;
                 const canIncrement = !tier.is_sold_out && currentQty < tier.available_quantity;
                 const canDecrement = currentQty > 0;
@@ -816,100 +999,157 @@ export default function SelectTickets() {
                   : 0;
 
                 return (
-                  <View key={tier.id} style={styles.tierCard}>
-                    {/* Barre d'accent coloree en haut */}
-                    <View style={[styles.tierAccentBar, { backgroundColor: accent.color }]} />
+                  <View
+                    key={tier.id}
+                    style={[styles.tierCard, { borderColor: `${quality.color}38` }]}
+                  >
+                    <LinearGradient
+                      colors={['#FFFFFF', `${quality.color}16`]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.tierCardGradient}
+                    >
+                      <View style={styles.tierCardBody}>
+                        {/* Ligne superieure : badge qualite + nom + prix */}
+                        <View style={styles.tierTopRow}>
+                          <LinearGradient
+                            colors={[`${quality.color}3D`, `${quality.color}14`]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.tierQualityTile}
+                          >
+                            {(() => {
+                              const QualityIcon = quality.source;
+                              return <QualityIcon width={34} height={34} />;
+                            })()}
+                          </LinearGradient>
 
-                    <View style={styles.tierCardBody}>
-                      {/* Ligne superieure : nom + prix */}
-                      <View style={styles.tierTopRow}>
-                        <View style={styles.tierNameArea}>
-                          <View style={[styles.tierLabelBadge, { backgroundColor: accent.bg }]}>
-                            <Text style={[styles.tierLabelText, { color: accent.color }]}>
-                              {accent.label}
+                          <View style={styles.tierNameArea}>
+                            <Text style={styles.tierName} numberOfLines={1}>
+                              {tier.name}
                             </Text>
+                            <View style={[
+                              styles.tierLabelBadge,
+                              {
+                                backgroundColor: `${quality.color}14`,
+                                borderColor: `${quality.color}40`,
+                              },
+                            ]}>
+                              <Text
+                                style={[styles.tierLabelText, { color: quality.color }]}
+                                numberOfLines={1}
+                                allowFontScaling={false}
+                              >
+                                {quality.label}
+                              </Text>
+                            </View>
                           </View>
-                          <Text style={styles.tierName}>{tier.name}</Text>
+
+                          <View style={styles.tierPriceArea}>
+                            <Text style={styles.tierPriceLabel}>par billet</Text>
+                            <View style={styles.tierPriceChip}>
+                              <Text style={styles.tierPrice}>{formatTierPrice(tier.price)}</Text>
+                            </View>
+                          </View>
                         </View>
-                        <View style={styles.tierPriceArea}>
-                          <Text style={styles.tierPriceLabel}>par billet</Text>
-                          <Text style={styles.tierPrice}>{formatTierPrice(tier.price)}</Text>
+
+                        {/* Description */}
+                        {tier.description && (
+                          <Text style={styles.tierDescription} numberOfLines={2}>
+                            {tier.description}
+                          </Text>
+                        )}
+
+                        {/* Benefits */}
+                        {tier.benefits.length > 0 && (
+                          <View style={styles.benefitsContainer}>
+                            {tier.benefits.map((benefit, index) => (
+                              <View key={index} style={styles.benefitChip}>
+                                <View style={styles.benefitCheck}>
+                                  <Check size={9} color={colors.forest} strokeWidth={3} />
+                                </View>
+                                <Text style={styles.benefitText}>{benefit}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {/* Ligne du bas : stock + selecteur quantite */}
+                        <View style={styles.tierBottomRow}>
+                          <View style={styles.stockInfo}>
+                            {tier.is_sold_out ? (
+                              <View style={[styles.stockBadge, { backgroundColor: `${colors.danger}15` }]}>
+                                <Text style={[styles.stockBadgeText, { color: colors.danger }]}>Epuise</Text>
+                              </View>
+                            ) : tier.is_low_stock ? (
+                              <>
+                                <View style={[styles.stockDot, { backgroundColor: colors.mango }]} />
+                                <View style={[styles.stockBadge, { backgroundColor: `${colors.mango}15` }]}>
+                                  <Text style={[styles.stockBadgeText, { color: colors.mango }]}>Stock faible</Text>
+                                </View>
+                              </>
+                            ) : (
+                              <>
+                                <View style={[styles.stockDot, { backgroundColor: colors.forest }]} />
+                                <Text style={styles.stockText}>
+                                  {tier.available_quantity} dispo{tier.available_quantity > 1 ? 's' : ''} ({pourcentageVendu}% vendu)
+                                </Text>
+                              </>
+                            )}
+                          </View>
+
+                          {/* Selecteur quantite premium - pilule dans pilule */}
+                          <View style={styles.quantitySelector}>
+                            <Pressable
+                              onPress={() => {
+                                if (!canDecrement) return;
+                                impact('light');
+                                handleQuantityChange(tier.id, currentQty - 1);
+                              }}
+                              style={({ pressed }) => [
+                                styles.qtyButton,
+                                !canDecrement && styles.qtyButtonDisabled,
+                                pressed && { transform: [{ scale: 0.94 }] },
+                              ]}
+                              disabled={!canDecrement}
+                              hitSlop={8}
+                              accessibilityRole="button"
+                              accessibilityLabel="Diminuer"
+                            >
+                              <Minus size={16} color={canDecrement ? colors.onyx : colors.stone} strokeWidth={2.5} />
+                            </Pressable>
+
+                            <Text style={styles.qtyNumber}>{currentQty}</Text>
+
+                            <Pressable
+                              onPress={() => {
+                                if (!canIncrement) return;
+                                impact('light');
+                                handleQuantityChange(tier.id, currentQty + 1);
+                              }}
+                              style={({ pressed }) => [
+                                styles.qtyButton,
+                                !canIncrement && styles.qtyButtonDisabled,
+                                pressed && { transform: [{ scale: 0.94 }] },
+                              ]}
+                              disabled={!canIncrement}
+                              hitSlop={8}
+                              accessibilityRole="button"
+                              accessibilityLabel="Augmenter"
+                            >
+                              <Plus size={16} color={canIncrement ? quality.color : colors.stone} strokeWidth={2.5} />
+                            </Pressable>
+                          </View>
                         </View>
                       </View>
+                    </LinearGradient>
 
-                      {/* Description */}
-                      {tier.description && (
-                        <Text style={styles.tierDescription} numberOfLines={2}>
-                          {tier.description}
-                        </Text>
-                      )}
-
-                      {/* Benefits */}
-                      {tier.benefits.length > 0 && (
-                        <View style={styles.benefitsContainer}>
-                          {tier.benefits.map((benefit, index) => (
-                            <View key={index} style={styles.benefitChip}>
-                              <Check size={12} color={colors.forest} strokeWidth={2.5} />
-                              <Text style={styles.benefitText}>{benefit}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-
-                      {/* Ligne du bas : stock + selecteur quantite */}
-                      <View style={styles.tierBottomRow}>
-                        <View style={styles.stockInfo}>
-                          {tier.is_sold_out ? (
-                            <View style={[styles.stockBadge, { backgroundColor: `${colors.danger}15` }]}>
-                              <Text style={[styles.stockBadgeText, { color: colors.danger }]}>Epuise</Text>
-                            </View>
-                          ) : tier.is_low_stock ? (
-                            <View style={[styles.stockBadge, { backgroundColor: `${colors.mango}15` }]}>
-                              <Text style={[styles.stockBadgeText, { color: colors.mango }]}>Stock faible</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.stockText}>
-                              {tier.available_quantity} dispo{tier.available_quantity > 1 ? 's' : ''} ({pourcentageVendu}% vendu)
-                            </Text>
-                          )}
-                        </View>
-
-                        {/* Selecteur quantite premium */}
-                        <View style={styles.quantitySelector}>
-                          <Pressable
-                            onPress={() => {
-                              if (!canDecrement) return;
-                              impact('light');
-                              handleQuantityChange(tier.id, currentQty - 1);
-                            }}
-                            style={[styles.qtyButton, !canDecrement && styles.qtyButtonDisabled]}
-                            disabled={!canDecrement}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel="Diminuer"
-                          >
-                            <Minus size={20} color={canDecrement ? colors.onyx : colors.stone} strokeWidth={2.5} />
-                          </Pressable>
-
-                          <Text style={styles.qtyNumber}>{currentQty}</Text>
-
-                          <Pressable
-                            onPress={() => {
-                              if (!canIncrement) return;
-                              impact('light');
-                              handleQuantityChange(tier.id, currentQty + 1);
-                            }}
-                            style={[styles.qtyButton, !canIncrement && styles.qtyButtonDisabled]}
-                            disabled={!canIncrement}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel="Augmenter"
-                          >
-                            <Plus size={20} color={canIncrement ? accent.color : colors.stone} strokeWidth={2.5} />
-                          </Pressable>
-                        </View>
-                      </View>
-                    </View>
+                    {/* Halo superieur en degrade - rendu au-dessus de la carte */}
+                    <LinearGradient
+                      colors={[`${quality.color}40`, 'rgba(255,255,255,0)']}
+                      style={styles.tierAccentBand}
+                      pointerEvents="none"
+                    />
                   </View>
                 );
               })}
@@ -918,66 +1158,112 @@ export default function SelectTickets() {
 
           {/* Recapitulatif */}
           {totalQuantity > 0 && (
-            <View style={styles.recapCard}>
-              <View style={styles.sectionHeader}>
-                <Sparkles size={18} color={colors.gold} strokeWidth={1.5} />
-                <Text style={{ fontFamily: 'PlayfairDisplay-SemiBold', fontSize: 18, lineHeight: 24, color: colors.onyx }}>
-                  Recapitulatif
-                </Text>
-              </View>
-
-              {selectedTiers.map((tier) => (
-                <View key={tier.tierId} style={styles.recapRow}>
-                  <Text style={styles.recapTierName}>
-                    {tier.quantity}x {tier.tierName}
-                  </Text>
-                  <Text style={styles.recapTierDetail}>{formatPrice(tier.subtotal)}</Text>
+            <LinearGradient
+              colors={['#FFFFFF', '#FDF9F0']}
+              style={styles.recapCard}
+            >
+              <View style={styles.recapCardInner}>
+                <View style={styles.recapHeader}>
+                  <View style={styles.recapHeaderIcon}>
+                    <Sparkles size={15} color={colors.gold} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.recapHeaderText}>Recapitulatif</Text>
                 </View>
-              ))}
 
-              <View style={styles.recapSeparator} />
+                {selectedTiers.map((tier) => {
+                  const quality = getTierQuality(tier.tierName);
+                  return (
+                    <View key={tier.tierId} style={styles.recapRow}>
+                      {(() => {
+                        const QualityIcon = quality.source;
+                        return (
+                          <View style={styles.recapQualityIconWrap}>
+                            <QualityIcon width={20} height={20} />
+                          </View>
+                        );
+                      })()}
+                      <Text style={styles.recapTierName}>
+                        {tier.quantity}x {tier.tierName}
+                      </Text>
+                      <Text style={styles.recapTierDetail}>{formatPrice(tier.subtotal)}</Text>
+                    </View>
+                  );
+                })}
 
-              <View style={styles.recapTotalRow}>
-                <Text style={styles.recapTotalLabel}>Total</Text>
-                <Text style={styles.recapTotalValue}>{formatPrice(totalAmount)}</Text>
+                <View style={styles.recapSeparator} />
+
+                <View style={styles.recapTotalRow}>
+                  <Text style={styles.recapTotalLabel}>Total</Text>
+                  <Text style={styles.recapTotalValue}>{formatPrice(totalAmount)}</Text>
+                </View>
               </View>
-            </View>
+            </LinearGradient>
           )}
         </View>
       </ScrollView>
 
       {/* =============================================
-          BARRE FIXE EN BAS - glassmorphism premium
+          DOCK DE PAIEMENT - panneau flottant premium
           ============================================= */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}>
-        <LinearGradient
-          colors={['rgba(26,24,22,0.92)', 'rgba(26,24,22,0.98)']}
-          style={{ borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl }}
-        >
-          <View style={styles.bottomBarInner}>
-            <View style={styles.bottomSummary}>
-              <Text style={styles.bottomTicketCount}>
-                {totalQuantity > 0
-                  ? `${totalQuantity} billet${totalQuantity > 1 ? 's' : ''} selectionne${totalQuantity > 1 ? 's' : ''}`
-                  : 'Aucun billet selectionne'}
-              </Text>
-              <Text style={styles.bottomTotal}>
-                {totalQuantity > 0 ? formatPrice(totalAmount) : '0 F'}
-              </Text>
-            </View>
+        <View style={styles.dockOuter}>
+          <LinearGradient
+            colors={['rgba(30,27,24,0.97)', 'rgba(18,16,14,1)']}
+            style={styles.dockPanel}
+          >
+            <View style={styles.dockRow}>
+              <View style={styles.dockSummary}>
+                <Text style={styles.dockCaption}>
+                  {totalQuantity > 0
+                    ? `${totalQuantity} billet${totalQuantity > 1 ? 's' : ''} selectionne${totalQuantity > 1 ? 's' : ''}`
+                    : 'Aucun billet selectionne'}
+                </Text>
+                <Text style={[
+                  styles.dockTotal,
+                  totalQuantity === 0 && styles.dockTotalEmpty,
+                ]}>
+                  {totalQuantity > 0 ? formatPrice(totalAmount) : '0 FCFA'}
+                </Text>
+              </View>
 
-            <Pressable
-              onPress={handleProceedToPayment}
-              style={[styles.bottomCtaButton, totalQuantity === 0 && styles.bottomCtaDisabled]}
-              disabled={totalQuantity === 0}
-              accessibilityRole="button"
-              accessibilityLabel="Payer les billets"
-            >
-              <Text style={styles.bottomCtaText}>Payer</Text>
-              <ArrowRight size={20} color={colors.white} strokeWidth={2} />
-            </Pressable>
-          </View>
-        </LinearGradient>
+              <Pressable
+                onPress={handleProceedToPayment}
+                style={({ pressed }) => [
+                  styles.dockCtaButton,
+                  totalQuantity === 0 && styles.dockCtaDisabled,
+                  pressed && totalQuantity > 0 && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                ]}
+                disabled={totalQuantity === 0}
+                accessibilityRole="button"
+                accessibilityLabel="Payer les billets"
+                accessibilityState={{ disabled: totalQuantity === 0 }}
+              >
+                <LinearGradient
+                  colors={
+                    totalQuantity > 0
+                      ? ['#F0CD77', '#C9A84C']
+                      : ['#EBE5DA', '#D8CFBE']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.dockCtaInner}
+                >
+                  <Text style={[
+                    styles.dockCtaText,
+                    totalQuantity === 0 && styles.dockCtaTextDisabled,
+                  ]}>
+                    {totalQuantity > 0 ? 'Payer' : 'Choisir'}
+                  </Text>
+                  <ArrowRight
+                    size={20}
+                    color={totalQuantity > 0 ? colors.onyx : colors.stone}
+                    strokeWidth={2.25}
+                  />
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </View>
       </View>
     </View>
   );

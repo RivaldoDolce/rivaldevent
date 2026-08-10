@@ -1,14 +1,15 @@
 /**
  * Page selection operateur Mobile Money - Tunnel d'achat.
  *
- * Design ultra-premium inspire de Stripe Checkout et Apple Pay :
- * - Header elegant avec bouton retour
- * - Recapitulatif compact avec total en or
- * - Selecteur d'operateur avec logos SVG et branding colore
- * - Champ telephone premium avec prefixe +237, auto-format,
- *   validation temps reel, et clavier qui ne masque pas le champ
- * - Bouton "Confirmer le paiement" inline (pas de barre fixe)
- *   pour eviter les problemes de clavier
+ * Design ultra-premium inspire de Stripe Checkout, Apple Pay et Revolut :
+ * - Header elegant avec retour et sous-titre
+ * - Recapitulatif style "ticket stub" sur carte onyx avec liseret
+ *   perfore, montant en or, et badges qualite SVG (VIP/Premium/Standard)
+ * - Selecteur d'operateur avec logos SVG, couleur de marque,
+ *   badge "Populaire" et etat de selection affirmatif
+ * - Champ telephone premium avec prefixe +237, auto-format sur 9 chiffres
+ *   (maxLength corrige), validation temps reel et clavier non masquant
+ * - Bouton "Confirmer le paiement" inline pour eviter les problemes de clavier
  * - Badge de securite discret
  *
  * Navigation :
@@ -43,14 +44,25 @@ import {
   Ticket,
   CircleCheck,
   AlertCircle,
+  Info,
+  CalendarDays,
+  MapPin,
 } from 'lucide-react-native';
-import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import MtnLogo from '@/assets/icons/mtn-logo.svg';
+import OrangeLogo from '@/assets/icons/orange-logo.svg';
+import MoovLogo from '@/assets/icons/moov-logo.svg';
+import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
+import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
+import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
-import { formatPrice } from '@/services/event.service';
+import { formatPrice, formatDate } from '@/services/event.service';
 import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
+import type { SelectedTierInfo } from '@/stores/purchase-flow-store';
 import type { PaymentMethod } from '@/types';
 
 // ============================================================
@@ -61,8 +73,24 @@ interface OperatorInfo {
   readonly id: PaymentMethod;
   readonly name: string;
   readonly subtitle: string;
-  readonly logoSource: ReturnType<typeof require>;
-  readonly accentColor: string;
+  readonly logoSource: React.ComponentType<{ width?: number; height?: number }>;
+  readonly gradient: readonly [string, string];
+  readonly textColor: string;
+  readonly badge?: string;
+}
+
+interface QualityInfo {
+  readonly source: React.ComponentType<{ width?: number; height?: number }>;
+  readonly label: string;
+  readonly accent: string;
+}
+
+interface RecapRow {
+  readonly key: string;
+  readonly tierName: string;
+  readonly quantity: number;
+  readonly subtotal: number | null;
+  readonly quality: QualityInfo;
 }
 
 // ============================================================
@@ -74,24 +102,43 @@ const OPERATORS: readonly OperatorInfo[] = [
     id: 'mtn',
     name: 'MTN MoMo',
     subtitle: 'Mobile Money',
-    logoSource: require('@/assets/icons/mtn-logo.svg'),
-    accentColor: '#FFC300',
+    logoSource: MtnLogo,
+    gradient: ['#FFD24A', '#E7A400'],
+    textColor: colors.onyx,
+    badge: 'Populaire',
   },
   {
     id: 'orange',
     name: 'Orange Money',
     subtitle: 'Paiement mobile',
-    logoSource: require('@/assets/icons/orange-logo.svg'),
-    accentColor: '#FF7900',
+    logoSource: OrangeLogo,
+    gradient: ['#FF8A21', '#E05200'],
+    textColor: colors.white,
   },
   {
     id: 'moov',
     name: 'Moov Money',
     subtitle: 'Transfert mobile',
-    logoSource: require('@/assets/icons/moov-logo.svg'),
-    accentColor: '#0099FF',
+    logoSource: MoovLogo,
+    gradient: ['#2EAAFF', '#0068D6'],
+    textColor: colors.white,
   },
 ] as const;
+
+// ============================================================
+// Helper : badge qualite selon le nom du tier
+// ============================================================
+
+function getQualityForTier(name: string): QualityInfo {
+  const lower = name.toLowerCase();
+  if (lower.includes('premium') || lower.includes('vvip')) {
+    return { source: QualityPremiumIcon, label: 'PREMIUM', accent: colors.gold };
+  }
+  if (lower.includes('vip')) {
+    return { source: QualityVipIcon, label: 'VIP', accent: colors.mango };
+  }
+  return { source: QualityStandardIcon, label: 'STANDARD', accent: colors.ivory };
+}
 
 // ============================================================
 // Helper : valider numero camerounais
@@ -103,7 +150,7 @@ function isValidCameroonPhone(phone: string): boolean {
 }
 
 /**
- * Auto-formatage du numero : 6 XX XX XX XX
+ * Auto-formatage du numero : 6 XX XX XX XX (13 caracteres max)
  */
 function formatPhoneNumber(input: string): string {
   // Ne garder que les chiffres
@@ -131,22 +178,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   headerBackButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+    ...shadows.search,
+  },
+  headerTitleArea: {
+    flex: 1,
   },
   headerTitle: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 24,
+    lineHeight: 30,
     color: colors.onyx,
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone,
+    marginTop: 2,
   },
 
   /* Contenu */
@@ -154,64 +214,165 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
 
-  /* Recapitulatif */
+  /* =====================================================
+     Recapitulatif "ticket stub" - carte onyx premium
+     ===================================================== */
   recapCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
+    borderRadius: radii.xxl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
     ...shadows.eventCard,
   },
-  recapHeader: {
+  recapTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  recapOverline: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.5,
+    color: colors.gold,
+  },
+  recapEventTitle: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 19,
+    lineHeight: 26,
+    color: colors.white,
+    marginBottom: spacing.md,
+    letterSpacing: -0.2,
+  },
+  /* Meta date / lieu sur le stub */
+  recapMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  recapHeaderText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-  },
-  recapRow: {
+  recapMetaItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+    backgroundColor: `${colors.white}10`,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+  },
+  recapMetaText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}99`,
+  },
+  recapTierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  recapQualityTile: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.md,
+    backgroundColor: `${colors.white}14`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  recapTierInfo: {
+    flex: 1,
   },
   recapTierName: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.text,
-  },
-  recapTierPrice: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.white,
   },
-  recapSeparator: {
+  recapTierQuantity: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}99`,
+  },
+  recapTierSubtotal: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.white,
+  },
+
+  /* Liseret perfore */
+  recapDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+    position: 'relative',
+  },
+  dashedLine: {
+    flex: 1,
     height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: `${colors.white}30`,
   },
+  dividerDiamond: {
+    width: 8,
+    height: 8,
+    backgroundColor: colors.gold,
+    transform: [{ rotate: '45deg' }],
+    marginHorizontal: spacing.sm,
+  },
+  /* Encoches perforees - moities de cercles qui "mordent" les bords */
+  notchLeft: {
+    position: 'absolute',
+    left: -40,
+    top: 0,
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.sand,
+  },
+  notchRight: {
+    position: 'absolute',
+    right: -40,
+    top: 0,
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.sand,
+  },
+
+  /* Total */
   recapTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+  },
+  recapTotalLabelArea: {
+    flex: 1,
   },
   recapTotalLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.onyx,
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}99`,
+  },
+  recapTotalCaption: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 11,
+    lineHeight: 15,
+    color: `${colors.white}66`,
+    marginTop: 2,
   },
   recapTotalValue: {
     fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 26,
+    lineHeight: 32,
     color: colors.gold,
   },
 
@@ -234,57 +395,88 @@ const styles = StyleSheet.create({
   },
 
   /* Section titre */
+  sectionOverline: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 2,
+    color: colors.gold,
+    marginBottom: spacing.xs,
+  },
   sectionTitle: {
     fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 22,
+    lineHeight: 28,
     color: colors.onyx,
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.stone,
+    marginTop: 2,
     marginBottom: spacing.md,
   },
 
-  /* Carte operateur premium */
+  /* Carte operateur premium - degrade marque */
   operatorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     borderRadius: radii.xl,
     padding: spacing.md + 2,
     borderWidth: 2,
     borderColor: 'transparent',
     marginBottom: spacing.md,
     overflow: 'hidden',
-    ...shadows.card,
   },
   operatorCardSelected: {
-    borderColor: colors.terracotta,
-    backgroundColor: `${colors.terracotta}05`,
+    borderColor: colors.white,
+    ...shadows.eventCard,
+  },
+  operatorCardPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   operatorLogoWrap: {
     width: 56,
     height: 56,
     borderRadius: radii.lg,
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
     overflow: 'hidden',
-  },
-  operatorLogo: {
-    width: 44,
-    height: 44,
+    ...shadows.search,
   },
   operatorInfo: {
     flex: 1,
   },
-  operatorName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.onyx,
+  operatorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: 2,
   },
-  operatorNameSelected: {
-    color: colors.terracotta,
+  operatorName: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 17,
+    lineHeight: 23,
+    color: colors.onyx,
+    letterSpacing: -0.2,
+  },
+  operatorBadge: {
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+    borderWidth: 1,
+  },
+  operatorBadgeText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 0.8,
   },
   operatorSubtitle: {
     fontFamily: 'Inter-Regular',
@@ -292,13 +484,46 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.stone,
   },
-  operatorCheckCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  operatorCheckOuter: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: `${colors.white}B3`,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: spacing.sm,
+  },
+  operatorCheckOuterSelected: {
+    borderColor: colors.white,
+    backgroundColor: colors.white,
+  },
+
+  /* Indication dynamique sous la liste */
+  operatorHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.search,
+  },
+  operatorHintText: {
+    flex: 1,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.text,
+  },
+  operatorHintTextSelected: {
+    color: colors.terracotta,
+    fontFamily: 'Inter-SemiBold',
   },
 
   /* Champ telephone premium */
@@ -320,12 +545,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: colors.border,
     ...shadows.card,
   },
   phoneInputOuterFocused: {
     borderColor: colors.terracotta,
+    ...shadows.eventCard,
   },
   phoneInputOuterError: {
     borderColor: colors.danger,
@@ -377,27 +603,45 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
 
-  /* Bouton confirmer premium */
+  /* Bouton confirmer premium - pilule degrade or */
   confirmButton: {
+    borderRadius: radii.xl,
+    marginBottom: spacing.sm,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  confirmButtonDisabled: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  confirmGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.xl,
-    paddingVertical: spacing.md + 4,
-    paddingHorizontal: spacing.xl,
     gap: spacing.sm,
-    marginBottom: spacing.md,
-    ...shadows.eventCard,
-  },
-  confirmButtonDisabled: {
-    opacity: 0.5,
+    paddingVertical: spacing.md + 4,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
   },
   confirmButtonText: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 17,
     lineHeight: 24,
-    color: colors.white,
+    color: colors.onyx,
+  },
+  confirmButtonTextDisabled: {
+    color: colors.stone,
+  },
+  ctaHelperText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+    textAlign: 'center',
+    marginBottom: spacing.md,
   },
 
   /* Bouton annuler */
@@ -428,6 +672,7 @@ export default function PaymentIndex() {
   }>();
   const { impact } = useHaptics();
   const isOffline = useOffline();
+  const flow = usePurchaseFlowStore();
 
   // -- Refs --
   const phoneInputRef = useRef<TextInput>(null);
@@ -450,6 +695,34 @@ export default function PaymentIndex() {
     }
   }, [params.tiers]);
 
+  // -- Lignes du recapitulatif : privilegie le store (riches),
+  //    sinon repli sur les parametres de navigation --
+  const recapRows: RecapRow[] = useMemo(() => {
+    if (flow.selectedTiers.length > 0) {
+      return flow.selectedTiers
+        .filter((tier: SelectedTierInfo) => tier.quantity > 0)
+        .map((tier: SelectedTierInfo) => ({
+          key: tier.tierId,
+          tierName: tier.tierName,
+          quantity: tier.quantity,
+          subtotal: tier.quantity * tier.unitPrice,
+          quality: getQualityForTier(tier.tierName),
+        }));
+    }
+    return parsedTiers.map((tier) => ({
+      key: tier.tierId ?? `${tier.quantity}`,
+      tierName: 'Billet',
+      quantity: tier.quantity,
+      subtotal: null,
+      quality: getQualityForTier('standard'),
+    }));
+  }, [flow.selectedTiers, parsedTiers]);
+
+  const displayTotal = flow.totalAmount > 0 ? flow.totalAmount : totalAmount;
+  const displayEventTitle = flow.eventTitle ?? 'Votre commande';
+  const displayEventDate = flow.eventStartDate ? formatDate(flow.eventStartDate) : '';
+  const displayEventCity = flow.eventCity ?? '';
+
   // -- Validation --
   const phoneDigits = phoneNumber.replace(/\s/g, '');
   const isPhoneValid = phoneDigits.length === 0 || isValidCameroonPhone(phoneDigits);
@@ -460,6 +733,14 @@ export default function PaymentIndex() {
       && isPhoneComplete
       && !isOffline;
   }, [selectedOperator, isPhoneComplete, isOffline]);
+
+  // -- Aide contextuelle sous le bouton --
+  const ctaHelper = useMemo(() => {
+    if (isOffline) return 'Hors ligne - verifiez votre connexion';
+    if (!selectedOperator) return 'Selectionnez un operateur pour continuer';
+    if (!isPhoneComplete) return 'Entrez votre numero (9 chiffres) pour continuer';
+    return '';
+  }, [isOffline, selectedOperator, isPhoneComplete]);
 
   // -- Handlers --
   const handleBack = useCallback(() => {
@@ -544,37 +825,93 @@ export default function PaymentIndex() {
           >
             <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.headerTitle}>Paiement</Text>
+          <View style={styles.headerTitleArea}>
+            <Text style={styles.headerTitle}>Paiement</Text>
+            <Text style={styles.headerSubtitle}>
+              Choisissez votre operateur Mobile Money
+            </Text>
+          </View>
         </View>
 
         <View style={styles.content}>
           {/* =============================================
-              RECAPITULATIF
+              RECAPITULATIF - ticket stub onyx premium
               ============================================= */}
-          <View style={styles.recapCard}>
-            <View style={styles.recapHeader}>
-              <Ticket size={18} color={colors.terracotta} strokeWidth={1.5} />
-              <Text style={styles.recapHeaderText}>Votre commande</Text>
+          <LinearGradient
+            colors={['#26221E', colors.onyx]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.recapCard}
+          >
+            <View style={styles.recapTopRow}>
+              <Text style={styles.recapOverline}>VOTRE COMMANDE</Text>
+              <Ticket size={18} color={colors.gold} strokeWidth={1.5} />
             </View>
 
-            {parsedTiers.map((tier, index) => (
-              <View key={tier.tierId ?? index} style={styles.recapRow}>
-                <Text style={styles.recapTierName}>
-                  {tier.quantity}x billet{tier.quantity > 1 ? 's' : ''}
-                </Text>
-                <Text style={styles.recapTierPrice}>
-                  {tier.quantity} place{tier.quantity > 1 ? 's' : ''}
+            <Text style={styles.recapEventTitle} numberOfLines={2}>
+              {displayEventTitle}
+            </Text>
+
+            {(displayEventDate || displayEventCity) && (
+              <View style={styles.recapMetaRow}>
+                {displayEventDate ? (
+                  <View style={styles.recapMetaItem}>
+                    <CalendarDays size={13} color={`${colors.white}88`} strokeWidth={1.75} />
+                    <Text style={styles.recapMetaText} numberOfLines={1}>
+                      {displayEventDate}
+                    </Text>
+                  </View>
+                ) : null}
+                {displayEventCity ? (
+                  <View style={styles.recapMetaItem}>
+                    <MapPin size={13} color={`${colors.white}88`} strokeWidth={1.75} />
+                    <Text style={styles.recapMetaText} numberOfLines={1}>
+                      {displayEventCity}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            {recapRows.map((row) => (
+              <View key={row.key} style={styles.recapTierRow}>
+                <View style={styles.recapQualityTile}>
+                  {(() => {
+                    const QualityIcon = row.quality.source;
+                    return <QualityIcon width={26} height={26} />;
+                  })()}
+                </View>
+                <View style={styles.recapTierInfo}>
+                  <Text style={styles.recapTierName} numberOfLines={1}>
+                    {row.tierName}
+                  </Text>
+                  <Text style={styles.recapTierQuantity}>
+                    {row.quantity} billet{row.quantity > 1 ? 's' : ''} - {row.quality.label}
+                  </Text>
+                </View>
+                <Text style={styles.recapTierSubtotal}>
+                  {row.subtotal !== null ? formatPrice(row.subtotal) : `${row.quantity}x`}
                 </Text>
               </View>
             ))}
 
-            <View style={styles.recapSeparator} />
+            {/* Liseret perfore avec losange or + encoches */}
+            <View style={styles.recapDividerRow}>
+              <View style={styles.dashedLine} />
+              <View style={styles.dividerDiamond} />
+              <View style={styles.dashedLine} />
+              <View style={styles.notchLeft} pointerEvents="none" />
+              <View style={styles.notchRight} pointerEvents="none" />
+            </View>
 
             <View style={styles.recapTotalRow}>
-              <Text style={styles.recapTotalLabel}>Total a payer</Text>
-              <Text style={styles.recapTotalValue}>{formatPrice(totalAmount)}</Text>
+              <View style={styles.recapTotalLabelArea}>
+                <Text style={styles.recapTotalLabel}>Total a payer</Text>
+                <Text style={styles.recapTotalCaption}>Paiement en un versement</Text>
+              </View>
+              <Text style={styles.recapTotalValue}>{formatPrice(displayTotal)}</Text>
             </View>
-          </View>
+          </LinearGradient>
 
           {/* Badge securise */}
           <View style={styles.securityRow}>
@@ -585,56 +922,103 @@ export default function PaymentIndex() {
           </View>
 
           {/* =============================================
-              SELECTION OPERATEUR
+              SELECTION OPERATEUR - cartes degrade marque
               ============================================= */}
+          <Text style={styles.sectionOverline}>PAIEMENT MOBILE</Text>
           <Text style={styles.sectionTitle}>Operateur Mobile Money</Text>
+          <Text style={styles.sectionSubtitle}>
+            Selectionnez votre reseau de paiement
+          </Text>
 
           {OPERATORS.map((op) => {
             const isSelected = selectedOperator === op.id;
+            const textColor = op.textColor;
             return (
-              <Pressable
+              <LinearGradient
                 key={op.id}
-                onPress={() => handleOperatorSelect(op.id)}
+                colors={op.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={[
                   styles.operatorCard,
                   isSelected && styles.operatorCardSelected,
                 ]}
-                accessibilityRole="button"
-                accessibilityLabel={op.name}
-                accessibilityState={{ selected: isSelected }}
               >
-                {/* Logo */}
-                <View style={styles.operatorLogoWrap}>
-                  <Image
-                    source={op.logoSource}
-                    style={styles.operatorLogo}
-                    contentFit="contain"
-                  />
-                </View>
+                <Pressable
+                  onPress={() => handleOperatorSelect(op.id)}
+                  style={({ pressed }) => [
+                    styles.operatorCardPressable,
+                    pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={op.name}
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  {/* Logo */}
+                  <View style={styles.operatorLogoWrap}>
+                    {(() => {
+                      const OperatorLogo = op.logoSource;
+                      return <OperatorLogo width={42} height={42} />;
+                    })()}
+                  </View>
 
-                {/* Info */}
-                <View style={styles.operatorInfo}>
-                  <Text style={[
-                    styles.operatorName,
-                    isSelected && styles.operatorNameSelected,
+                  {/* Info */}
+                  <View style={styles.operatorInfo}>
+                    <View style={styles.operatorNameRow}>
+                      <Text style={[styles.operatorName, { color: textColor }]}>
+                        {op.name}
+                      </Text>
+                      {op.badge && (
+                        <View style={[
+                          styles.operatorBadge,
+                          {
+                            backgroundColor: `${textColor}1F`,
+                            borderColor: `${textColor}40`,
+                          },
+                        ]}>
+                          <Text style={[styles.operatorBadgeText, { color: textColor }]}>
+                            {op.badge}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.operatorSubtitle, { color: `${textColor}B3` }]}>
+                      {op.subtitle}
+                    </Text>
+                  </View>
+
+                  {/* Indicateur selection */}
+                  <View style={[
+                    styles.operatorCheckOuter,
+                    isSelected && styles.operatorCheckOuterSelected,
                   ]}>
-                    {op.name}
-                  </Text>
-                  <Text style={styles.operatorSubtitle}>{op.subtitle}</Text>
-                </View>
-
-                {/* Indicateur selection */}
-                <View style={[
-                  styles.operatorCheckCircle,
-                  { backgroundColor: isSelected ? colors.terracotta : colors.ivory },
-                ]}>
-                  {isSelected && (
-                    <CircleCheck size={18} color={colors.white} strokeWidth={2.5} />
-                  )}
-                </View>
-              </Pressable>
+                    {isSelected && (
+                      <CircleCheck size={18} color={colors.onyx} strokeWidth={2.5} />
+                    )}
+                  </View>
+                </Pressable>
+              </LinearGradient>
             );
           })}
+
+          {/* Indication contextuelle */}
+          <View style={styles.operatorHintRow}>
+            {selectedOperator ? (
+              <>
+                <ArrowRight size={16} color={colors.terracotta} strokeWidth={2} />
+                <Text style={[styles.operatorHintText, styles.operatorHintTextSelected]}>
+                  Redirection vers {OPERATORS.find((op) => op.id === selectedOperator)?.name}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Info size={16} color={colors.stone} strokeWidth={1.75} />
+                <Text style={styles.operatorHintText}>
+                  Choisissez un operateur, puis entrez votre numero
+                </Text>
+              </>
+            )}
+          </View>
 
           {/* =============================================
               NUMERO DE TELEPHONE
@@ -664,7 +1048,7 @@ export default function PaymentIndex() {
                 placeholder="6 XX XX XX XX"
                 placeholderTextColor={colors.stone}
                 keyboardType="phone-pad"
-                maxLength={12}
+                maxLength={13}
                 autoComplete="tel"
                 textContentType="telephoneNumber"
                 accessibilityLabel="Numero de telephone"
@@ -698,18 +1082,43 @@ export default function PaymentIndex() {
           </View>
 
           {/* =============================================
-              BOUTON CONFIRMER
+              BOUTON CONFIRMER - degrade or dynamique
               ============================================= */}
           <Pressable
             onPress={handleConfirmPayment}
-            style={[styles.confirmButton, !canProceed && styles.confirmButtonDisabled]}
+            style={({ pressed }) => [
+              styles.confirmButton,
+              !canProceed && styles.confirmButtonDisabled,
+              pressed && canProceed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
+            ]}
             disabled={!canProceed}
             accessibilityRole="button"
             accessibilityLabel="Confirmer le paiement"
+            accessibilityState={{ disabled: !canProceed }}
           >
-            <Text style={styles.confirmButtonText}>Confirmer le paiement</Text>
-            <ArrowRight size={20} color={colors.white} strokeWidth={2} />
+            <LinearGradient
+              colors={canProceed ? ['#F0CD77', '#C9A84C'] : ['#EBE5DA', '#D8CFBE']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.confirmGradient}
+            >
+              <Text style={[
+                styles.confirmButtonText,
+                !canProceed && styles.confirmButtonTextDisabled,
+              ]}>
+                {canProceed ? `Confirmer ${formatPrice(displayTotal)}` : 'Confirmer'}
+              </Text>
+              <ArrowRight
+                size={20}
+                color={canProceed ? colors.onyx : colors.stone}
+                strokeWidth={2.25}
+              />
+            </LinearGradient>
           </Pressable>
+
+          {!canProceed && ctaHelper ? (
+            <Text style={styles.ctaHelperText}>{ctaHelper}</Text>
+          ) : null}
 
           <Pressable
             onPress={handleBack}
