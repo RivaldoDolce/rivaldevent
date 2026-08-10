@@ -33,13 +33,18 @@ import {
   Text,
   ScrollView,
   Pressable,
-  type ImageRequireSource,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, SlidersHorizontal } from 'lucide-react-native';
-import { Image } from 'expo-image';
+
+import ConcertIcon from '@/assets/icons/concert.svg';
+import FestivalIcon from '@/assets/icons/festival.svg';
+import ConferenceIcon from '@/assets/icons/conference.svg';
+import GalaIcon from '@/assets/icons/gala.svg';
+import SportIcon from '@/assets/icons/sport.svg';
+import TheatreIcon from '@/assets/icons/theatre.svg';
 
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -60,7 +65,7 @@ import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 interface CategoryIconCard {
   readonly id: string;
   readonly label: string;
-  readonly iconSource: ImageRequireSource;
+  readonly iconSource: React.ComponentType<{ width?: number; height?: number }>;
 }
 
 // ============================================================
@@ -68,12 +73,12 @@ interface CategoryIconCard {
 // ============================================================
 
 const CATEGORY_ICONS: readonly CategoryIconCard[] = [
-  { id: 'concerts', label: 'Concerts', iconSource: require('@/assets/icons/concert.svg') },
-  { id: 'festivals', label: 'Festivals', iconSource: require('@/assets/icons/festival.svg') },
-  { id: 'conferences', label: 'Conferences', iconSource: require('@/assets/icons/conference.svg') },
-  { id: 'galas', label: 'Galas', iconSource: require('@/assets/icons/gala.svg') },
-  { id: 'sports', label: 'Sports', iconSource: require('@/assets/icons/sport.svg') },
-  { id: 'theatre', label: 'Theatre', iconSource: require('@/assets/icons/theatre.svg') },
+  { id: 'concerts', label: 'Concerts', iconSource: ConcertIcon },
+  { id: 'festivals', label: 'Festivals', iconSource: FestivalIcon },
+  { id: 'conferences', label: 'Conferences', iconSource: ConferenceIcon },
+  { id: 'galas', label: 'Galas', iconSource: GalaIcon },
+  { id: 'sports', label: 'Sports', iconSource: SportIcon },
+  { id: 'theatre', label: 'Theatre', iconSource: TheatreIcon },
 ] as const;
 
 // ============================================================
@@ -407,11 +412,10 @@ export default function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Explorer les ${cat.label}`}
               >
-                <Image
-                  source={cat.iconSource}
-                  style={{ width: 32, height: 32 }}
-                  contentFit="contain"
-                />
+                {(() => {
+                  const CategoryIcon = cat.iconSource;
+                  return <CategoryIcon width={32} height={32} />;
+                })()}
                 <Text style={categoryIconLabelStyle}>{cat.label}</Text>
               </Pressable>
             ))}

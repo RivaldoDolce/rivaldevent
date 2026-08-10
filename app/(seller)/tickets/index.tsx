@@ -9,7 +9,7 @@ export default function Screen() {
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.sand }}
       contentContainerStyle={{
-        paddingTop: insets.top,
+        paddingTop: insets.top + spacing.md,
         paddingBottom: 80,
         paddingHorizontal: spacing.lg,
       }}

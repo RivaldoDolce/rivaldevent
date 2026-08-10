@@ -7,7 +7,6 @@
  * - payment/mtn        : paiement MTN
  * - payment/orange     : paiement Orange
  * - payment/moov       : paiement Moov
- * - confirmation/[id]  : confirmation + QR code
  */
 
 import { Stack } from 'expo-router';
@@ -28,7 +27,6 @@ export default function PurchaseLayout() {
       <Stack.Screen name="payment/mtn" />
       <Stack.Screen name="payment/orange" />
       <Stack.Screen name="payment/moov" />
-      <Stack.Screen name="confirmation/[ticketId]" />
     </Stack>
   );
 }

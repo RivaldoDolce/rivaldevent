@@ -345,7 +345,7 @@ export default function VenuesScreen() {
   };
 
   const scrollContentStyle: ViewStyle = {
-    paddingTop: insets.top,
+    paddingTop: insets.top + spacing.lg,
     paddingBottom: 100,
   };
 

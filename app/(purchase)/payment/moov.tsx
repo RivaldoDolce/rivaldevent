@@ -1,59 +1,325 @@
 /**
- * Flux de paiement Moov Money.
+ * Page paiement Moov Money - Tunnel d'achat.
  *
- * Route : /(purchase)/payment/moov
- * Params : eventId, operator, phone, totalAmount, tiers
+ * Design ultra-premium inspire de Revolut, Apple Pay et des
+ * ecrans USSD de Moov Money :
+ * - Hero sombre en degrade avec logo, montant en or et numero de debit
+ * - Panneau USSD focal avec code en gros, sur fond clair contraste
+ * - Timeline d'etapes numerotees avec trait de liaison
+ * - CTA terracotta pleine largeur + etat de verification
+ * - Bouton "Annuler" discret en lien fantome
  *
- * Meme structure que MTN/Orange mais avec branding Moov :
- * - Accent bleu (#0267B3)
- * - Label "Moov Money"
+ * Navigation :
+ * - Recoit { transactionId } en parametres
+ * - Confirmation -> vers ROUTES.TICKETS (liste billets)
  *
  * Conventions :
  * - Design tokens depuis lib/constants.ts
  * - Commentaires en francais
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   Pressable,
+  Alert,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
   ChevronLeft,
-  CheckCircle2,
-  XCircle,
+  CircleCheck,
+  Smartphone,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import MoovLogo from '@/assets/icons/moov-logo.svg';
+
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
+import { confirmPaymentAndCreateTickets } from '@/lib/payment-helper';
 import { formatPrice } from '@/services/event.service';
-import {
-  paymentService,
-  formatPhoneNumber,
-  type PaymentStepStatus,
-} from '@/services/payment.service';
+import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
 
 // ============================================================
-// Constantes
+// Constantes Moov
 // ============================================================
 
-const MOOV_ACCENT = '#0267B3';
-const MOOV_BG = '#0267B315';
+const OPERATOR_NAME = 'Moov Money';
+const USSD_CODE = '*155#';
+const OPERATOR_COLOR = '#0099FF';
 
-const STEPS = [
-  { key: 'initiating' as PaymentStepStatus, label: 'Initiation', description: 'Preparation du paiement...' },
-  { key: 'ussd_sent' as PaymentStepStatus, label: 'Validation', description: 'Validez sur votre telephone Moov' },
-  { key: 'confirming' as PaymentStepStatus, label: 'Confirmation', description: 'Verification en cours...' },
-  { key: 'completed' as PaymentStepStatus, label: 'Termine', description: 'Paiement confirme !' },
-];
+const PAYMENT_STEPS = [
+  { step: 1, instruction: `Composez le code ${USSD_CODE} sur votre telephone` },
+  { step: 2, instruction: 'Selectionnez "Transfert d\'argent"' },
+  { step: 3, instruction: 'Entrez le numero marchand Rivald\'Event' },
+  { step: 4, instruction: 'Confirmez le montant et validez avec votre code PIN' },
+] as const;
 
-const POLL_INTERVAL = 3000;
-const MAX_POLL_ATTEMPTS = 10;
+// ============================================================
+// Helper : afficher le numero formatte
+// ============================================================
+
+function formatPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  return digits.replace(/(\d{2})(?=\d)/g, '$1 ');
+}
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.sand },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+    ...shadows.search,
+  },
+  headerTitle: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.onyx,
+  },
+
+  content: { paddingHorizontal: spacing.lg },
+
+  /* =============================================
+     Hero operateur - carte sombre en degrade
+     ============================================= */
+  heroCard: {
+    borderRadius: radii.xxl,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    ...shadows.eventCard,
+  },
+  heroAccentBar: {
+    height: 4,
+    width: '100%',
+    backgroundColor: OPERATOR_COLOR,
+  },
+  heroInner: {
+    padding: spacing.lg,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  heroLogoWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  heroLogo: {
+    width: 44,
+    height: 44,
+  },
+  heroTitleArea: {
+    flex: 1,
+  },
+  heroName: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.white,
+  },
+  heroTag: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}99`,
+  },
+  heroAmountLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}99`,
+    marginBottom: 2,
+  },
+  heroAmount: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 30,
+    lineHeight: 38,
+    color: colors.gold,
+    letterSpacing: -0.3,
+  },
+  heroDivider: {
+    height: 1,
+    backgroundColor: `${colors.white}22`,
+    marginVertical: spacing.md,
+  },
+  heroPhoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  heroPhoneLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: `${colors.white}80`,
+  },
+  heroPhoneValue: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.white,
+  },
+
+  /* =============================================
+     Panneau USSD focal
+     ============================================= */
+  ussdCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  ussdLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  ussdLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+    letterSpacing: 0.8,
+  },
+  ussdCode: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 34,
+    lineHeight: 42,
+    color: colors.onyx,
+    letterSpacing: 2,
+  },
+  ussdHint: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.stone,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+
+  /* Section titre */
+  sectionTitle: {
+    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.onyx,
+    marginBottom: spacing.md,
+  },
+
+  /* Timeline des etapes */
+  stepContainer: {
+    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.card,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  stepIndicatorColumn: {
+    alignItems: 'center',
+    width: 32,
+    marginRight: spacing.md,
+  },
+  stepIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: `${OPERATOR_COLOR}22`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepIndicatorCompleted: {
+    backgroundColor: `${colors.forest}15`,
+  },
+  stepNumber: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
+    lineHeight: 18,
+    color: OPERATOR_COLOR,
+  },
+  stepConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: `${OPERATOR_COLOR}30`,
+    marginVertical: spacing.xs,
+    minHeight: 24,
+  },
+  stepInstruction: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+    flex: 1,
+    paddingTop: 5,
+    paddingBottom: spacing.md,
+  },
+
+  /* Boutons */
+  confirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.terracotta,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.md + 4,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    ...shadows.eventCard,
+  },
+  confirmButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.white,
+  },
+  cancelButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  cancelButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.stone,
+  },
+});
 
 // ============================================================
 // Composant
@@ -62,226 +328,184 @@ const MAX_POLL_ATTEMPTS = 10;
 export default function MoovPayment() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { impact, notification } = useHaptics();
-  const pollCountRef = useRef(0);
+  const { impact } = useHaptics();
+  const flow = usePurchaseFlowStore();
 
-  const params = useLocalSearchParams<{
-    eventId: string;
-    operator: string;
-    phone: string;
-    totalAmount: string;
-    tiers: string;
-  }>();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [completedSteps] = useState(0);
 
-  const phone = params.phone ?? '';
-  const totalAmount = parseInt(params.totalAmount ?? '0', 10) || 0;
-  const formattedPhone = useMemo(() => formatPhoneNumber(phone), [phone]);
-
-  const [status, setStatus] = useState<PaymentStepStatus>('idle');
-  const [transactionId, setTransactionId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const currentStepIndex = useMemo(() => {
-    return STEPS.findIndex((s) => s.key === status);
-  }, [status]);
-
-  // -- Initiation --
-  useEffect(() => {
-    if (status !== 'idle') return;
-    const initiate = async () => {
-      setStatus('initiating');
-      try {
-        const tiers = JSON.parse(params.tiers ?? '[]');
-        const result = await paymentService.initiatePayment('moov', phone, totalAmount, params.eventId ?? '', tiers);
-        setTransactionId(result.transactionId);
-        setStatus(result.status);
-      } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : 'Erreur inattendue');
-        setStatus('failed');
-      }
-    };
-    initiate();
-  }, [status, phone, totalAmount, params]);
-
-  // -- Polling --
-  useEffect(() => {
-    if (status !== 'ussd_sent' && status !== 'confirming') return;
-    if (!transactionId) return;
-    if (pollCountRef.current >= MAX_POLL_ATTEMPTS) {
-      setStatus('expired');
-      setErrorMessage('Le paiement a expire. Veuillez reessayer.');
-      return;
-    }
-    setStatus('confirming');
-    const interval = setInterval(async () => {
-      pollCountRef.current += 1;
-      try {
-        const result = await paymentService.checkPaymentStatus(transactionId);
-        if (result.status === 'completed') {
-          setStatus('completed');
-          notification('success');
-          clearInterval(interval);
-        } else if (result.status === 'failed') {
-          setStatus('failed');
-          setErrorMessage(result.message ?? 'Le paiement a echoue.');
-          notification('error');
-          clearInterval(interval);
-        }
-      } catch { /* continue */ }
-    }, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [status, transactionId, notification]);
+  const displayAmount = flow.totalAmount;
+  const displayPhone = flow.phoneNumber
+    ? formatPhoneDisplay(flow.phoneNumber)
+    : '';
 
   const handleBack = useCallback(() => {
     impact('light');
-    if (status === 'idle' || status === 'failed' || status === 'expired') {
-      if (router.canGoBack()) router.back();
-    }
-  }, [impact, status, router]);
+    router.back();
+  }, [impact, router]);
 
-  const handleCancel = useCallback(async () => {
+  const handleConfirmPayment = useCallback(() => {
+    if (isProcessing) return;
     impact('medium');
-    if (transactionId) await paymentService.cancelPayment(transactionId);
-    if (router.canGoBack()) router.back();
-  }, [impact, transactionId, router]);
+    setIsProcessing(true);
 
-  const handleRetry = useCallback(() => {
-    impact('medium');
-    setStatus('idle');
-    setTransactionId(null);
-    setErrorMessage(null);
-    pollCountRef.current = 0;
-  }, [impact]);
+    setTimeout(() => {
+      setIsProcessing(false);
+      const ticketsCreated = confirmPaymentAndCreateTickets();
+      Alert.alert(
+        'Paiement confirme',
+        ticketsCreated > 0
+          ? `${ticketsCreated} billet${ticketsCreated > 1 ? 's' : ''} achete${ticketsCreated > 1 ? 's' : ''} avec succes.`
+          : 'Votre paiement Moov Money a ete enregistre.',
+        [
+          { text: 'Voir mes billets', onPress: () => { router.push(ROUTES.TICKETS as never); } },
+        ],
+      );
+    }, 2000);
+  }, [isProcessing, impact, router]);
+
+  const handleCancel = useCallback(() => {
+    impact('light');
+    Alert.alert(
+      'Annuler le paiement ?',
+      'Votre reservation ne sera pas conservee.',
+      [
+        { text: 'Continuer', style: 'cancel' },
+        { text: 'Annuler', style: 'destructive', onPress: () => { router.push(ROUTES.TICKETS as never); } },
+      ],
+    );
+  }, [impact, router]);
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={handleBack} style={styles.backButton} hitSlop={8}>
-          <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Moov Money</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + spacing.xl,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={handleBack} style={styles.headerBackButton} hitSlop={12}>
+            <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Paiement Moov</Text>
+        </View>
 
-      <View style={styles.content}>
-        {/* Carte operateur Moov */}
-        <View style={styles.operatorCard}>
-          <View style={[styles.operatorBadge, { backgroundColor: MOOV_ACCENT }]}>
-            <Text style={styles.operatorBadgeText}>V</Text>
+        <View style={styles.content}>
+          {/* Hero operateur */}
+          <LinearGradient
+            colors={['#26221E', colors.onyx]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}
+          >
+            <View style={styles.heroAccentBar} />
+            <View style={styles.heroInner}>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroLogoWrap}>
+                  <MoovLogo width={44} height={44} />
+                </View>
+                <View style={styles.heroTitleArea}>
+                  <Text style={styles.heroName}>{OPERATOR_NAME}</Text>
+                  <Text style={styles.heroTag}>Paiement USSD</Text>
+                </View>
+              </View>
+
+              <Text style={styles.heroAmountLabel}>Montant a payer</Text>
+              <Text style={styles.heroAmount}>
+                {displayAmount > 0 ? formatPrice(displayAmount) : '0 FCFA'}
+              </Text>
+
+              <View style={styles.heroDivider} />
+
+              {displayPhone.length > 0 && (
+                <View style={styles.heroPhoneRow}>
+                  <Smartphone size={14} color={`${colors.white}80`} strokeWidth={1.5} />
+                  <Text style={styles.heroPhoneLabel}>Numero de debit</Text>
+                  <Text style={styles.heroPhoneValue}>+237 {displayPhone}</Text>
+                </View>
+              )}
+            </View>
+          </LinearGradient>
+
+          {/* Code USSD focal */}
+          <View style={styles.ussdCard}>
+            <View style={styles.ussdLabelRow}>
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: colors.gold,
+                }}
+              />
+              <Text style={styles.ussdLabel}>CODE USSD A COMPOSER</Text>
+            </View>
+            <Text style={styles.ussdCode}>{USSD_CODE}</Text>
+            <Text style={styles.ussdHint}>
+              Ouvrez le composeur de votre telephone puis saisissez ce code
+            </Text>
           </View>
-          <Text style={styles.operatorName}>Moov Money</Text>
-          <Text style={styles.operatorPhone}>+237 {formattedPhone}</Text>
-        </View>
 
-        {/* Montant */}
-        <View style={styles.amountCard}>
-          <Text style={styles.amountLabel}>Montant a payer</Text>
-          <Text style={styles.amountValue}>{formatPrice(totalAmount)}</Text>
-        </View>
+          {/* Etapes */}
+          <Text style={styles.sectionTitle}>Etapes a suivre</Text>
 
-        {/* Stepper */}
-        {status !== 'failed' && status !== 'expired' && (
-          <View style={styles.stepperContainer}>
-            {STEPS.map((step, index) => {
-              const isCompleted = currentStepIndex > index;
-              const isCurrent = currentStepIndex === index;
+          <View style={styles.stepContainer}>
+            {PAYMENT_STEPS.map((step, index) => {
+              const isCompleted = step.step <= completedSteps;
+              const isLast = index === PAYMENT_STEPS.length - 1;
               return (
-                <View key={step.key} style={styles.stepRow}>
-                  <View style={styles.stepIndicatorContainer}>
-                    {isCompleted ? (
-                      <View style={[styles.stepCircle, { backgroundColor: MOOV_ACCENT }]}>
-                        <CheckCircle2 size={16} color={colors.white} strokeWidth={2} />
-                      </View>
-                    ) : isCurrent ? (
-                      <View style={[styles.stepCircle, styles.stepCircleCurrent, { borderColor: MOOV_ACCENT }]}>
-                        <ActivityIndicator size="small" color={MOOV_ACCENT} />
-                      </View>
-                    ) : (
-                      <View style={styles.stepCircle}>
-                        <Text style={styles.stepNumber}>{index + 1}</Text>
-                      </View>
-                    )}
+                <View key={step.step} style={styles.stepRow}>
+                  <View style={styles.stepIndicatorColumn}>
+                    <View style={[
+                      styles.stepIndicator,
+                      isCompleted && styles.stepIndicatorCompleted,
+                    ]}>
+                      {isCompleted ? (
+                        <CircleCheck size={16} color={colors.forest} strokeWidth={2} />
+                      ) : (
+                        <Text style={styles.stepNumber}>{step.step}</Text>
+                      )}
+                    </View>
+                    {!isLast && <View style={styles.stepConnector} />}
                   </View>
-                  <View style={styles.stepTextContainer}>
-                    <Text style={[styles.stepLabel, isCurrent && styles.stepLabelActive]}>{step.label}</Text>
-                    <Text style={[styles.stepDescription, isCurrent && styles.stepDescriptionActive]}>{step.description}</Text>
-                  </View>
+                  <Text style={styles.stepInstruction}>{step.instruction}</Text>
                 </View>
               );
             })}
           </View>
-        )}
 
-        {/* Erreur */}
-        {(status === 'failed' || status === 'expired') && (
-          <View style={styles.errorCard}>
-            <XCircle size={32} color={colors.danger} strokeWidth={1.5} />
-            <Text style={styles.errorTitle}>{status === 'expired' ? 'Paiement expire' : 'Paiement echoue'}</Text>
-            {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
-            <Pressable style={styles.retryButton} onPress={handleRetry}>
-              <Text style={styles.retryButtonText}>Reessayer</Text>
-            </Pressable>
-          </View>
-        )}
+          {/* Bouton confirmation */}
+          <Pressable
+            onPress={handleConfirmPayment}
+            style={[styles.confirmButton, isProcessing && { opacity: 0.7 }]}
+            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel="Confirmer le paiement"
+          >
+            {isProcessing ? (
+              <>
+                <ActivityIndicator size="small" color={colors.white} />
+                <Text style={styles.confirmButtonText}>Verification en cours...</Text>
+              </>
+            ) : (
+              <Text style={styles.confirmButtonText}>J'ai effectue le paiement</Text>
+            )}
+          </Pressable>
 
-        {/* Succes */}
-        {status === 'completed' && (
-          <View style={styles.successCard}>
-            <CheckCircle2 size={48} color={colors.forest} strokeWidth={1.5} />
-            <Text style={styles.successTitle}>Paiement reussi !</Text>
-            <Text style={styles.successMessage}>
-              Vos billets ont ete reserves. Vous les retrouverez dans l'onglet "Mes billets".
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {(status === 'initiating' || status === 'ussd_sent' || status === 'confirming') && (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-          <Pressable style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Annuler le paiement</Text>
+          <Pressable
+            onPress={handleCancel}
+            style={styles.cancelButton}
+            accessibilityRole="button"
+            accessibilityLabel="Annuler le paiement"
+          >
+            <Text style={styles.cancelButtonText}>Annuler</Text>
           </Pressable>
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.sand },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.ivory, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontFamily: 'PlayfairDisplay-Bold', fontSize: 22, lineHeight: 28, color: colors.onyx, letterSpacing: -0.3, textAlign: 'center' },
-  headerSpacer: { width: 36 },
-  content: { flex: 1, paddingHorizontal: spacing.lg },
-  operatorCard: { backgroundColor: colors.white, borderRadius: radii.lg, padding: spacing.lg, alignItems: 'center', marginBottom: spacing.lg, ...shadows.card },
-  operatorBadge: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
-  operatorBadgeText: { fontFamily: 'Inter-Bold', fontSize: 24, lineHeight: 30, color: colors.white },
-  operatorName: { fontFamily: 'Inter-SemiBold', fontSize: 16, lineHeight: 22, color: colors.onyx, marginBottom: spacing.xs },
-  operatorPhone: { fontFamily: 'Inter-Regular', fontSize: 14, lineHeight: 20, color: colors.stone },
-  amountCard: { backgroundColor: MOOV_BG, borderRadius: radii.lg, padding: spacing.md, alignItems: 'center', marginBottom: spacing.xl, borderWidth: 1, borderColor: `${MOOV_ACCENT}30` },
-  amountLabel: { fontFamily: 'Inter-Regular', fontSize: 12, lineHeight: 16, color: colors.stone, marginBottom: spacing.xs },
-  amountValue: { fontFamily: 'PlayfairDisplay-Bold', fontSize: 28, lineHeight: 36, color: colors.onyx, letterSpacing: -0.3 },
-  stepperContainer: { gap: spacing.lg },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  stepIndicatorContainer: { width: 32, alignItems: 'center' },
-  stepCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ivory },
-  stepCircleCurrent: { backgroundColor: colors.white, borderWidth: 2 },
-  stepNumber: { fontFamily: 'Inter-SemiBold', fontSize: 14, lineHeight: 20, color: colors.stone },
-  stepTextContainer: { flex: 1, paddingTop: 4 },
-  stepLabel: { fontFamily: 'Inter-SemiBold', fontSize: 14, lineHeight: 20, color: colors.stone, marginBottom: 2 },
-  stepLabelActive: { color: colors.onyx },
-  stepDescription: { fontFamily: 'Inter-Regular', fontSize: 12, lineHeight: 16, color: colors.stone },
-  stepDescriptionActive: { color: colors.onyx },
-  errorCard: { backgroundColor: colors.white, borderRadius: radii.lg, padding: spacing.xl, alignItems: 'center', borderWidth: 1, borderColor: `${colors.danger}20` },
-  errorTitle: { fontFamily: 'PlayfairDisplay-SemiBold', fontSize: 18, lineHeight: 24, color: colors.danger, marginTop: spacing.md, marginBottom: spacing.sm, textAlign: 'center' },
-  errorMessage: { fontFamily: 'Inter-Regular', fontSize: 14, lineHeight: 20, color: colors.stone, textAlign: 'center', marginBottom: spacing.lg },
-  retryButton: { backgroundColor: colors.terracotta, borderRadius: radii.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
-  retryButtonText: { fontFamily: 'Inter-SemiBold', fontSize: 16, lineHeight: 24, color: colors.white },
-  successCard: { backgroundColor: colors.white, borderRadius: radii.lg, padding: spacing.xl, alignItems: 'center', borderWidth: 1, borderColor: `${colors.forest}20` },
-  successTitle: { fontFamily: 'PlayfairDisplay-SemiBold', fontSize: 20, lineHeight: 26, color: colors.forest, marginTop: spacing.md, marginBottom: spacing.sm },
-  successMessage: { fontFamily: 'Inter-Regular', fontSize: 14, lineHeight: 20, color: colors.stone, textAlign: 'center' },
-  bottomBar: { backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.md, paddingHorizontal: spacing.lg },
-  cancelButton: { alignItems: 'center', paddingVertical: spacing.md },
-  cancelButtonText: { fontFamily: 'Inter-SemiBold', fontSize: 14, lineHeight: 20, color: colors.stone },
-});

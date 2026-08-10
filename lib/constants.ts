@@ -146,6 +146,7 @@ export const ROUTES = {
   VENUE_DETAIL: '/(client)/explore/venues/[id]' as const,
   TICKETS: '/(client)/tickets' as const,
   TICKET_DETAIL: '/(client)/tickets/[id]' as const,
+  TICKET_EVENT: '/(client)/tickets/event/[eventId]' as const,
   PROFILE: '/(client)/profile' as const,
   SWITCH_SELLER: '/(client)/profile/switch-seller' as const,
   SELLER_HOME: '/(seller)/home' as const,
