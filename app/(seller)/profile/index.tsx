@@ -183,6 +183,7 @@ export default function SellerProfileScreen() {
           label: 'Mon portefeuille',
           icon: <Wallet size={19} color={colors.goldDark} strokeWidth={1.75} />,
           accent: `${colors.goldDark}12`,
+          onPress: () => router.push(ROUTES.SELLER_WALLET),
         },
       ],
     },
@@ -193,6 +194,7 @@ export default function SellerProfileScreen() {
           label: 'Modifier mon profil',
           icon: <UserPen size={19} color={colors.terracotta} strokeWidth={1.75} />,
           accent: `${colors.terracotta}12`,
+          onPress: () => router.push(ROUTES.PROFILE_EDIT),
         },
         {
           label: 'Aide et support',
@@ -297,13 +299,17 @@ export default function SellerProfileScreen() {
           {/* Chips vitrines */}
           <View style={styles.chipsRow}>
             <View style={styles.chip}>
-              <TicketCheck size={17} color={colors.goldSoft} strokeWidth={1.75} />
-              <Text style={styles.chipValue}>{totals.ticketsSold}</Text>
+              <View style={styles.chipValueRow}>
+                <TicketCheck size={17} color={colors.goldSoft} strokeWidth={1.75} />
+                <Text style={styles.chipValue}>{totals.ticketsSold}</Text>
+              </View>
               <Text style={styles.chipLabel}>Billets vendus</Text>
             </View>
             <View style={styles.chip}>
-              <Store size={17} color={colors.goldSoft} strokeWidth={1.75} />
-              <Text style={styles.chipValue}>{totals.publishedEvents}</Text>
+              <View style={styles.chipValueRow}>
+                <Store size={17} color={colors.goldSoft} strokeWidth={1.75} />
+                <Text style={styles.chipValue}>{totals.publishedEvents}</Text>
+              </View>
               <Text style={styles.chipLabel}>Evenements</Text>
             </View>
           </View>
@@ -574,6 +580,7 @@ const styles = StyleSheet.create({
   avatarRing: {
     alignSelf: 'center',
     padding: 3,
+    borderRadius: radius.full,
     shadowColor: colors.onyx,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
@@ -652,14 +659,16 @@ const styles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: `${colors.sand}14`,
     borderWidth: 1,
     borderColor: `${colors.sand}24`,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md - 2,
+  },
+  chipValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chipValue: {
     fontFamily: 'PlayfairDisplay-Bold',
@@ -673,7 +682,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: `${colors.sand}B3`,
-    marginLeft: spacing.xs,
     marginTop: 3,
   },
 

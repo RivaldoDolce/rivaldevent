@@ -163,6 +163,7 @@ export const ROUTES = {
   SELLER_TICKETS: '/(seller)/tickets' as const,
   SELL: '/(seller)/sell' as const,
   SELLER_PROFILE: '/(seller)/profile' as const,
+  SELLER_WALLET: '/(seller)/wallet' as const,
   SWITCH_CLIENT: '/(seller)/profile/switch-client' as const,
   PURCHASE_TICKETS: '/(purchase)/event/[id]/tickets' as const,
   PAYMENT: '/(purchase)/payment' as const,

@@ -61,6 +61,7 @@ const TABS: readonly TabConfig[] = [
 // Seulement les routes qui EXISTENT reellement dans le filesystem
 const HIDDEN_TAB_ROUTES = [
   'profile/switch-client',
+  'wallet/index',
 ] as const;
 
 export default function SellerLayout() {

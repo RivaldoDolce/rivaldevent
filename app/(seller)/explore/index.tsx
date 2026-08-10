@@ -138,12 +138,22 @@ export default function SellerExploreScreen() {
             >
               <Plus size={20} color={colors.sand} strokeWidth={2} />
             </Pressable>
-            <Avatar
-              source={profile?.avatar_url ?? null}
-              fallback={profile?.full_name ?? 'U'}
-              size="sm"
-              border="highlight"
-            />
+            <Pressable
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.SELLER_PROFILE);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Voir mon profil"
+            >
+              <Avatar
+                source={profile?.avatar_url ?? null}
+                fallback={profile?.full_name ?? 'U'}
+                size="sm"
+                border="highlight"
+              />
+            </Pressable>
           </View>
         </View>
 

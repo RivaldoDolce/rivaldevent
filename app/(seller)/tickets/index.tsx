@@ -34,12 +34,13 @@ import {
 
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { colors, spacing, radius } from '@/lib/constants';
+import { colors, spacing, radius, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useSellerStore } from '@/stores/seller-store';
 import type { MockSellerSale } from '@/data/mock';
+import { useRouter } from 'expo-router';
 
 // ============================================================
 // Metadonnees de statut
@@ -65,6 +66,7 @@ const FILTERS: readonly { id: SaleFilter; label: string }[] = [
 
 export default function SellerTicketsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { profile } = useAuth();
   const { impact, notification } = useHaptics();
 
@@ -133,12 +135,22 @@ export default function SellerTicketsScreen() {
               {sales.length > 1 ? 's' : ''}
             </Text>
           </View>
-          <Avatar
-            source={profile?.avatar_url ?? null}
-            fallback={profile?.full_name ?? 'U'}
-            size="sm"
-            border="highlight"
-          />
+          <Pressable
+            onPress={() => {
+              impact('light');
+              router.push(ROUTES.SELLER_PROFILE);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Voir mon profil"
+          >
+            <Avatar
+              source={profile?.avatar_url ?? null}
+              fallback={profile?.full_name ?? 'U'}
+              size="sm"
+              border="highlight"
+            />
+          </Pressable>
         </View>
 
         {/* ============================================

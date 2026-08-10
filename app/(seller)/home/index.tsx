@@ -123,12 +123,22 @@ export default function SellerHomeScreen() {
             <Text style={headerTitleStyle}>Rivald'event</Text>
             <Text style={styles.greeting}>Bonjour, {firstName}</Text>
           </View>
-          <Avatar
-            source={profile?.avatar_url ?? null}
-            fallback={profile?.full_name ?? 'U'}
-            size="sm"
-            border="highlight"
-          />
+          <Pressable
+            onPress={() => {
+              impact('light');
+              router.push(ROUTES.SELLER_PROFILE);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Voir mon profil"
+          >
+            <Avatar
+              source={profile?.avatar_url ?? null}
+              fallback={profile?.full_name ?? 'U'}
+              size="sm"
+              border="highlight"
+            />
+          </Pressable>
         </View>
 
         {/* ============================================
