@@ -23,10 +23,16 @@ export const colors = {
   forest: '#1A4D2E',
   gold: '#C9A84C',
   goldBright: '#FFD700',
+  goldSoft: '#E5C882',
   indigo: '#2C3E5A',
   mango: '#E8A838',
   onyx: '#1A1816',
   stone: '#6B6560',
+
+  // -- Variantes profondes (hero, surfaces premium) --
+  forestDeep: '#0D3B22',
+  forestMid: '#1B5C3B',
+  terracottaSoft: '#D97757',
 
   // -- Semantic aliases --
   primary: '#B84A32',
@@ -148,6 +154,8 @@ export const ROUTES = {
   TICKET_DETAIL: '/(client)/tickets/[id]' as const,
   TICKET_EVENT: '/(client)/tickets/event/[eventId]' as const,
   PROFILE: '/(client)/profile' as const,
+  PROFILE_EDIT: '/(client)/profile/edit' as const,
+  PROFILE_SETTINGS: '/(client)/profile/settings' as const,
   SWITCH_SELLER: '/(client)/profile/switch-seller' as const,
   SELLER_HOME: '/(seller)/home' as const,
   SELLER_EXPLORE: '/(seller)/explore' as const,
