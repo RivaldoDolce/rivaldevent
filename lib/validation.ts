@@ -6,7 +6,7 @@
  *
  * Regles :
  * - Email : format valide
- * - Mot de passe : min 8, 1 maj, 1 chiffre, 1 special
+ * - Mot de passe : min 15 (politique Clerk), 1 maj, 1 chiffre, 1 special
  * - Telephone : format camerounais (6XXXXXXXX)
  * - OTP : 6 chiffres
  */
@@ -24,8 +24,7 @@ export const loginSchema = z.object({
     .email('Email invalide'),
   password: z
     .string()
-    .min(1, 'Mot de passe requis')
-    .min(8, 'Minimum 8 caractères'),
+    .min(1, 'Mot de passe requis'),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -51,7 +50,7 @@ export const newPasswordSchema = z
     password: z
       .string()
       .min(1, 'Mot de passe requis')
-      .min(8, 'Minimum 8 caractères')
+      .min(15, 'Minimum 15 caractères')
       .regex(/[A-Z]/, 'Une majuscule requise')
       .regex(/[0-9]/, 'Un chiffre requis')
       .regex(/[^A-Za-z0-9]/, 'Un caractère spécial requis'),
@@ -81,7 +80,8 @@ export const registerSchema = z
       .regex(/^6[0-9]{8}$/, 'Format invalide (6XXXXXXXX)'),
     password: z
       .string()
-      .min(8, 'Minimum 8 caractères')
+      .min(1, 'Mot de passe requis')
+      .min(15, 'Minimum 15 caractères')
       .regex(/[A-Z]/, '1 majuscule requise')
       .regex(/[0-9]/, '1 chiffre requis')
       .regex(/[!@#$%^&*(),.?":{}|<>]/, '1 caractère spécial requis'),

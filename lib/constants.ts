@@ -142,6 +142,7 @@ export const ROUTES = {
   ONBOARDING: '/(auth)/onboarding' as const,
   LOGIN: '/(auth)/login' as const,
   REGISTER: '/(auth)/register' as const,
+  PHONE_LOGIN: '/(auth)/phone' as const,
   FORGOT_PASSWORD: '/(auth)/forgot-password' as const,
   OTP: '/(auth)/otp' as const,
   HOME: '/(client)/home' as const,
@@ -184,7 +185,7 @@ PROFILE: '/(client)/profile' as const,
 export const APP_CONFIG = {
   OTP_MAX_ATTEMPTS: 3,
   OTP_LOCK_MINUTES: 2,
-  OTP_CODE_LENGTH: 4,
+  OTP_CODE_LENGTH: 6,
   SESSION_TIMEOUT_DAYS: 1,                      // 24 heures avant reconnexion obligatoire
   CACHE_VERSION: 'v1',
   CACHE_STALE_TIME: 5 * 60 * 1000,       // 5 minutes

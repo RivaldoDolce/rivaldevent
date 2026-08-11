@@ -43,11 +43,12 @@ const COUNTDOWN_SECONDS = 60;
 
 export default function OtpScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone?: string; email?: string }>();
+  const params = useLocalSearchParams<{ phone?: string; email?: string; migrate?: string }>();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
   const authService = useAuthService();
 
+  const isMigration = params.migrate === '1';
   const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,10 +140,10 @@ export default function OtpScreen() {
   );
 
   const handleResend = useCallback(async () => {
-    if (countdown > 0 || !params.phone) return;
+    if (countdown > 0) return;
 
     impact('light');
-    const result = await authService.resendOtp(params.phone);
+    const result = await authService.resendOtp(params.phone, params.email);
 
     if (result.error) {
       setError(result.error.message);
@@ -151,12 +152,18 @@ export default function OtpScreen() {
       setCode(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     }
-  }, [countdown, params.phone, impact, authService]);
+  }, [countdown, params.phone, params.email, impact, authService]);
 
   const formatPhone = (phone?: string) => {
     if (!phone) return 'votre numero';
     return `+237 ${phone.slice(0, 1)}${phone.slice(1, 3)} ${phone.slice(3, 5)} ${phone.slice(5, 7)} ${phone.slice(7)}`;
   };
+
+  const recipientText = params.phone
+    ? `envoye au ${formatPhone(params.phone)}`
+    : params.email
+      ? `envoye a ${params.email}`
+      : 'envoye a votre numero';
 
   return (
     <View style={styles.container}>
@@ -195,9 +202,20 @@ export default function OtpScreen() {
           <Text style={styles.subtitle}>
             Veuillez saisir le code a{' '}
             <Text style={styles.subtitleHighlight}>{OTP_LENGTH} chiffres</Text>
-            {' '}envoye au {formatPhone(params.phone)}
-            {params.email ? ` et a ${params.email}` : ''}
+            {' '}{recipientText}
           </Text>
+
+          {/* Banniere migration (ancien compte Supabase) */}
+          {isMigration && (
+            <View style={styles.migrationBanner}>
+              <Text style={styles.migrationTitle}>Ancien compte détecté</Text>
+              <Text style={styles.migrationText}>
+                Votre compte de l'ancienne version est en cours de migration.
+                Vérifiez votre boîte mail pour finaliser. Si besoin, utilisez
+                « Mot de passe oublié » à la prochaine connexion.
+              </Text>
+            </View>
+          )}
 
           {/* Erreur */}
           {error && (
@@ -267,13 +285,13 @@ export default function OtpScreen() {
         <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.xl }]}>
           {/* Barre decorative alternee */}
           <View style={styles.accentBar}>
-            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: '#3D2B1F' }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
           </View>
         </View>
@@ -285,7 +303,7 @@ export default function OtpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF8F3',
+    backgroundColor: colors.sand,
   },
 
   // Barre du haut
@@ -321,7 +339,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FFF3D6',
+    backgroundColor: `${colors.gold}20`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -347,7 +365,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlayfairDisplay-Bold',
     fontSize: 30,
     lineHeight: 38,
-    color: '#0F172A',
+    color: colors.onyx,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
@@ -357,7 +375,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 15,
     lineHeight: 22,
-    color: '#475569',
+    color: colors.stone,
     textAlign: 'center',
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
@@ -367,6 +385,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: colors.terracotta,
+  },
+
+  // Banniere migration
+  migrationBanner: {
+    backgroundColor: `${colors.gold}18`,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.sm,
+  },
+  migrationTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  migrationText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.stone,
+    textAlign: 'center',
   },
 
   // Erreur
@@ -393,9 +435,9 @@ const styles = StyleSheet.create({
   },
   otpInput: {
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: `${colors.stone}25`,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     textAlign: 'center',
     fontSize: 26,
     fontWeight: '700',
@@ -451,7 +493,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     lineHeight: 20,
-    color: '#64748B',
+    color: colors.stone,
     textAlign: 'center',
   },
   countdownTimer: {
@@ -462,7 +504,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     lineHeight: 20,
-    color: '#64748B',
+    color: colors.stone,
     textAlign: 'center',
   },
   resendLinkBold: {

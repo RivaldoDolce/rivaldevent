@@ -5,14 +5,23 @@
  * - Fond sand avec logo centré en haut
  * - Titre "Bienvenue" serif bold + sous-titre stone
  * - Formulaire : email + password (icone oeil pour reveal)
- * - Ligne : "Se souvenir de moi" + "Mot de passe oublié"
+ * - Ligne : "Se souvenir de moi" (persiste l'email) + "Mot de passe oublié"
  * - Bouton "Se connecter" terracotta (CTA unique)
  * - Séparateur "OU"
- * - Boutons : Google (outline) + Téléphone (outline)
+ * - Boutons sociaux Google + Apple (logos séparés des libellés)
+ * - Bouton téléphone (OTP SMS) séparé
  * - Lien "Inscrivez-vous" en bas
+ *
+ * OAuth (Google / Apple) : useSSO experimental (@clerk/expo/experimental)
+ * qui active automatiquement la session ; le retour navigateur passe par
+ * la route /oauth-callback qui redirige vers l'accueil.
+ *
+ * Migration : si l'email n'existe pas chez Clerk, on tente la connexion sur
+ * l'ancien projet Supabase ; si elle réussit, le compte est recréé chez
+ * Clerk et l'utilisateur finalise via un code email (écran OTP).
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,15 +35,16 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { useSSO } from '@clerk/expo';
+import { useSSO } from '@clerk/expo/experimental';
 import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { GoogleLogo } from '@/components/icons/GoogleLogo';
+import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
 import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
@@ -43,6 +53,7 @@ import { logger } from '@/lib/logger';
 import { useAppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
+const REMEMBER_EMAIL_KEY = 'rivaldevent.remember_email';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -54,7 +65,7 @@ export default function LoginScreen() {
   const { startSSOFlow } = useSSO();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -62,6 +73,7 @@ export default function LoginScreen() {
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginInput>({
     mode: 'onChange',
@@ -69,6 +81,30 @@ export default function LoginScreen() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
+
+  // Pre-remplir l'email memorise au montage
+  useEffect(() => {
+    AsyncStorage.getItem(REMEMBER_EMAIL_KEY)
+      .then((email) => {
+        if (email) {
+          setRememberMe(true);
+          setValue('email', email);
+        }
+      })
+      .catch(() => logger.debug('remember email read failed'));
+  }, [setValue]);
+
+  const rememberEmail = useCallback(async (email: string) => {
+    try {
+      if (rememberMe) {
+        await AsyncStorage.setItem(REMEMBER_EMAIL_KEY, email);
+      } else {
+        await AsyncStorage.removeItem(REMEMBER_EMAIL_KEY);
+      }
+    } catch {
+      logger.debug('remember email save failed');
+    }
+  }, [rememberMe]);
 
   const onSubmit = useCallback(
     async (data: LoginInput) => {
@@ -81,62 +117,79 @@ export default function LoginScreen() {
       if (result.error) {
         setAuthError(result.error.message);
         notification('error');
-      } else {
-        notification('success');
-        // Verifier le mode pour rediriger vers le bon layout
-        if (!result.data?.user?.id) {
-          setAuthError('Une erreur est survenue. Veuillez reessayer.');
-          notification('error');
-          return;
-        }
-        const mode = await authService.getUserMode(result.data.user.id);
-        const isSeller = mode?.isSeller ?? false;
-        initializeFromProfile(isSeller);
-        router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
+        setIsLoading(false);
+        return;
       }
 
+      // Migration d'ancien compte : verification email requise
+      if (result.data?.requiresEmailVerification) {
+        rememberEmail(data.email);
+        notification('success');
+        router.push({
+          pathname: ROUTES.OTP,
+          params: { email: data.email, migrate: '1' },
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!result.data?.user?.id) {
+        setAuthError('Une erreur est survenue. Veuillez reessayer.');
+        notification('error');
+        setIsLoading(false);
+        return;
+      }
+
+      rememberEmail(data.email);
+      notification('success');
+      const mode = await authService.getUserMode(result.data.user.id);
+      const isSeller = mode?.isSeller ?? false;
+      initializeFromProfile(isSeller);
+      router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
       setIsLoading(false);
     },
-    [impact, notification, router, initializeFromProfile, authService]
+    [impact, notification, router, initializeFromProfile, authService, rememberEmail]
   );
 
   const goToRegister = useCallback(() => {
     impact('light');
-    router.push('/(auth)/register');
+    router.push(ROUTES.REGISTER);
   }, [impact, router]);
 
   const goToPhoneLogin = useCallback(() => {
     impact('light');
-    router.push('/(auth)/otp');
+    router.push(ROUTES.PHONE_LOGIN);
   }, [impact, router]);
 
-  const handleGoogleLogin = useCallback(async () => {
-    if (isGoogleLoading) return;
-    impact('light');
-    setAuthError(null);
-    setIsGoogleLoading(true);
+  const handleSocial = useCallback(
+    async (provider: SocialProvider) => {
+      if (socialLoading) return;
+      impact('light');
+      setAuthError(null);
+      setSocialLoading(provider);
 
-    try {
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: 'oauth_google',
-        redirectUrl: Linking.createURL('/oauth-callback'),
-      });
+      try {
+        const { createdSessionId } = await startSSOFlow({
+          strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
+          redirectUrl: Linking.createURL('/oauth-callback'),
+        });
 
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        notification('success');
-        // Le mode (acheteur/vendeur) est synchronise depuis les
-        // metadata Clerk par useAuth au chargement de l'utilisateur.
-        router.replace('/(client)/home');
+        if (!createdSessionId) {
+          setAuthError('Connexion annulée.');
+          notification('error');
+        }
+        // Session active automatiquement : la route /oauth-callback
+        // redirige vers l'accueil (acheteur ou vendeur).
+      } catch (err) {
+        logger.debug('Social login error:', err);
+        setAuthError('Connexion impossible avec ce fournisseur. Réessayez.');
+        notification('error');
+      } finally {
+        setSocialLoading(null);
       }
-    } catch (err) {
-      logger.debug('Google login error:', err);
-      setAuthError('Connexion Google impossible. Reessayez.');
-      notification('error');
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  }, [startSSOFlow, isGoogleLoading, impact, notification, router]);
+    },
+    [socialLoading, startSSOFlow, impact, notification]
+  );
 
   return (
     <KeyboardAvoidingView
@@ -178,7 +231,7 @@ export default function LoginScreen() {
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Email ou Nom d'utilisateur"
+                label="Email"
                 placeholder="Ex: rivaldocabrel@email.com"
                 value={value}
                 onChangeText={onChange}
@@ -226,6 +279,8 @@ export default function LoginScreen() {
                 impact('light');
                 setRememberMe(!rememberMe);
               }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: rememberMe }}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
                 {rememberMe && <Check color={colors.sand} size={14} strokeWidth={3} />}
@@ -265,27 +320,27 @@ export default function LoginScreen() {
           <View style={styles.separatorLine} />
         </View>
 
-        {/* Boutons alternatifs — outline */}
-        <View style={styles.alternatives}>
-          <Pressable
-            style={[styles.alternativeButton, isGoogleLoading && styles.alternativeButtonDisabled]}
-            onPress={handleGoogleLogin}
-            disabled={isGoogleLoading}
-          >
-            <GoogleLogo size="md" />
-            <Text style={styles.alternativeText}>
-              {isGoogleLoading ? 'Connexion en cours...' : 'Se connecter avec Google'}
-            </Text>
-          </Pressable>
+        {/* Boutons sociaux — logo et libelle separes */}
+        <SocialButtons
+          googleLabel="Se connecter avec Google"
+          appleLabel="Se connecter avec Apple"
+          loading={socialLoading}
+          onGoogle={() => handleSocial('google')}
+          onApple={() => handleSocial('apple')}
+        />
 
-          <Pressable
-            style={styles.alternativeButton}
-            onPress={goToPhoneLogin}
-          >
-            <Phone color={colors.onyx} size={20} strokeWidth={1.5} />
-            <Text style={styles.alternativeText}>Utiliser mon numéro</Text>
-          </Pressable>
-        </View>
+        {/* Bouton téléphone — OTP SMS */}
+        <Pressable
+          style={styles.alternativeButton}
+          onPress={goToPhoneLogin}
+          disabled={socialLoading !== null}
+          accessibilityRole="button"
+        >
+          <View style={styles.iconSlot} pointerEvents="none">
+            <Phone color={colors.onyx} size={20} strokeWidth={1.8} />
+          </View>
+          <Text style={styles.alternativeText}>Utiliser mon numéro de téléphone</Text>
+        </Pressable>
 
         {/* Lien inscription */}
         <View style={styles.signUpWrapper}>
@@ -414,37 +469,41 @@ const styles = StyleSheet.create({
     color: colors.stone,
     textTransform: 'uppercase',
   },
-  alternatives: {
-    marginBottom: spacing.lg,
-  },
   alternativeButton: {
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: `${colors.stone}30`,
     borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
     minHeight: 52,
     backgroundColor: colors.sand,
-    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  iconSlot: {
+    position: 'absolute',
+    left: spacing.md,
+    top: 0,
+    bottom: 0,
+    width: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   alternativeText: {
+    flex: 1,
+    textAlign: 'center',
     fontFamily: 'Inter-Medium',
     fontSize: 15,
     lineHeight: 22,
     color: colors.onyx,
     letterSpacing: 0.2,
-  },
-  alternativeButtonDisabled: {
-    opacity: 0.6,
+    paddingHorizontal: spacing.xl,
   },
   signUpWrapper: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: spacing.sm,
+    paddingTop: spacing.lg,
   },
   signUpText: {
     fontFamily: 'Inter-Regular',
