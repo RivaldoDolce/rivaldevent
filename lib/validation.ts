@@ -28,6 +28,15 @@ export const loginSchema = z.object({
     .min(8, 'Minimum 8 caractères'),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email requis')
+    .email('Email invalide'),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
 export const registerSchema = z
   .object({
     full_name: z

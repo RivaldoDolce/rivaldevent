@@ -32,7 +32,7 @@ import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { authService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
@@ -202,7 +202,15 @@ export default function LoginScreen() {
               <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
             </Pressable>
 
-            <Pressable onPress={() => logger.debug('TODO: reset password')} hitSlop={8}>
+            <Pressable
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.FORGOT_PASSWORD);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Mot de passe oublie"
+            >
               <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
             </Pressable>
           </View>

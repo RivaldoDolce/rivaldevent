@@ -35,6 +35,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   PanResponder,
+  Share,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -284,12 +285,6 @@ export default function EventDetail() {
     }
   }, [impact, toggleEvent, eventId]);
 
-  const handleShare = useCallback(() => {
-    impact('light');
-    // TODO: brancher le partage social (Roadmap #18)
-    logger.debug('[EventDetail] share (TODO)');
-  }, [impact]);
-
   const handleReserve = useCallback(() => {
     if (isOffline) {
       Alert.alert('Hors ligne', 'Pas de connexion internet. Verifiez votre reseau.');
@@ -341,6 +336,24 @@ export default function EventDetail() {
     if (!event) return 0;
     return event.tiers_with_availability.reduce((sum, t) => sum + t.available_quantity, 0);
   }, [event]);
+
+  const handleShare = useCallback(async () => {
+    if (!event) return;
+    impact('light');
+    const location = event.address ?? event.venue?.name ?? event.city ?? 'Lieu non precise';
+    const priceText =
+      minPrice !== null
+        ? `Billets a partir de ${formatPrice(minPrice)}.`
+        : 'Entree gratuite.';
+    try {
+      await Share.share({
+        title: event.title,
+        message: `Decouvrez "${event.title}" le ${formatDate(event.start_date)} a ${location} sur Rivald'Event. ${priceText}`,
+      });
+    } catch (err) {
+      logger.debug('[EventDetail] share error:', err);
+    }
+  }, [impact, event, minPrice]);
 
   const displayImages = useMemo(() => {
     if (!event) return [];

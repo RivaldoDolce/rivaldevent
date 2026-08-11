@@ -36,6 +36,7 @@ import {
   Alert,
   ActivityIndicator,
   PanResponder,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -62,7 +63,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { venueService } from '@/services/venue.service';
@@ -216,10 +217,19 @@ export default function VenueDetail() {
     }
   }, [impact, toggleVenue, venueId]);
 
-  const handleShare = () => {
+  const handleShare = useCallback(async () => {
+    if (!venue) return;
     impact('light');
-    logger.debug('[VenueDetail] share (TODO)');
-  };
+    const location = venue.address ?? venue.city ?? 'Adresse non precisee';
+    try {
+      await Share.share({
+        title: venue.name,
+        message: `Decouvrez le lieu "${venue.name}" a ${location} sur Rivald'Event.`,
+      });
+    } catch (err) {
+      logger.debug('[VenueDetail] share error:', err);
+    }
+  }, [impact, venue]);
 
   const handleContactWhatsApp = useCallback(() => {
     if (!venue) return;
@@ -243,9 +253,11 @@ export default function VenueDetail() {
       return;
     }
     impact('medium');
-    // TODO: naviguer vers la page de reservation de lieu
-    Alert.alert('Reservation', 'La reservation de lieu sera disponible dans une prochaine version.');
-  }, [impact, isOffline]);
+    router.push({
+      pathname: ROUTES.VENUE_RESERVE,
+      params: { id: venueId },
+    });
+  }, [impact, router, venueId, isOffline]);
 
   // -- Donnees derivees --
   const displayImages = useMemo(() => {
