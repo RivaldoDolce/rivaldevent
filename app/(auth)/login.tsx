@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/Input';
 import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
 import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useAuth } from '@/hooks/useAuth';
 import { useAuthService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
 import { logger } from '@/lib/logger';
@@ -62,7 +63,9 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
   const authService = useAuthService();
+  const { isAuthenticated: isAuth } = useAuth();
   const { startSSOFlow } = useSSO();
+  const mode = useAppMode((state: { mode: string }) => state.mode);
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
@@ -93,6 +96,14 @@ export default function LoginScreen() {
       })
       .catch(() => logger.debug('remember email read failed'));
   }, [setValue]);
+
+  // Si la session s'active pendant qu'on est sur cet ecran
+  // (retour OAuth notamment), rediriger immediatement vers l'accueil.
+  useEffect(() => {
+    if (isAuth) {
+      router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
+    }
+  }, [isAuth, mode, router]);
 
   const rememberEmail = useCallback(async (email: string) => {
     try {
