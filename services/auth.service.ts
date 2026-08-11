@@ -429,6 +429,43 @@ export const authService = {
   },
 
   /**
+   * Upload de la photo de profil vers Supabase Storage (bucket "avatars").
+   * Retourne l'URL publique, ou une erreur (bucket non configure,
+   * hors ligne...) — l'appelant bascule alors sur le stockage local.
+   */
+  async uploadAvatar(
+    userId: string,
+    dataUri: string
+  ): Promise<ApiResponse<{ publicUrl: string }>> {
+    try {
+      const res = await fetch(dataUri);
+      const blob = await res.blob();
+      const mimeType = blob.type || 'image/jpeg';
+      const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+      const path = `${userId}/avatar.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { contentType: mimeType, upsert: true });
+
+      if (error) {
+        logger.debug('uploadAvatar error:', error.message);
+        return { data: null, error: { code: error.name, message: error.message } };
+      }
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      logger.debug('uploadAvatar success');
+      return { data: { publicUrl: urlData.publicUrl }, error: null };
+    } catch (err) {
+      logger.debug('uploadAvatar exception:', err);
+      return {
+        data: null,
+        error: { code: 'unknown', message: 'Une erreur est survenue. Veuillez réessayer.' },
+      };
+    }
+  },
+
+  /**
    * Retourne l'etat du rate limiting OTP (pour l'UI).
    */
   getOtpStatus(): { attempts: number; locked: boolean; lockedUntil: number | null } {

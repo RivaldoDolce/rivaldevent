@@ -7,9 +7,15 @@
  *
  * Design :
  * - Header partage (derivee foret) via components/profile/ScreenHeader
- * - Carte identite : avatar + nom courant
+ * - Carte identite : avatar editable (appui pour changer la photo) + nom
  * - Formulaire react-hook-form + zod (nom, telephone +237, email verrouille)
  * - Bouton enregistrer desactive si formulaire inchange ou invalide
+ *
+ * Avatar :
+ * - Selection via expo-image-picker (bibliotheque, recadrage carre)
+ * - Apercu immediat + stockage local (stores/avatar-store.ts)
+ * - Tentative d'upload Supabase Storage au moment de l'enregistrement
+ *   (bascule silencieuse sur le local si le bucket n'est pas configure)
  *
  * Donnees :
  * - Valeurs initiales depuis useAuth (profil Supabase)
@@ -29,11 +35,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { User, Mail, Lock, ShieldCheck } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { User, Mail, Lock, ShieldCheck, Camera } from 'lucide-react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -43,18 +51,23 @@ import { colors, typography, spacing, radius } from '@/lib/constants';
 import { profileSchema, type ProfileInput } from '@/lib/validation';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
+import { useAvatarStore } from '@/stores/avatar-store';
 import { authService } from '@/services/auth.service';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const { impact, notification } = useHaptics();
+  const setAvatar = useAvatarStore((state: { setAvatar: (id: string, uri: string) => void }) => state.setAvatar);
 
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [pickedAvatar, setPickedAvatar] = useState<string | null>(null);
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || '';
   const displayEmail = user?.email || '';
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
 
   const {
     control,
@@ -80,6 +93,24 @@ export default function EditProfileScreen() {
     });
   }, [profile, reset]);
 
+  const pickAvatar = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Autorisation requise', 'Accedez a vos photos pour changer votre photo de profil.');
+      return;
+    }
+    impact('light');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0]?.uri;
+    if (uri) setPickedAvatar(uri);
+  }, [impact]);
+
   const onSubmit = useCallback(
     async (data: ProfileInput) => {
       if (!user?.id) return;
@@ -96,15 +127,24 @@ export default function EditProfileScreen() {
       if (result.error) {
         setAuthError(result.error.message);
         notification('error');
-      } else {
-        await refreshProfile();
-        notification('success');
-        router.back();
+        setIsLoading(false);
+        return;
       }
 
-      setIsLoading(false);
+      // Photo : stockage local immediat, puis upload serveur (bascule
+      // silencieuse si le bucket Supabase n'est pas encore configure).
+      if (pickedAvatar) {
+        setAvatar(user.id, pickedAvatar);
+        const upload = await authService.uploadAvatar(user.id, pickedAvatar);
+        if (upload.data) {
+          await refreshProfile();
+        }
+      }
+
+      notification('success');
+      router.back();
     },
-    [user, refreshProfile, notification, router, impact]
+    [user, pickedAvatar, setAvatar, refreshProfile, notification, router, impact]
   );
 
   const completion = [
@@ -136,12 +176,23 @@ export default function EditProfileScreen() {
             Carte identite
             ============================================ */}
         <View style={styles.identityCard}>
-          <Avatar
-            source={profile?.avatar_url ?? null}
-            fallback={displayName || 'U'}
-            size="xl"
-            border="highlight"
-          />
+          <Pressable
+            onPress={pickAvatar}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Changer la photo de profil"
+            style={styles.avatarWrapper}
+          >
+            <Avatar
+              source={pickedAvatar ?? avatarUrl}
+              fallback={displayName || 'U'}
+              size="xl"
+              border="highlight"
+            />
+            <View style={styles.cameraBadge}>
+              <Camera color={colors.sand} size={14} strokeWidth={2} />
+            </View>
+          </Pressable>
           <Text style={styles.identityName} numberOfLines={1}>
             {displayName || 'Utilisateur'}
           </Text>
@@ -267,6 +318,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
+  },
+  avatarWrapper: {
+    position: 'relative',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.terracotta,
+    borderWidth: 2.5,
+    borderColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   identityName: {
     marginTop: spacing.sm,

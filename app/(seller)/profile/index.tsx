@@ -43,6 +43,7 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppMode } from '@/stores/app-mode';
 import type { AppMode } from '@/stores/app-mode';
 import { useSellerTotals } from '@/stores/seller-store';
@@ -128,6 +129,7 @@ export default function SellerProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || '';
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
   const displayEmail = user?.email || '';
   const displayPhone = profile?.phone || '';
   const initials = displayName.charAt(0).toUpperCase() || '?';
@@ -262,9 +264,9 @@ export default function SellerProfileScreen() {
             style={styles.avatarRing}
           >
             <View style={styles.avatarInner}>
-              {profile?.avatar_url ? (
+              {avatarUrl ? (
                 <Image
-                  source={{ uri: profile.avatar_url }}
+                  source={{ uri: avatarUrl }}
                   style={styles.avatarImage}
                   contentFit="cover"
                   transition={200}

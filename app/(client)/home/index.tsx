@@ -49,6 +49,7 @@ import TheatreIcon from '@/assets/icons/theatre.svg';
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { Avatar } from '@/components/ui/Avatar';
 import { EventCard } from '@/components/events/EventCard';
 import { FeaturedCarousel } from '@/components/events/FeaturedCarousel';
@@ -90,7 +91,8 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { impact } = useHaptics();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
 
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -339,7 +341,7 @@ export default function HomeScreen() {
               accessibilityLabel="Mon profil"
             >
               <Avatar
-                source={profile?.avatar_url ?? null}
+                source={avatarUrl}
                 fallback={profile?.full_name ?? 'U'}
                 size="sm"
                 border="highlight"

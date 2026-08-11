@@ -41,6 +41,7 @@ import { colors, spacing, radius, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useSellerStore } from '@/stores/seller-store';
 import type { MockSellerEvent } from '@/data/mock';
 
@@ -71,7 +72,8 @@ const FILTERS: readonly { id: EventFilter; label: string }[] = [
 export default function SellerExploreScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
   const { impact } = useHaptics();
 
   const events = useSellerStore((state) => state.events);
@@ -148,7 +150,7 @@ export default function SellerExploreScreen() {
               accessibilityLabel="Voir mon profil"
             >
               <Avatar
-                source={profile?.avatar_url ?? null}
+                source={avatarUrl}
                 fallback={profile?.full_name ?? 'U'}
                 size="sm"
                 border="highlight"

@@ -41,6 +41,7 @@ import { colors, spacing, radius, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useSellerStore, useSellerTotals } from '@/stores/seller-store';
 
 // ============================================================
@@ -60,7 +61,8 @@ const SALE_STATUS_META = {
 export default function SellerHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
   const { impact, notification } = useHaptics();
 
   const sales = useSellerStore((state) => state.sales);
@@ -133,7 +135,7 @@ export default function SellerHomeScreen() {
             accessibilityLabel="Voir mon profil"
           >
             <Avatar
-              source={profile?.avatar_url ?? null}
+              source={avatarUrl}
               fallback={profile?.full_name ?? 'U'}
               size="sm"
               border="highlight"
