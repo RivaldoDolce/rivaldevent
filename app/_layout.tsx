@@ -2,6 +2,7 @@
  * Layout racine de l'application.
  *
  * Initialise tous les providers globaux :
+ * - ClerkProvider (auth : email/password, OTP, Google OAuth)
  * - QueryClientProvider (TanStack Query)
  * - SafeAreaProvider (insets)
  * - StatusBar (style auto, bg sand)
@@ -17,6 +18,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { useFonts, Lobster_400Regular } from '@expo-google-fonts/lobster';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
@@ -26,6 +29,12 @@ import { colors } from '@/lib/constants';
 // ============================================================
 // Configuration & Initialisation
 // ============================================================
+
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+
+if (!clerkPublishableKey) {
+  throw new Error('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY est manquant (voir .env)');
+}
 
 // Filtre les warnings de navigation Expo Router
 LogBox.ignoreLogs(['[Layout children]', 'Unable to resolve manifest assets']);
@@ -90,22 +99,24 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <StatusBar style="dark" backgroundColor={colors.sand} />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.sand },
-          }}
-        >
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(client)" />
-          <Stack.Screen name="(seller)" />
-          <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
-        </Stack>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <StatusBar style="dark" backgroundColor={colors.sand} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.sand },
+            }}
+          >
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(client)" />
+            <Stack.Screen name="(seller)" />
+            <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
+          </Stack>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }

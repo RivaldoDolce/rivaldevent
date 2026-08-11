@@ -37,6 +37,33 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
+export const forgotPasswordCodeSchema = z.object({
+  code: z
+    .string()
+    .min(1, 'Code requis')
+    .length(6, 'Le code doit contenir 6 chiffres'),
+});
+
+export type ForgotPasswordCodeInput = z.infer<typeof forgotPasswordCodeSchema>;
+
+export const newPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(1, 'Mot de passe requis')
+      .min(8, 'Minimum 8 caractères')
+      .regex(/[A-Z]/, 'Une majuscule requise')
+      .regex(/[0-9]/, 'Un chiffre requis')
+      .regex(/[^A-Za-z0-9]/, 'Un caractère spécial requis'),
+    confirm_password: z.string().min(1, 'Confirmation requise'),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['confirm_password'],
+  });
+
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
+
 export const registerSchema = z
   .object({
     full_name: z

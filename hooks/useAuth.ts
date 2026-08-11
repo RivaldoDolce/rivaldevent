@@ -1,125 +1,103 @@
 /**
- * Hook d'authentification.
+ * Hook d'authentification (Clerk).
  *
- * Wrapper autour de Supabase Auth avec :
- * - Session reactive (se met a jour automatiquement)
- * - Listener onChange (token refresh, logout)
- * - Profil utilisateur (depuis la table profiles)
- * - Synchronisation avec le store app-mode (Zustand)
+ * Wrapper autour de Clerk avec la meme surface que l'ancien useAuth
+ * (Supabase) pour ne pas toucher aux ecrans :
+ * - session : objet session simplifie (CompatSessionUser)
+ * - user : identite Clerk mappee (id, email, user_metadata.full_name)
+ * - profile : synthetise depuis Clerk (full_name, avatar_url, phone,
+ *   is_seller via unsafeMetadata, meme forme que la table profiles)
+ * - Synchronisation du mode (acheteur/vendeur) dans le store app-mode
  *
- * Le state auth est gere via Supabase Auth listener.
- * Le mode (acheteur/vendeur) est synchronise dans le store Zustand.
+ * Le mode et le telephone vivent dans unsafeMetadata (seule metadata
+ * modifiable cote client).
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { useEffect } from 'react';
+import { useAuth as useClerkAuth, useUser } from '@clerk/expo';
 
-import { supabase } from '@/lib/supabase';
-import { logger } from '@/lib/logger';
 import { useAppMode } from '@/stores/app-mode';
 import type { Profile } from '@/types';
 
+export interface CompatSessionUser {
+  readonly id: string;
+  readonly email: string | null;
+  readonly user_metadata: { readonly full_name?: string | null };
+}
+
+export interface CompatSession {
+  readonly user: CompatSessionUser;
+}
+
 interface UseAuthReturn {
-  readonly session: Session | null;
-  readonly user: Session['user'] | null;
+  readonly session: CompatSession | null;
+  readonly user: CompatSessionUser | null;
   readonly profile: Profile | null;
   readonly isLoading: boolean;
   readonly isAuthenticated: boolean;
   readonly refreshProfile: () => Promise<void>;
 }
 
+function buildProfile(
+  id: string,
+  fullName: string | null,
+  imageUrl: string | null,
+  unsafeMetadata: Record<string, unknown>
+): Profile {
+  const now = new Date().toISOString();
+  return {
+    id,
+    full_name: fullName,
+    avatar_url: imageUrl,
+    phone: (unsafeMetadata.phone as string | undefined) ?? null,
+    role: 'client',
+    is_seller: (unsafeMetadata.is_seller as boolean | undefined) ?? false,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
 export function useAuth(): UseAuthReturn {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoaded, isSignedIn, userId } = useClerkAuth();
+  const { user } = useUser();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
-  const loadProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  const isAuthenticated = isLoaded && isSignedIn && !!userId && !!user;
 
-      if (error) {
-        logger.error('[useAuth] loadProfile error:', error.message);
-        return null;
+  const session: CompatSession | null = isAuthenticated
+    ? {
+        user: {
+          id: user.id,
+          email: user.primaryEmailAddress?.emailAddress ?? null,
+          user_metadata: { full_name: user.fullName },
+        },
       }
+    : null;
 
-      const p = (data as unknown as Profile) ?? null;
-      return p;
-    } catch (err) {
-      logger.error('[useAuth] loadProfile exception:', err);
-      return null;
-    }
-  }, []);
+  const profile: Profile | null = isAuthenticated
+    ? buildProfile(user.id, user.fullName, user.imageUrl, user.unsafeMetadata)
+    : null;
 
-  const refreshProfile = useCallback(async () => {
-    if (!session?.user?.id) return;
-    const p = await loadProfile(session.user.id);
-    setProfile(p);
-  }, [session, loadProfile]);
-
+  // Synchronise le mode (acheteur/vendeur) dans le store app-mode
   useEffect(() => {
-    let mounted = true;
+    if (!isAuthenticated) return;
+    initializeFromProfile(profile?.is_seller ?? false);
+  }, [isAuthenticated, profile?.is_seller, initializeFromProfile]);
 
-    const init = async () => {
-      try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        setSession(existingSession);
-
-        if (existingSession?.user?.id) {
-          const p = await loadProfile(existingSession.user.id);
-          if (mounted) {
-            setProfile(p);
-            if (p) {
-              initializeFromProfile(p.is_seller);
-            }
-          }
-        }
-      } catch (err) {
-        logger.error('[useAuth] init error:', err);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (!mounted) return;
-        setSession(newSession);
-
-        if (newSession?.user?.id) {
-          const p = await loadProfile(newSession.user.id);
-          if (mounted) {
-            setProfile(p);
-            if (p) {
-              initializeFromProfile(p.is_seller);
-            }
-          }
-        } else {
-          if (mounted) setProfile(null);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [loadProfile, initializeFromProfile]);
+  const refreshProfile = async (): Promise<void> => {
+    try {
+      await user?.reload();
+    } catch {
+      // Reload silencieux : l'etat se mettra a jour au prochain rendu
+    }
+  };
 
   return {
     session,
     user: session?.user ?? null,
     profile,
-    isLoading,
-    isAuthenticated: !!session,
+    isLoading: !isLoaded,
+    isAuthenticated,
     refreshProfile,
   };
 }

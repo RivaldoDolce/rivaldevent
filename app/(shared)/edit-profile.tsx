@@ -53,11 +53,12 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAvatarStore } from '@/stores/avatar-store';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
+  const authService = useAuthService();
   const { impact, notification } = useHaptics();
   const setAvatar = useAvatarStore((state: { setAvatar: (id: string, uri: string) => void }) => state.setAvatar);
 
@@ -144,7 +145,7 @@ export default function EditProfileScreen() {
       notification('success');
       router.back();
     },
-    [user, pickedAvatar, setAvatar, refreshProfile, notification, router, impact]
+    [user, pickedAvatar, setAvatar, refreshProfile, notification, router, impact, authService]
   );
 
   const completion = [

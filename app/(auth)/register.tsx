@@ -43,7 +43,7 @@ import { DateInput } from '@/components/ui/DateInput';
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
 import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
 import { useAppMode } from '@/stores/app-mode';
 
@@ -51,6 +51,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const authService = useAuthService();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -112,7 +113,7 @@ export default function RegisterScreen() {
 
       setIsLoading(false);
     },
-    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile]
+    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile, authService]
   );
 
   const goToLogin = useCallback(() => {

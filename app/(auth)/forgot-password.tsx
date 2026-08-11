@@ -1,12 +1,15 @@
 /**
- * Mot de passe oublie — envoi de l'email de reinitialisation.
+ * Mot de passe oublie — flow Clerk en 3 etapes.
+ *
+ * 1. Email : envoi du code de reinitialisation (resetPasswordEmailCode)
+ * 2. Code : saisie du code recu par email
+ * 3. Nouveau mot de passe : reinitialisation + session active
  *
  * Design aligne sur login.tsx :
  * - Fond sand, logo en haut, titre serif
- * - Champs email + bouton "Envoyer le lien"
- * - Etat de succes "Email envoye" avec retour a la connexion
+ * - Cartes blanches par etape, retour en arriere possible
  *
- * Donnees : authService.resetPassword (Supabase a terme).
+ * Donnees : useAuthService (Clerk Core 3).
  * Conventions : couleurs depuis lib/constants.ts, pas d'emojis.
  */
 
@@ -25,51 +28,71 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
-import { ChevronLeft, Mail, MailCheck } from 'lucide-react-native';
+import { ChevronLeft, Mail, KeyRound, Lock, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import {
   forgotPasswordSchema,
+  forgotPasswordCodeSchema,
+  newPasswordSchema,
   type ForgotPasswordInput,
+  type ForgotPasswordCodeInput,
+  type NewPasswordInput,
 } from '@/lib/validation';
+import { useAppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
+
+type Step = 'email' | 'code' | 'password' | 'success';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const authService = useAuthService();
+  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
+  const [step, setStep] = useState<Step>('email');
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useForm<ForgotPasswordInput>({
+  const emailForm = useForm<ForgotPasswordInput>({
     mode: 'onChange',
     reValidateMode: 'onChange',
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
   });
 
+  const codeForm = useForm<ForgotPasswordCodeInput>({
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    resolver: zodResolver(forgotPasswordCodeSchema),
+    defaultValues: { code: '' },
+  });
+
+  const passwordForm = useForm<NewPasswordInput>({
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    resolver: zodResolver(newPasswordSchema),
+    defaultValues: { password: '', confirm_password: '' },
+  });
+
   const handleBack = useCallback(() => {
     impact('light');
-    router.back();
-  }, [impact, router]);
+    if (step === 'email' || step === 'success') {
+      router.back();
+      return;
+    }
+    setAuthError(null);
+    setStep(step === 'password' ? 'code' : 'email');
+  }, [impact, router, step]);
 
-  const goToLogin = useCallback(() => {
-    impact('light');
-    router.back();
-  }, [impact, router]);
-
-  const onSubmit = useCallback(
+  const sendCode = useCallback(
     async (data: ForgotPasswordInput) => {
       setIsLoading(true);
       setAuthError(null);
@@ -82,13 +105,79 @@ export default function ForgotPasswordScreen() {
         notification('error');
       } else {
         notification('success');
-        setSentEmail(data.email);
+        setEmail(data.email);
+        setStep('code');
       }
 
       setIsLoading(false);
     },
-    [impact, notification]
+    [impact, notification, authService]
   );
+
+  const verifyCode = useCallback(
+    async (data: ForgotPasswordCodeInput) => {
+      setIsLoading(true);
+      setAuthError(null);
+      impact('light');
+
+      const result = await authService.resetPasswordVerify(data.code);
+
+      if (result.error) {
+        setAuthError(result.error.message);
+        notification('error');
+      } else {
+        setStep('password');
+      }
+
+      setIsLoading(false);
+    },
+    [impact, notification, authService]
+  );
+
+  const submitNewPassword = useCallback(
+    async (data: NewPasswordInput) => {
+      setIsLoading(true);
+      setAuthError(null);
+      impact('light');
+
+      const result = await authService.resetPasswordSubmit(data.password);
+
+      if (result.error) {
+        setAuthError(result.error.message);
+        notification('error');
+      } else {
+        notification('success');
+        initializeFromProfile(false);
+        router.replace('/(client)/home');
+      }
+
+      setIsLoading(false);
+    },
+    [impact, notification, authService, router, initializeFromProfile]
+  );
+
+  const renderStepTitle = () => {
+    switch (step) {
+      case 'code':
+        return {
+          title: 'Verification',
+          subtitle: `Saisissez le code a 6 chiffres envoye a ${email || 'votre adresse email'}.`,
+        };
+      case 'password':
+        return {
+          title: 'Nouveau mot de passe',
+          subtitle: 'Choisissez un mot de passe robuste et inutilise sur vos autres comptes.',
+        };
+      default:
+        return {
+          title: 'Mot de passe oublie',
+          subtitle:
+            'Indiquez votre adresse email et nous vous enverrons un code de verification.',
+        };
+    }
+  };
+
+  const { title, subtitle } = renderStepTitle();
 
   return (
     <KeyboardAvoidingView
@@ -129,37 +218,10 @@ export default function ForgotPasswordScreen() {
         </View>
 
         {/* Titre */}
-        <Text style={styles.title}>Mot de passe oublie</Text>
-        <Text style={styles.subtitle}>
-          Indiquez votre adresse email et nous vous enverrons un lien
-          pour reinitialiser votre mot de passe.
-        </Text>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
 
-        {sentEmail ? (
-          /* ============ ETAT SUCCES ============ */
-          <View style={styles.successCard}>
-            <View style={styles.successIcon}>
-              <MailCheck size={28} color={colors.forest} strokeWidth={1.75} />
-            </View>
-            <Text style={styles.successTitle}>Email envoye</Text>
-            <Text style={styles.successText}>
-              Si un compte existe pour {sentEmail}, un lien de
-              reinitialisation vient de lui etre envoye. Verifiez votre
-              boite de reception (et vos spams).
-            </Text>
-            <View style={styles.successButtonWrap}>
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                onPress={goToLogin}
-              >
-                Retour a la connexion
-              </Button>
-            </View>
-          </View>
-        ) : (
-          /* ============ FORMULAIRE ============ */
+        {step === 'email' && (
           <View style={styles.formCard}>
             {authError ? (
               <View style={styles.errorBanner}>
@@ -168,7 +230,7 @@ export default function ForgotPasswordScreen() {
             ) : null}
 
             <Controller
-              control={control}
+              control={emailForm.control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
@@ -177,13 +239,13 @@ export default function ForgotPasswordScreen() {
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
-                  error={errors.email?.message}
-                  isValid={!errors.email?.message && value.length > 3}
+                  error={emailForm.formState.errors.email?.message}
+                  isValid={!emailForm.formState.errors.email?.message && value.length > 3}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
-                  helperText="Le lien expirera apres 30 minutes"
+                  helperText="Le code expirera apres 10 minutes"
                 />
               )}
             />
@@ -194,22 +256,132 @@ export default function ForgotPasswordScreen() {
                 size="lg"
                 fullWidth
                 loading={isLoading}
-                disabled={!isValid}
-                onPress={handleSubmit(onSubmit)}
+                disabled={!emailForm.formState.isValid}
+                onPress={emailForm.handleSubmit(sendCode)}
               >
-                {isLoading ? 'Envoi...' : 'Envoyer le lien'}
+                {isLoading ? 'Envoi...' : 'Envoyer le code'}
+              </Button>
+            </View>
+          </View>
+        )}
+
+        {step === 'code' && (
+          <View style={styles.formCard}>
+            {authError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{authError}</Text>
+              </View>
+            ) : null}
+
+            <Controller
+              control={codeForm.control}
+              name="code"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Code de verification"
+                  placeholder="123456"
+                  value={value}
+                  onChangeText={(text) => onChange(text.replace(/\D/g, ''))}
+                  onBlur={onBlur}
+                  error={codeForm.formState.errors.code?.message}
+                  isValid={!codeForm.formState.errors.code?.message && value.length === 6}
+                  keyboardType="numeric"
+                  autoCapitalize="none"
+                  maxLength={6}
+                  iconLeft={<KeyRound color={colors.stone} size={20} strokeWidth={1.5} />}
+                  helperText="Verifiez votre boite de reception (et vos spams)"
+                />
+              )}
+            />
+
+            <View style={styles.submitWrap}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isLoading}
+                disabled={!codeForm.formState.isValid}
+                onPress={codeForm.handleSubmit(verifyCode)}
+              >
+                {isLoading ? 'Verification...' : 'Verifier le code'}
               </Button>
             </View>
 
             <Pressable
-              onPress={handleBack}
+              onPress={() => {
+                impact('light');
+                setAuthError(null);
+                setStep('email');
+              }}
               hitSlop={8}
               style={styles.backLink}
               accessibilityRole="button"
-              accessibilityLabel="Revenir a la connexion"
+              accessibilityLabel="Changer d'adresse email"
             >
-              <Text style={styles.backLinkText}>Retour a la connexion</Text>
+              <Text style={styles.backLinkText}>Utiliser une autre adresse</Text>
             </Pressable>
+          </View>
+        )}
+
+        {step === 'password' && (
+          <View style={styles.formCard}>
+            {authError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{authError}</Text>
+              </View>
+            ) : null}
+
+            <Controller
+              control={passwordForm.control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Nouveau mot de passe"
+                  placeholder="••••••••"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={passwordForm.formState.errors.password?.message}
+                  secureTextEntry
+                  iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                />
+              )}
+            />
+
+            <Controller
+              control={passwordForm.control}
+              name="confirm_password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Confirmer le mot de passe"
+                  placeholder="••••••••"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={passwordForm.formState.errors.confirm_password?.message}
+                  isValid={
+                    !passwordForm.formState.errors.confirm_password?.message &&
+                    value.length > 0 &&
+                    value === passwordForm.watch('password')
+                  }
+                  secureTextEntry
+                  iconLeft={<Check color={colors.stone} size={20} strokeWidth={1.5} />}
+                />
+              )}
+            />
+
+            <View style={styles.submitWrap}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isLoading}
+                disabled={!passwordForm.formState.isValid}
+                onPress={passwordForm.handleSubmit(submitNewPassword)}
+              >
+                {isLoading ? 'Reinitialisation...' : 'Reinitialiser le mot de passe'}
+              </Button>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -286,38 +458,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.stone,
-  },
-  successCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: `${colors.border}60`,
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  successIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: `${colors.forest}12`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  successTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 19,
-    lineHeight: 26,
-    color: colors.onyx,
-  },
-  successText: {
-    ...typography.body,
-    color: colors.stone,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  successButtonWrap: {
-    alignSelf: 'stretch',
   },
 });

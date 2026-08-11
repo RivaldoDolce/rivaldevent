@@ -46,7 +46,7 @@ import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppMode } from '@/stores/app-mode';
 import type { AppMode } from '@/stores/app-mode';
 import { useTicketsStore } from '@/stores/tickets-store';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import { useHaptics } from '@/hooks/useHaptics';
 import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 
@@ -118,6 +118,7 @@ export default function ClientProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
+  const authService = useAuthService();
   const mode = useAppMode((state: { mode: AppMode }) => state.mode);
   const setMode = useAppMode((state: { setMode: (v: AppMode) => void }) => state.setMode);
   const ticketCount = useTicketsStore((state) => state.tickets.length);
@@ -156,7 +157,7 @@ export default function ClientProfileScreen() {
     }
 
     setIsSwitching(false);
-  }, [user, setMode, notification, router, impact]);
+  }, [user, setMode, notification, router, impact, authService]);
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -164,7 +165,7 @@ export default function ClientProfileScreen() {
     await authService.signOut();
     setMode('buyer');
     router.replace('/(auth)/login');
-  }, [setMode, router, impact]);
+  }, [setMode, router, impact, authService]);
 
   const menuSections: readonly MenuSection[] = [
     {

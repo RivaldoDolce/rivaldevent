@@ -36,7 +36,7 @@ import { ArrowRight, ChevronLeft, ShieldCheck, } from 'lucide-react-native';
 
 import { colors, spacing, radius, APP_CONFIG } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 
 const OTP_LENGTH = APP_CONFIG.OTP_CODE_LENGTH;
 const COUNTDOWN_SECONDS = 60;
@@ -46,6 +46,7 @@ export default function OtpScreen() {
   const params = useLocalSearchParams<{ phone?: string; email?: string }>();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const authService = useAuthService();
 
   const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
@@ -100,7 +101,7 @@ export default function OtpScreen() {
 
       setIsLoading(false);
     },
-    [code, params.email, params.phone, impact, notification, router],
+    [code, params.email, params.phone, impact, notification, router, authService],
   );
 
   const handleInputChange = useCallback(
@@ -150,7 +151,7 @@ export default function OtpScreen() {
       setCode(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     }
-  }, [countdown, params.phone, impact]);
+  }, [countdown, params.phone, impact, authService]);
 
   const formatPhone = (phone?: string) => {
     if (!phone) return 'votre numero';

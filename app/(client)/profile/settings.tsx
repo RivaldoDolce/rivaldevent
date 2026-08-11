@@ -38,9 +38,8 @@ import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { colors, typography, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 
-// ============================================================
 // Types & données statiques
 // ============================================================
 
@@ -138,6 +137,7 @@ function Toggle({
 
 export default function ProfileSettingsScreen() {
   const { user } = useAuth();
+  const authService = useAuthService();
   const { impact, notification } = useHaptics();
 
   const [toggles, setToggles] = useState<Record<string, boolean>>(() =>
@@ -178,7 +178,7 @@ export default function ProfileSettingsScreen() {
     }
 
     setIsResettingPassword(false);
-  }, [user, notification, impact]);
+  }, [user, notification, impact, authService]);
 
   return (
     <View style={styles.screen}>

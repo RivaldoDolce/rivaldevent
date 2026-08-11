@@ -27,6 +27,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { useSSO } from '@clerk/expo';
 import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -34,19 +37,24 @@ import { Input } from '@/components/ui/Input';
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
 import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import { loginSchema, type LoginInput } from '@/lib/validation';
 import { logger } from '@/lib/logger';
 import { useAppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const authService = useAuthService();
+  const { startSSOFlow } = useSSO();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -89,7 +97,7 @@ export default function LoginScreen() {
 
       setIsLoading(false);
     },
-    [impact, notification, router, initializeFromProfile]
+    [impact, notification, router, initializeFromProfile, authService]
   );
 
   const goToRegister = useCallback(() => {
@@ -102,10 +110,33 @@ export default function LoginScreen() {
     router.push('/(auth)/otp');
   }, [impact, router]);
 
-  const handleGoogleLogin = useCallback(() => {
+  const handleGoogleLogin = useCallback(async () => {
+    if (isGoogleLoading) return;
     impact('light');
-    logger.debug('Google login (TODO: implement OAuth)');
-  }, [impact]);
+    setAuthError(null);
+    setIsGoogleLoading(true);
+
+    try {
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: 'oauth_google',
+        redirectUrl: Linking.createURL('/oauth-callback'),
+      });
+
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        notification('success');
+        // Le mode (acheteur/vendeur) est synchronise depuis les
+        // metadata Clerk par useAuth au chargement de l'utilisateur.
+        router.replace('/(client)/home');
+      }
+    } catch (err) {
+      logger.debug('Google login error:', err);
+      setAuthError('Connexion Google impossible. Reessayez.');
+      notification('error');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }, [startSSOFlow, isGoogleLoading, impact, notification, router]);
 
   return (
     <KeyboardAvoidingView
@@ -237,11 +268,14 @@ export default function LoginScreen() {
         {/* Boutons alternatifs — outline */}
         <View style={styles.alternatives}>
           <Pressable
-            style={styles.alternativeButton}
+            style={[styles.alternativeButton, isGoogleLoading && styles.alternativeButtonDisabled]}
             onPress={handleGoogleLogin}
+            disabled={isGoogleLoading}
           >
             <GoogleLogo size="md" />
-            <Text style={styles.alternativeText}>Se connecter avec Google</Text>
+            <Text style={styles.alternativeText}>
+              {isGoogleLoading ? 'Connexion en cours...' : 'Se connecter avec Google'}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -402,6 +436,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.onyx,
     letterSpacing: 0.2,
+  },
+  alternativeButtonDisabled: {
+    opacity: 0.6,
   },
   signUpWrapper: {
     flexDirection: 'row',
