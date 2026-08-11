@@ -147,7 +147,9 @@ export default function SellerProfileScreen() {
       setMode('buyer');
       notification('success');
       setShowSwitchModal(false);
-      router.replace('/(client)/home');
+      // Push (et non replace) : le retour revient au profil vendeur
+      // avec son etat intact.
+      router.push('/(client)/home');
     } else {
       notification('error');
     }
@@ -200,11 +202,13 @@ export default function SellerProfileScreen() {
           label: 'Aide et support',
           icon: <HelpCircle size={19} color={colors.goldDark} strokeWidth={1.75} />,
           accent: `${colors.goldDark}12`,
+          onPress: () => router.push(ROUTES.HELP),
         },
         {
           label: 'Confidentialite',
           icon: <ShieldCheck size={19} color={colors.forest} strokeWidth={1.75} />,
           accent: `${colors.forest}12`,
+          onPress: () => router.push(ROUTES.PRIVACY),
         },
       ],
     },

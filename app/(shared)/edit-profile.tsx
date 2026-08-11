@@ -1,6 +1,10 @@
 /**
  * Modifier mon profil — edition du nom complet et du telephone.
  *
+ * Ecran PARTAGE (hors groupes client/vendeur) afin que le retour
+ * (router.back) ramene toujours a l'ecran d'origine avec son etat,
+ * quel que soit le mode (acheteur ou organisateur).
+ *
  * Design :
  * - Header partage (derivee foret) via components/profile/ScreenHeader
  * - Carte identite : avatar + nom courant
@@ -41,7 +45,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/auth.service';
 
-export default function ProfileEditScreen() {
+export default function EditProfileScreen() {
   const router = useRouter();
   const { user, profile, refreshProfile } = useAuth();
   const { impact, notification } = useHaptics();

@@ -146,7 +146,9 @@ export default function ClientProfileScreen() {
       setMode('seller');
       notification('success');
       setShowSwitchModal(false);
-      router.replace('/(seller)/home');
+      // Push (et non replace) : le retour revient au profil client
+      // avec son etat intact (onglets, scroll, filtres).
+      router.push('/(seller)/home');
     } else {
       notification('error');
     }
@@ -199,11 +201,13 @@ export default function ClientProfileScreen() {
           label: 'Aide et support',
           icon: <HelpCircle size={19} color={colors.goldDark} strokeWidth={1.75} />,
           accent: `${colors.goldDark}12`,
+          onPress: () => router.push(ROUTES.HELP),
         },
         {
           label: 'Confidentialite',
           icon: <ShieldCheck size={19} color={colors.forest} strokeWidth={1.75} />,
           accent: `${colors.forest}12`,
+          onPress: () => router.push(ROUTES.PRIVACY),
         },
       ],
     },
@@ -248,7 +252,10 @@ export default function ClientProfileScreen() {
           <View style={styles.heroTopBar}>
             <Text style={styles.heroOverline}>MON ESPACE</Text>
             <Pressable
-              onPress={() => impact('light')}
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.PROFILE_SETTINGS);
+              }}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Parametres"

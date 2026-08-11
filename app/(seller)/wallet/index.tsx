@@ -33,6 +33,7 @@ import { colors, spacing, radius, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSellerStore, useSellerTotals } from '@/stores/seller-store';
 import { formatFCFA, formatShortDate } from '@/lib/format';
+import { ScreenHeader } from '@/components/profile/ScreenHeader';
 
 // ============================================================
 // Metadonnees de statut (aligne sur l'ecran Mes ventes)
@@ -51,7 +52,6 @@ const SALE_STATUS_META = {
 export default function SellerWalletScreen() {
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
-
   const availableBalance = useSellerStore((s) => s.availableBalance);
   const pendingWithdrawals = useSellerStore((s) => s.pendingWithdrawals);
   const sales = useSellerStore((s) => s.sales);
@@ -80,13 +80,21 @@ export default function SellerWalletScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            1. HERO — solde du portefeuille
+            1. HEADER (retour vers le profil vendeur)
+            ============================================ */}
+        <ScreenHeader
+          title="Mon portefeuille"
+          subtitle="Vos revenus et votre activite"
+        />
+
+        {/* ============================================
+            2. HERO — solde du portefeuille
             ============================================ */}
         <LinearGradient
           colors={[colors.forestDeep, colors.forestMid, colors.forest]}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
-          style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
+          style={styles.hero}
         >
           <View pointerEvents="none" style={styles.ringLarge} />
           <View pointerEvents="none" style={styles.ringSmall} />
@@ -205,10 +213,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sand,
   },
   hero: {
+    marginHorizontal: spacing.lg,
+    marginTop: -spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl + spacing.md,
-    borderBottomLeftRadius: radius.xxl,
-    borderBottomRightRadius: radius.xxl,
+    borderRadius: radius.xxl,
     overflow: 'hidden',
   },
   ringLarge: {

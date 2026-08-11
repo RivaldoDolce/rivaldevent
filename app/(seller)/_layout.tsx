@@ -60,7 +60,6 @@ const TABS: readonly TabConfig[] = [
 // Routes imbriquees a cacher de la tab bar
 // Seulement les routes qui EXISTENT reellement dans le filesystem
 const HIDDEN_TAB_ROUTES = [
-  'profile/switch-client',
   'wallet/index',
 ] as const;
 
