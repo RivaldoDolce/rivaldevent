@@ -1,21 +1,13 @@
 /**
- * TabBar personnalisee -- Rivald'Event
+ * TabBar — design system « Noir & Or ».
  *
- * Gere l'affichage des onglets normaux ET de l'onglet special (Vendre)
- * avec un cercle or surleve au centre de la barre.
+ * Barre flottante sombre avec :
+ * - Surface verre fumé à coins très arrondis, filet hairline doré
+ * - Onglet actif : pastille dorée lumineuse sous l'icône + texte or
+ * - Onglet spécial (Vendre) : médaillon or surélevé avec halo
  *
- * Architecture :
- *   - Onglets normaux : flex:1, icone + label centres
- *   - Onglet special : cercle or surleve (debordement vertical gere),
- *     icone blanche a l'interieur, label en dessous
- *   - Safe areas gerees via useSafeAreaInsets
- *
- * Corrections apporte vs version precedente :
- *   1. Icone de l'onglet special est desormais rendue comme un composant
- *      (React.ComponentType<IconProps>) au lieu d'un ReactNode vide
- *   2. Alignement vertical coherent entre onglets normaux et special
- *   3. Navigation fonctionnelle via les props de BottomTabBarProps
- *   4. Dimensions et espacement calibres pour 5 onglets vendeur
+ * Architecture : onglets normaux flex:1, onglet spécial centré
+ * et surélevé, safe areas gérées via useSafeAreaInsets.
  */
 
 import React, { useCallback } from 'react';
@@ -28,7 +20,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { colors } from '@/lib/constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients, radius, shadows } from '@/lib/constants';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,7 +39,7 @@ interface TabConfig {
   label: string;
   /** Composant icone -- doit accepter { color, size } */
   icon: React.ComponentType<IconProps>;
-  /** Si true, onglet special avec cercle or surleve */
+  /** Si true, onglet special avec medaillon or surleve */
   isSpecial?: boolean;
 }
 
@@ -60,11 +53,12 @@ interface TabBarProps extends BottomTabBarProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const TAB_BAR_BASE_HEIGHT = 60;
-const SPECIAL_CIRCLE_SIZE = 52;
-const NORMAL_ICON_SIZE = 22;
+const TAB_BAR_BASE_HEIGHT = 64;
+const SPECIAL_CIRCLE_SIZE = 56;
+const NORMAL_ICON_SIZE = 21;
 const SPECIAL_ICON_SIZE = 24;
 const LABEL_FONT_SIZE = 10;
+const BAR_MARGIN = 16;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -75,7 +69,7 @@ export default function TabBar(props: TabBarProps) {
   const insets = useSafeAreaInsets();
 
   const safeBottom = Math.max(insets.bottom, 0);
-  const tabBarHeight = TAB_BAR_BASE_HEIGHT + safeBottom;
+  const tabBarHeight = TAB_BAR_BASE_HEIGHT + safeBottom + 8;
 
   const handleTabPress = useCallback(
     (routeIndex: number) => {
@@ -88,8 +82,7 @@ export default function TabBar(props: TabBarProps) {
         canPreventDefault: true,
       });
 
-      const isAlreadyFocused =
-        route.name === state.routes[state.index]?.name;
+      const isAlreadyFocused = route.name === state.routes[state.index]?.name;
 
       if (!isAlreadyFocused && !event.defaultPrevented) {
         navigation.navigate(route.name, route.params, { merge: true });
@@ -103,7 +96,6 @@ export default function TabBar(props: TabBarProps) {
       return state.routes.findIndex((r) => {
         if (r.name === tab.key) return true;
         if (r.name.startsWith(tab.key + '/')) return true;
-        // Match "sell/index" -> tab.key "sell"
         const routeBase = r.name.split('/')[0];
         return routeBase === tab.key;
       });
@@ -121,15 +113,56 @@ export default function TabBar(props: TabBarProps) {
         { height: tabBarHeight, paddingBottom: safeBottom },
       ]}
     >
-      <View style={styles.tabRow}>
-        {tabs.map((tab) => {
-          const routeIndex = getRouteIndexForTab(tab);
-          const isActive = activeRouteBase === tab.key;
+      <LinearGradient
+        colors={['rgba(30,26,22,0.98)', 'rgba(19,17,16,0.98)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.bar}
+      >
+        <View style={styles.tabRow}>
+          {tabs.map((tab) => {
+            const routeIndex = getRouteIndexForTab(tab);
+            const isActive = activeRouteBase === tab.key;
+            const IconComponent = tab.icon;
 
-          // Rendre le composant icone avec les bonnes props
-          const IconComponent = tab.icon;
+            if (tab.isSpecial) {
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (routeIndex >= 0) handleTabPress(routeIndex);
+                  }}
+                  style={styles.specialTab}
+                >
+                  <LinearGradient
+                    colors={
+                      isActive
+                        ? (gradients.gold as unknown as readonly [string, string, ...string[]])
+                        : (['#3A332A', '#241F1A'] as unknown as readonly [string, string, ...string[]])
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.specialCircle, isActive ? shadows.goldGlow : undefined]}
+                  >
+                    <IconComponent
+                      color={isActive ? colors.onyx : colors.goldMuted}
+                      size={SPECIAL_ICON_SIZE}
+                    />
+                  </LinearGradient>
+                  <Text
+                    style={[
+                      styles.specialLabel,
+                      { color: isActive ? colors.goldBright : colors.textMuted },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
 
-          if (tab.isSpecial) {
             return (
               <TouchableOpacity
                 key={tab.key}
@@ -137,27 +170,19 @@ export default function TabBar(props: TabBarProps) {
                 onPress={() => {
                   if (routeIndex >= 0) handleTabPress(routeIndex);
                 }}
-                style={styles.specialTab}
+                style={styles.normalTab}
               >
-                <View
-                  style={[
-                    styles.specialCircle,
-                    {
-                      backgroundColor: isActive
-                        ? colors.primary
-                        : colors.gold,
-                    },
-                  ]}
-                >
+                <View style={styles.iconWrap}>
+                  {isActive && <View style={styles.activePill} />}
                   <IconComponent
-                    color={colors.white}
-                    size={SPECIAL_ICON_SIZE}
+                    color={isActive ? colors.goldBright : colors.textMuted}
+                    size={NORMAL_ICON_SIZE}
                   />
                 </View>
                 <Text
                   style={[
-                    styles.specialLabel,
-                    { color: isActive ? colors.primary : colors.gold },
+                    styles.normalLabel,
+                    { color: isActive ? colors.goldBright : colors.textMuted },
                   ]}
                   numberOfLines={1}
                 >
@@ -165,34 +190,9 @@ export default function TabBar(props: TabBarProps) {
                 </Text>
               </TouchableOpacity>
             );
-          }
-
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (routeIndex >= 0) handleTabPress(routeIndex);
-              }}
-              style={styles.normalTab}
-            >
-              <IconComponent
-                color={isActive ? colors.primary : colors.muted}
-                size={NORMAL_ICON_SIZE}
-              />
-              <Text
-                style={[
-                  styles.normalLabel,
-                  { color: isActive ? colors.primary : colors.muted },
-                ]}
-                numberOfLines={1}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+          })}
+        </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -207,18 +207,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.background,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    paddingHorizontal: BAR_MARGIN,
+  },
+  bar: {
+    flex: 1,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}2E`,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 8,
+        elevation: 16,
       },
     }),
   },
@@ -227,27 +232,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     height: TAB_BAR_BASE_HEIGHT,
+    paddingHorizontal: 4,
   },
-  // -- Onglet normal --
   normalTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingBottom: 2,
+    gap: 3,
+    paddingBottom: 6,
+  },
+  iconWrap: {
+    width: 44,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activePill: {
+    position: 'absolute',
+    top: 0,
+    width: 34,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.gold,
+    opacity: 0.85,
   },
   normalLabel: {
     fontSize: LABEL_FONT_SIZE,
-    fontFamily: 'Inter-Medium',
-    letterSpacing: 0.2,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.3,
     lineHeight: 13,
   },
-  // -- Onglet special (Vendre) --
   specialTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 2,
+    paddingBottom: 4,
   },
   specialCircle: {
     width: SPECIAL_CIRCLE_SIZE,
@@ -255,25 +274,26 @@ const styles = StyleSheet.create({
     borderRadius: SPECIAL_CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    // Le cercle deborde vers le haut de la barre
-    marginTop: -(SPECIAL_CIRCLE_SIZE / 2 + 4),
+    marginTop: -(SPECIAL_CIRCLE_SIZE / 2 + 8),
+    borderWidth: 1,
+    borderColor: `${colors.goldBright}59`,
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(201, 168, 76, 0.5)',
+        shadowColor: 'rgba(216, 180, 90, 0.5)',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 1,
-        shadowRadius: 10,
+        shadowRadius: 12,
       },
       android: {
-        elevation: 12,
+        elevation: 14,
       },
     }),
   },
   specialLabel: {
     fontSize: LABEL_FONT_SIZE,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     letterSpacing: 0.3,
     lineHeight: 13,
-    marginTop: 6,
+    marginTop: 4,
   },
 });

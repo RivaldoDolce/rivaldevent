@@ -1,35 +1,21 @@
 /**
- * Input du design system, compatible React Hook Form.
+ * Input — design system « Noir & Or ».
  *
- * Règles UI/UX :
- * - Border 1px stone, radius 16px
- * - Focus : border terracotta + shadow subtil
- * - Error : border terracotta + message en dessous
- * - Label : bodySmall, stone, aligné à gauche
- * - Padding interne : 16px horizontal, 14px vertical
- * - Min height 48px (touch target)
+ * - Surface verre fumé, filet hairline blanc 8%
+ * - Focus : filet or + halo doré subtil
+ * - Erreur : filet danger + message
+ * - Valide : filet succès
+ * - Label ouverline doré, followes d'un champ profond
  *
- * Usage avec RHF :
- * <Controller
- *   control={control}
- *   name="email"
- *   render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
- *     <Input
- *       label="Email"
- *       value={value}
- *       onChangeText={onChange}
- *       onBlur={onBlur}
- *       error={error?.message}
- *     />
- *   )}
- * />
+ * Compatible React Hook Form (onChangeText / onBlur / error).
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
+  Animated,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
@@ -86,42 +72,66 @@ export const Input = React.memo(function Input({
   testID,
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
+    Animated.timing(glowAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
     onFocus?.();
-  }, [onFocus]);
+  }, [glowAnim, onFocus]);
 
   const handleBlur = useCallback(() => {
     setIsFocused(false);
+    Animated.timing(glowAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
     onBlur?.();
-  }, [onBlur]);
+  }, [glowAnim, onBlur]);
 
-  // Détermine la couleur de bordure — légère au repos, terracotta en focus/erreur
-  const borderColor = error
-    ? colors.terracotta
+  const isError = !!error;
+
+  const borderColor = isError
+    ? colors.danger
     : isValid
-      ? colors.forest
+      ? colors.success
       : isFocused
-        ? colors.terracotta
-        : `${colors.stone}40`;
+        ? colors.borderGold
+        : colors.border;
 
   const containerStyle: ViewStyle = {
     borderColor,
     borderWidth: 1,
-    borderRadius: radius.lg,
-    backgroundColor: editable ? colors.ivory : `${colors.ivory}80`,
+    borderRadius: radius.md,
+    backgroundColor: colors.glass,
     paddingHorizontal: spacing.md,
-    minHeight: 52,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    opacity: editable ? 1 : 0.6,
+    opacity: editable ? 1 : 0.55,
     outlineWidth: 0,
   };
 
+  const glowStyle = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: isError ? colors.danger : colors.borderGold,
+    opacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] }),
+  };
+
+  const labelColor = isError
+    ? colors.danger
+    : isValid
+      ? colors.success
+      : isFocused
+        ? colors.goldBright
+        : colors.textSecondary;
+
   const inputStyle: TextStyle = {
     ...typography.body,
-    color: colors.onyx,
+    color: colors.text,
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: iconLeft ? spacing.sm : 0,
@@ -129,17 +139,27 @@ export const Input = React.memo(function Input({
   };
 
   return (
-    <View className="mb-md">
+    <View style={{ marginBottom: spacing.md }}>
       {label && (
         <Text
-          style={[typography.bodySmall, { color: colors.stone, marginBottom: spacing.sm }]}
+          style={[
+            label ? typography.captionSemiBold : typography.caption,
+            {
+              color: labelColor,
+              marginBottom: spacing.sm,
+              letterSpacing: 0.4,
+            },
+          ]}
         >
           {label}
         </Text>
       )}
 
-      <View style={containerStyle}>
-        {iconLeft && <View className="mr-sm">{iconLeft}</View>}
+      <Animated.View style={containerStyle}>
+        <Animated.View pointerEvents="none" style={glowStyle} />
+        {iconLeft && (
+          <View style={{ marginRight: spacing.sm, opacity: 0.85 }}>{iconLeft}</View>
+        )}
 
         <TextInput
           testID={testID}
@@ -149,7 +169,7 @@ export const Input = React.memo(function Input({
           onBlur={handleBlur}
           onFocus={handleFocus}
           placeholder={placeholder}
-          placeholderTextColor={colors.stone}
+          placeholderTextColor={colors.textMuted}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
@@ -157,35 +177,23 @@ export const Input = React.memo(function Input({
           editable={editable}
           maxLength={maxLength}
           accessibilityLabel={label}
-          accessibilityState={{ disabled: false }}
+          accessibilityState={{ disabled: !editable }}
+          selectionColor={colors.gold}
+          cursorColor={colors.gold}
         />
 
-        {iconRight && <View className="ml-sm">{iconRight}</View>}
-      </View>
+        {iconRight && <View style={{ marginLeft: spacing.sm, opacity: 0.85 }}>{iconRight}</View>}
+      </Animated.View>
 
       {error ? (
         <Text
-          style={[
-            typography.caption,
-            {
-              color: colors.terracotta,
-              marginTop: spacing.xs,
-              marginLeft: spacing.xs,
-            },
-          ]}
+          style={[typography.caption, { color: colors.danger, marginTop: spacing.xs, marginLeft: spacing.xs }]}
         >
           {error}
         </Text>
       ) : helperText ? (
         <Text
-          style={[
-            typography.caption,
-            {
-              color: colors.stone,
-              marginTop: spacing.xs,
-              marginLeft: spacing.xs,
-            },
-          ]}
+          style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xs, marginLeft: spacing.xs }]}
         >
           {helperText}
         </Text>

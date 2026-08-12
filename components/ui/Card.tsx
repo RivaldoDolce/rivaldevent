@@ -1,26 +1,19 @@
 /**
- * Card du design system.
+ * Card — design system « Noir & Or ».
  *
- * Regles UI/UX :
- * - radius 16px par defaut
- * - 4 variants : default, elevated, outlined, featured
- * - Padding 16-24px selon le contenu
- * - Press feedback optionnel (scale 0.97 + shadow increase)
+ * Variantes :
+ * - default  : verre fumé + filet hairline
+ * - elevated : surface ornée, ombre profonde, filet doré subtil
+ * - outlined : transparent, filet hairline blanc
+ * - featured : filet doré + halo (événement à la une)
  *
- * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
- * Conformement au handoff section 8.6.
- *
- * Variants :
- * - default  : bg ivory, shadow-sm
- * - elevated : bg sand, shadow-md (cards mises en avant)
- * - outlined : bg transparent, border 1px stone
- * - featured : bg terracotta a 5%, border-left 4px terracotta (evenement a la une)
+ * Press feedback : scale 0.97 avec Animated natif.
  */
 
 import React, { useCallback, useRef } from 'react';
 import { Pressable, View, Animated, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/lib/constants';
+import { colors, radius, spacing, shadows } from '@/lib/constants';
 
 // ============================================================
 // Types
@@ -46,22 +39,6 @@ const PADDING_VALUE: Record<NonNullable<CardProps['padding']>, number> = {
   lg: spacing.lg,
 };
 
-const SHADOW_SMALL: ViewStyle = {
-  shadowColor: colors.onyx,
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.08,
-  shadowRadius: 3,
-  elevation: 1,
-};
-
-const SHADOW_MEDIUM: ViewStyle = {
-  shadowColor: colors.onyx,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.12,
-  shadowRadius: 8,
-  elevation: 3,
-};
-
 // ============================================================
 // Composant
 // ============================================================
@@ -74,7 +51,6 @@ export const Card = React.memo(function Card({
   fullWidth = true,
   testID,
 }: CardProps) {
-  // ── Animation avec Animated natif (pas reanimated) ──
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
@@ -97,36 +73,38 @@ export const Card = React.memo(function Card({
     }).start();
   }, [onPress, scaleAnim]);
 
-  // Style selon le variant
   const getVariantStyle = (): ViewStyle => {
     switch (variant) {
       case 'elevated':
         return {
-          backgroundColor: colors.sand,
+          backgroundColor: colors.elevated,
           borderRadius: radius.lg,
-          ...SHADOW_MEDIUM,
+          borderWidth: 1,
+          borderColor: `${colors.gold}1F`,
+          ...shadows.card,
         };
       case 'outlined':
         return {
           backgroundColor: 'transparent',
           borderRadius: radius.lg,
           borderWidth: 1,
-          borderColor: colors.stone,
+          borderColor: colors.border,
         };
       case 'featured':
         return {
-          backgroundColor: `${colors.terracotta}0D`, // 5% opacity
+          backgroundColor: colors.glassGold,
           borderRadius: radius.lg,
-          borderLeftWidth: 4,
-          borderLeftColor: colors.terracotta,
-          ...SHADOW_SMALL,
+          borderWidth: 1,
+          borderColor: colors.borderGold,
+          ...shadows.goldGlowSoft,
         };
       case 'default':
       default:
         return {
-          backgroundColor: colors.ivory,
+          backgroundColor: colors.glass,
           borderRadius: radius.lg,
-          ...SHADOW_SMALL,
+          borderWidth: 1,
+          borderColor: colors.border,
         };
     }
   };
@@ -137,7 +115,6 @@ export const Card = React.memo(function Card({
     width: fullWidth ? '100%' : undefined,
   };
 
-  // Si pas de onPress, render simple View (pas d'animation)
   if (!onPress) {
     return (
       <View testID={testID} style={containerStyle}>
@@ -147,12 +124,7 @@ export const Card = React.memo(function Card({
   }
 
   return (
-    <Animated.View
-      style={[
-        containerStyle,
-        { transform: [{ scale: scaleAnim }] },
-      ]}
-    >
+    <Animated.View style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
         testID={testID}
         onPress={onPress}

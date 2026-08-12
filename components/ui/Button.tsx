@@ -1,26 +1,33 @@
 /**
- * Bouton principal du design system.
+ * Button — design system « Noir & Or ».
  *
  * Variantes :
- * - primary   : bg terracotta (client) — CTA principal
- * - secondary : bg gold (premium, actions vendeur)
- * - outline   : border stone, transparent — actions secondaires
- * - ghost     : texte seul, underline — liens
+ * - primary   : dégradé or champagne + ombre dorée — CTA principal
+ * - secondary : surface verre fumé + filet doré — action alternative
+ * - outline   : transparent, filet hairline — action secondaire
+ * - ghost     : texte seul or — lien/action tertiaire
  *
  * Tailles :
- * - sm : 36px de haut, padding 12px
- * - md : 48px de haut, padding 16px (defaut)
- * - lg : 56px de haut, padding 24px
+ * - sm : 40px de haut
+ * - md : 52px de haut (défaut)
+ * - lg : 60px de haut
  *
- * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
- * Conformement au handoff section 8.6 : "ne PAS en ajouter de nouveau".
+ * Animations : Animated natif RN (pas reanimated — erreur TurboModule en Expo Go).
  */
 
 import React, { useCallback, useRef } from 'react';
-import { Pressable, Text, ActivityIndicator, Animated, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  Text,
+  View,
+  ActivityIndicator,
+  Animated,
+  type ViewStyle,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useHaptics } from '@/hooks/useHaptics';
-import { colors, spacing, radius, typography } from '@/lib/constants';
+import { colors, gradients, spacing, radius, typography, shadows } from '@/lib/constants';
 
 // ============================================================
 // Types
@@ -45,9 +52,9 @@ interface ButtonProps {
 // ============================================================
 
 const SIZE_HEIGHT: Record<NonNullable<ButtonProps['size']>, number> = {
-  sm: 36,
-  md: 48,
-  lg: 56,
+  sm: 40,
+  md: 52,
+  lg: 60,
 };
 
 const SIZE_PADDING: Record<NonNullable<ButtonProps['size']>, number> = {
@@ -59,7 +66,7 @@ const SIZE_PADDING: Record<NonNullable<ButtonProps['size']>, number> = {
 const SIZE_FONT: Record<NonNullable<ButtonProps['size']>, number> = {
   sm: 14,
   md: 16,
-  lg: 18,
+  lg: 17,
 };
 
 // ============================================================
@@ -81,9 +88,8 @@ export const Button = React.memo(function Button({
 }: ButtonProps) {
   const { impact } = useHaptics();
 
-  // ── Animations avec Animated natif (pas reanimated) ──
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(disabled ? 0.5 : 1)).current;
+  const opacityAnim = useRef(new Animated.Value(disabled ? 0.45 : 1)).current;
 
   const handlePressIn = useCallback(() => {
     if (disabled || loading) return;
@@ -94,7 +100,7 @@ export const Button = React.memo(function Button({
       useNativeDriver: true,
     }).start();
     Animated.timing(opacityAnim, {
-      toValue: 0.8,
+      toValue: 0.85,
       duration: 100,
       useNativeDriver: true,
     }).start();
@@ -122,48 +128,79 @@ export const Button = React.memo(function Button({
     onPress?.();
   }, [disabled, loading, onPress]);
 
-  // Mise a jour de l'opacite si disabled change
   React.useEffect(() => {
     Animated.timing(opacityAnim, {
-      toValue: disabled ? 0.5 : 1,
+      toValue: disabled ? 0.45 : 1,
       duration: 150,
       useNativeDriver: true,
     }).start();
   }, [disabled, opacityAnim]);
 
-  const textColor = {
-    primary: colors.sand,
-    secondary: colors.onyx,
-    outline: colors.onyx,
-    ghost: colors.terracotta,
-  }[variant];
+  const isGradient = variant === 'primary' || variant === 'secondary';
 
-  const variantBg: Record<NonNullable<ButtonProps['variant']>, string> = {
-    primary: colors.terracotta,
-    secondary: colors.gold,
-    outline: 'transparent',
-    ghost: 'transparent',
-  };
+  const textColor = variant === 'primary' ? colors.onyx : colors.text;
+  const spinnerColor =
+    variant === 'primary'
+      ? colors.onyx
+      : variant === 'ghost'
+        ? colors.goldBright
+        : colors.goldBright;
 
-  const containerStyle: ViewStyle = {
+  const containerBase: ViewStyle = {
     height: SIZE_HEIGHT[size],
     paddingHorizontal: SIZE_PADDING[size],
-    borderRadius: radius.lg,
-    backgroundColor: variantBg[variant],
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    ...(variant === 'outline' ? { borderWidth: 1, borderColor: `${colors.stone}60` } : {}),
   };
+
+  const containerSolid: ViewStyle = {
+    ...containerBase,
+    backgroundColor:
+      variant === 'outline' ? 'transparent' : variant === 'ghost' ? 'transparent' : colors.surfaceAlt,
+    ...(variant === 'outline'
+      ? { borderWidth: 1, borderColor: `${colors.text}33` }
+      : {}),
+  };
+
+  const content = loading ? (
+    <ActivityIndicator color={spinnerColor} size="small" />
+  ) : (
+    <>
+      {icon && iconPosition === 'left' && (
+        <ViewIcon dim={SIZE_FONT[size] + 4} color={textColor}>
+          {icon}
+        </ViewIcon>
+      )}
+      <Text
+        style={[
+          typography.button,
+          {
+            color: textColor,
+            fontSize: SIZE_FONT[size],
+            textAlign: 'center',
+            textAlignVertical: 'center',
+            marginLeft: icon && iconPosition === 'left' ? spacing.sm : 0,
+            marginRight: icon && iconPosition === 'right' ? spacing.sm : 0,
+            letterSpacing: 0.1,
+          },
+        ]}
+      >
+        {children}
+      </Text>
+      {icon && iconPosition === 'right' && (
+        <ViewIcon dim={SIZE_FONT[size] + 4} color={textColor}>
+          {icon}
+        </ViewIcon>
+      )}
+    </>
+  );
 
   return (
     <Animated.View
       style={[
-        containerStyle,
         fullWidth ? { width: '100%' as const } : {},
-        {
-          transform: [{ scale: scaleAnim }],
-          opacity: opacityAnim,
-        },
+        { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
       ]}
     >
       <Pressable
@@ -172,35 +209,40 @@ export const Button = React.memo(function Button({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
-        style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
       >
-        {loading ? (
-          <ActivityIndicator
-            color={textColor}
-            size={size === 'sm' ? 'small' : 'small'}
-          />
+        {isGradient ? (
+          <LinearGradient
+            colors={
+              variant === 'primary'
+                ? (gradients.gold as unknown as readonly [string, string, ...string[]])
+                : (['#26211B', '#181512'] as unknown as readonly [string, string, ...string[]])
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[
+              containerBase,
+              {
+                ...(variant === 'primary' ? shadows.goldGlow : {}),
+                borderWidth: 1,
+                borderColor:
+                  variant === 'primary' ? `${colors.goldBright}66` : `${colors.text}1F`,
+              },
+            ]}
+          >
+            {content}
+          </LinearGradient>
         ) : (
-          <>
-            {icon && iconPosition === 'left' && <IconWrapper>{icon}</IconWrapper>}
-            <Text
-              style={[
-                typography.button,
-                {
-                  color: textColor,
-                  fontSize: SIZE_FONT[size],
-                  marginLeft: icon && iconPosition === 'left' ? spacing.sm : 0,
-                  marginRight: icon && iconPosition === 'right' ? spacing.sm : 0,
-                  textAlign: 'center',
-                  textAlignVertical: 'center',
-                },
-              ]}
-            >
-              {children}
-            </Text>
-            {icon && iconPosition === 'right' && <IconWrapper>{icon}</IconWrapper>}
-          </>
+          <View
+            style={[
+              containerSolid,
+              variant === 'ghost' && { borderWidth: 0 },
+              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+            ]}
+          >
+            {content}
+          </View>
         )}
       </Pressable>
     </Animated.View>
@@ -208,9 +250,24 @@ export const Button = React.memo(function Button({
 });
 
 // ============================================================
-// Sous-composant : wrapper d'icone
+// Sous-composants
 // ============================================================
 
-function IconWrapper({ children }: { readonly children: React.ReactNode }) {
-  return <>{children}</>;
+function ViewIcon({
+  dim,
+  color,
+  children,
+}: {
+  readonly dim: number;
+  readonly color: string;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <View style={{ width: dim, height: dim, justifyContent: 'center', alignItems: 'center', opacity: 0.95 }}>
+      {React.cloneElement(children as React.ReactElement<{ color?: string }>, { color })}
+    </View>
+  );
 }
+
+// Réexport du type pour usage externe
+export type { ButtonProps };

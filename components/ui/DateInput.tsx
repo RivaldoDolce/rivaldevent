@@ -63,15 +63,19 @@ export const DateInput = React.memo(function DateInput({
   const displayValue = value ? formatDateDisplay(value) : '';
   const currentDate = value ? new Date(value) : new Date();
 
-  const borderColor = error ? colors.terracotta : isValid ? colors.forest : `${colors.stone}40`;
+  const borderColor = error
+    ? colors.danger
+    : isValid
+      ? colors.success
+      : colors.border;
 
   const containerStyle: ViewStyle = {
     borderColor,
     borderWidth: 1,
-    borderRadius: radius.lg,
-    backgroundColor: colors.ivory,
+    borderRadius: radius.md,
+    backgroundColor: colors.glass,
     paddingHorizontal: spacing.md,
-    minHeight: 52,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -90,10 +94,13 @@ export const DateInput = React.memo(function DateInput({
   };
 
   return (
-    <View className="mb-md">
+    <View style={{ marginBottom: spacing.md }}>
       {label && (
         <Text
-          style={[typography.bodySmall, { color: colors.stone, marginBottom: spacing.sm }]}
+          style={[
+            typography.captionSemiBold,
+            { color: colors.textSecondary, marginBottom: spacing.sm, letterSpacing: 0.4 },
+          ]}
         >
           {label}
         </Text>
@@ -109,15 +116,15 @@ export const DateInput = React.memo(function DateInput({
           style={[
             typography.body,
             {
-              color: displayValue ? colors.onyx : colors.stone,
+              color: displayValue ? colors.text : colors.textMuted,
               flex: 1,
-              fontFamily: 'monospace',
+              fontFamily: 'Inter_500Medium',
             },
           ]}
         >
           {displayValue || placeholder}
         </Text>
-        <Calendar color={colors.stone} size={20} strokeWidth={1.5} />
+        <Calendar color={colors.goldMuted} size={20} strokeWidth={1.5} />
       </Pressable>
 
       {showPicker && (
@@ -127,6 +134,7 @@ export const DateInput = React.memo(function DateInput({
           display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
           onChange={handleDateChange}
           maximumDate={new Date()}
+          themeVariant="dark"
         />
       )}
 
@@ -135,7 +143,7 @@ export const DateInput = React.memo(function DateInput({
           style={[
             typography.caption,
             {
-              color: colors.terracotta,
+              color: colors.danger,
               marginTop: spacing.xs,
               marginLeft: spacing.xs,
             },

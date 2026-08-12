@@ -1,20 +1,19 @@
 /**
- * Header du design system avec bouton retour et actions.
+ * Header — design system « Noir & Or ».
  *
- * Regles UI/UX :
- * - Background bg sand
- * - Bouton retour : icone fine-line chevron-left, 44x44dp touch target
- * - Titre : typography h3, couleur onyx, aligne a gauche
- * - Actions droite : 0-2 icon buttons (44x44dp)
- * - Safe area top automatique (react-native-safe-area-context)
- * - Border bottom 1px stone a 20% opacity
+ * - Fond décoratif profond avec halo doré (dégradé)
+ * - Bouton retour pastille verre + chevron or
+ * - Titre Playfair Display, sous-titre caption
+ * - Actions droites 0-2 (44px touch target)
  */
 
 import React from 'react';
-import { View, Text, Pressable, type ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
 
-import { colors, spacing, typography } from '@/lib/constants';
+import { colors, spacing, radius, typography } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -51,93 +50,132 @@ export const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   const { impact } = useHaptics();
 
-  const containerStyle: ViewStyle = {
-    paddingTop: insets.top + spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.sand,
-    borderBottomWidth: 1,
-    borderBottomColor: `${colors.stone}33`,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 56 + insets.top,
-  };
-
   const handleBack = () => {
     impact('light');
     onBack?.();
   };
 
   return (
-    <View testID={testID} style={containerStyle}>
-      {/* Bouton retour */}
-      {showBack && (
-        <Pressable
-          onPress={handleBack}
-          hitSlop={12}
-          style={{
-            width: 44,
-            height: 44,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: spacing.sm,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-        >
-          {onBack && (
-            <Text style={{ color: colors.terracotta, fontSize: 24, lineHeight: 28 }}>
-              {'<'}
+    <LinearGradient
+      testID={testID}
+      colors={[colors.elevated, colors.background]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[styles.container, { paddingTop: insets.top + spacing.sm }]}
+    >
+      <View pointerEvents="none" style={styles.glow} />
+
+      <View style={styles.row}>
+        {showBack && (
+          <Pressable
+            onPress={handleBack}
+            hitSlop={12}
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Retour"
+          >
+            {onBack && (
+              <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
+            )}
+          </Pressable>
+        )}
+
+        <View style={styles.titleBlock}>
+          {title && (
+            <Text style={[typography.h3, styles.title]} numberOfLines={1}>
+              {title}
             </Text>
           )}
-        </Pressable>
-      )}
+          {subtitle && (
+            <Text style={[typography.caption, styles.subtitle]} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
 
-      {/* Titre + sous-titre */}
-      <View style={{ flex: 1 }}>
-        {title && (
-          <Text
-            style={[typography.h3, { color: colors.onyx }]}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-        )}
-        {subtitle && (
-          <Text
-            style={[typography.caption, { color: colors.stone, marginTop: 2 }]}
-            numberOfLines={1}
-          >
-            {subtitle}
-          </Text>
+        {rightActions && rightActions.length > 0 && (
+          <View style={styles.actions}>
+            {rightActions.map((action, index) => (
+              <Pressable
+                key={index}
+                onPress={() => {
+                  impact('light');
+                  action.onPress();
+                }}
+                hitSlop={12}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
+              >
+                {action.icon}
+              </Pressable>
+            ))}
+          </View>
         )}
       </View>
-
-      {/* Actions droite */}
-      {rightActions && rightActions.length > 0 && (
-        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-          {rightActions.map((action, index) => (
-            <Pressable
-              key={index}
-              onPress={() => {
-                impact('light');
-                action.onPress();
-              }}
-              hitSlop={12}
-              style={{
-                width: 44,
-                height: 44,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={action.label}
-            >
-              {action.icon}
-            </Pressable>
-          ))}
-        </View>
-      )}
-    </View>
+    </LinearGradient>
   );
+});
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    minHeight: 64,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  titleBlock: {
+    flex: 1,
+  },
+  title: {
+    color: colors.text,
+  },
+  subtitle: {
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  glow: {
+    position: 'absolute',
+    top: -80,
+    right: -40,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(216,180,90,0.07)',
+  },
 });

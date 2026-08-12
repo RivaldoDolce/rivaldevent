@@ -2,7 +2,7 @@
  * Bandeau d'indicateur hors-ligne.
  *
  * S'affiche en haut de l'ecran quand la connexion est perdue.
- * Design : fond onyx, texte ivoire, icone warning.
+ * Design : fond noir profond, filet doré, texte ivoire, icone warning.
  * Se cache automatiquement quand la connexion revient.
  */
 
@@ -22,8 +22,9 @@ export const OfflineBanner = React.memo(function OfflineBanner() {
 
   return (
     <View style={[styles.banner, { paddingTop: insets.top }]}>
-      <WifiOff color={colors.ivory} size={16} strokeWidth={1.5} />
-      <Text style={styles.text}>Pas de connexion internet</Text>
+      <View style={styles.dot} />
+      <WifiOff color={colors.goldBright} size={15} strokeWidth={1.75} />
+      <Text style={styles.text}>Hors ligne — données en attente de sync</Text>
     </View>
   );
 });
@@ -35,20 +36,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 200,
-    backgroundColor: colors.onyx,
+    backgroundColor: 'rgba(10,9,8,0.96)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: `${colors.gold}40`,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: `${colors.gold}45`,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.warning,
+    opacity: 0.9,
   },
   text: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.ivory,
+    color: colors.text,
     letterSpacing: 0.3,
   },
 });

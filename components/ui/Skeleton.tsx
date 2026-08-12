@@ -1,24 +1,14 @@
 /**
- * Skeleton du design system.
+ * Skeleton — design system « Noir & Or ».
  *
- * Regles UI/UX :
- * - Animation shimmer de gauche a droite, duree 1.5s, loop infinie
- * - Couleur : bg ivory, shimmer white a 30% opacity
- * - A utiliser pour TOUT chargement de donnees
+ * Animation shimmer dorée de gauche à droite, durée 1.6s, boucle infinie.
+ * Utilisé pour TOUT chargement de données (cartes, listes, détails).
  *
- * Animations : Animated natif RN (pas reanimated — cause erreur TurboModule avec Expo Go).
- * Conformement au handoff section 8.6.
- *
- * Usage :
- * <Skeleton width="100%" height={200} />         // Card image
- * <Skeleton width={200} height={20} />           // Titre
- * <Skeleton width={120} height={16} radius={8} />// Badge
+ * Animations : Animated natif RN (pas reanimated).
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, type ViewStyle } from 'react-native';
-
-import { colors } from '@/lib/constants';
+import { View, Animated, Easing, type ViewStyle } from 'react-native';
 
 // ============================================================
 // Types
@@ -39,60 +29,63 @@ interface SkeletonProps {
 export const Skeleton = React.memo(function Skeleton({
   width = '100%',
   height = 20,
-  radius = 8,
+  radius = 10,
   style,
   testID,
 }: SkeletonProps) {
-  // ── Animation shimmer avec Animated natif (pas reanimated) ──
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmerAnim, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
     );
     animation.start();
     return () => animation.stop();
   }, [shimmerAnim]);
 
-  // Le shimmer est un overlay blanc dont l'opacite pulsee
-  // entre 0 et 0.3 pour simuler l'effet de lumiere
-  const shimmerOpacity = shimmerAnim.interpolate({
+  // Balayage doré de gauche à droite
+  const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.3],
+    outputRange: [-200, 320],
   });
 
   const containerStyle: ViewStyle = {
     width: width as ViewStyle['width'],
     height,
     borderRadius: radius,
-    backgroundColor: colors.ivory,
+    backgroundColor: 'rgba(255,255,255,0.055)',
     overflow: 'hidden',
     ...style,
   };
 
-  const overlayStyle: ViewStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-  };
-
   return (
     <View testID={testID} style={containerStyle}>
-      <Animated.View style={[overlayStyle, { opacity: shimmerOpacity }]} />
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 220,
+          height: '100%',
+          transform: [{ translateX }],
+          backgroundColor: 'rgba(242,220,155,0.13)',
+        }}
+      />
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255,255,255,0.03)',
+        }}
+      />
     </View>
   );
 });

@@ -1,21 +1,16 @@
 /**
- * Etat vide du design system.
+ * EmptyState — design system « Noir & Or ».
  *
- * A utiliser quand une liste est vide, une recherche ne retourne rien,
- * ou l'utilisateur n'a pas encore de billets/evenements.
- *
- * Regles UI/UX :
- * - Illustration/icon au centre (pas de centrage parfait : offset vertical)
- * - Titre h3 onyx
- * - Description body stone
- * - CTA optionnel (bouton outline ou ghost)
+ * - Icône dans un médaillon verre avec halo doré
+ * - Titre Playfair Display, description tamisée
+ * - CTA optionnel (bouton outline)
  */
 
 import React from 'react';
-import { View, Text, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 
 import { Button } from './Button';
-import { colors, spacing, typography } from '@/lib/constants';
+import { colors, spacing, typography, radius, shadows } from '@/lib/constants';
 
 // ============================================================
 // Types
@@ -53,58 +48,58 @@ export const EmptyState = React.memo(function EmptyState({
   return (
     <View testID={testID} style={containerStyle}>
       {icon && (
-        <View
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: `${colors.terracotta}1A`,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: spacing.lg,
-          }}
-        >
-          {icon}
+        <View style={styles.iconShadow}>
+          <View style={styles.iconMedallion}>{icon}</View>
         </View>
       )}
 
-      <Text
-        style={[
-          typography.h3,
-          {
-            color: colors.onyx,
-            textAlign: 'center',
-            marginBottom: spacing.sm,
-          },
-        ]}
-      >
-        {title}
-      </Text>
+      <Text style={[typography.h3, styles.title]}>{title}</Text>
 
       {description && (
-        <Text
-          style={[
-            typography.body,
-            {
-              color: colors.stone,
-              textAlign: 'center',
-              marginBottom: spacing.xl,
-            },
-          ]}
-        >
-          {description}
-        </Text>
+        <Text style={[typography.bodySmall, styles.description]}>{description}</Text>
       )}
 
       {actionLabel && onAction && (
-        <Button
-          variant="outline"
-          size="md"
-          onPress={onAction}
-        >
-          {actionLabel}
-        </Button>
+        <View style={{ marginTop: spacing.sm }}>
+          <Button variant="outline" size="md" onPress={onAction}>
+            {actionLabel}
+          </Button>
+        </View>
       )}
     </View>
   );
+});
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = StyleSheet.create({
+  iconShadow: {
+    marginBottom: spacing.lg,
+    ...shadows.goldGlowSoft,
+    borderRadius: radius.xxl,
+  },
+  iconMedallion: {
+    width: 88,
+    height: 88,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  description: {
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    maxWidth: 300,
+    lineHeight: 22,
+  },
 });
