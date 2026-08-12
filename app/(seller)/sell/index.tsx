@@ -11,6 +11,9 @@
  *
  * En production : remplacement de addEvent par un appel Supabase
  * (createEvent) + upload d'image dans le bucket storage.
+ *
+ * Design system « Noir & Or » : stepper or, sections en cartes verre,
+ * CTA degrade or, tiers style TicketTierCard sombre.
  */
 
 import { useState, useCallback } from 'react';
@@ -25,6 +28,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   ArrowRight,
@@ -39,7 +43,7 @@ import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { CATEGORIES } from '@/data/mock';
-import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, typography, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSellerStore, type NewSellerEventInput } from '@/stores/seller-store';
 
@@ -196,7 +200,7 @@ export default function SellerSellScreen() {
                 ]}
               >
                 {s < step ? (
-                  <Check size={14} color={colors.sand} strokeWidth={3} />
+                  <Check size={14} color={colors.onyx} strokeWidth={3} />
                 ) : (
                   <Text
                     style={[
@@ -319,7 +323,7 @@ export default function SellerSellScreen() {
               onChangeText={setImage}
               autoCapitalize="none"
               autoCorrect={false}
-              iconLeft={<ImagePlus color={colors.stone} size={20} strokeWidth={1.5} />}
+              iconLeft={<ImagePlus color={colors.goldMuted} size={20} strokeWidth={1.5} />}
               helperText="Laissez vide pour utiliser une image par defaut"
             />
 
@@ -329,7 +333,7 @@ export default function SellerSellScreen() {
               fullWidth
               disabled={!step1Valid}
               onPress={goNext}
-              icon={<ArrowRight color={colors.sand} size={18} />}
+              icon={<ArrowRight color={colors.onyx} size={18} />}
               iconPosition="right"
             >
               Continuer
@@ -380,7 +384,7 @@ export default function SellerSellScreen() {
               fullWidth
               disabled={!step2Valid}
               onPress={goNext}
-              icon={<ArrowRight color={colors.sand} size={18} />}
+              icon={<ArrowRight color={colors.onyx} size={18} />}
               iconPosition="right"
             >
               Continuer
@@ -462,13 +466,13 @@ export default function SellerSellScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Ajouter un palier"
               >
-                <Plus size={17} color={colors.terracotta} strokeWidth={2} />
+                <Plus size={17} color={colors.goldBright} strokeWidth={2} />
                 <Text style={styles.addTierText}>Ajouter un palier</Text>
               </Pressable>
             ) : null}
 
             <Button
-              variant="secondary"
+              variant="primary"
               size="lg"
               fullWidth
               loading={isPublishing}
@@ -489,7 +493,7 @@ export default function SellerSellScreen() {
             accessibilityRole="button"
             accessibilityLabel="Etape precedente"
           >
-            <ArrowLeft size={16} color={colors.stone} strokeWidth={1.75} />
+            <ArrowLeft size={16} color={colors.textSecondary} strokeWidth={1.75} />
             <Text style={styles.backLinkText}>Etape precedente</Text>
           </Pressable>
         ) : null}
@@ -506,9 +510,14 @@ export default function SellerSellScreen() {
       >
         <View style={styles.successBackdrop}>
           <View style={styles.successCard}>
-            <View style={styles.successCircle}>
-              <Check size={30} color={colors.sand} strokeWidth={2.5} />
-            </View>
+            <LinearGradient
+              colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.successCircle}
+            >
+              <Check size={30} color={colors.onyx} strokeWidth={2.5} />
+            </LinearGradient>
             <Text style={styles.successTitle}>Evenement publie</Text>
             <Text style={styles.successDescription}>
               Votre evenement est en ligne. Les participants peuvent desormais
@@ -536,7 +545,7 @@ export default function SellerSellScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
 
   // -- Stepper --
@@ -556,79 +565,81 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1.5,
-    borderColor: `${colors.stone}40`,
-    backgroundColor: colors.white,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepperCircleActive: {
-    borderColor: colors.terracotta,
-    backgroundColor: colors.terracotta,
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(216,180,90,0.16)',
+    ...shadows.goldGlowSoft,
   },
   stepperCircleDone: {
-    borderColor: colors.forest,
-    backgroundColor: colors.forest,
+    borderColor: colors.gold,
+    backgroundColor: colors.gold,
   },
   stepperNumber: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   stepperNumberActive: {
-    color: colors.sand,
+    color: colors.goldBright,
   },
   stepperLabel: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.stone,
+    color: colors.textMuted,
     marginLeft: 5,
   },
   stepperLabelActive: {
-    color: colors.terracotta,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
   stepperLine: {
     flex: 1,
     height: 2,
-    backgroundColor: `${colors.stone}25`,
+    backgroundColor: `${colors.gold}22`,
     marginHorizontal: spacing.sm,
   },
   stepperLineDone: {
-    backgroundColor: colors.forest,
+    backgroundColor: colors.gold,
   },
 
   // -- Formulaire --
   formCard: {
     marginTop: spacing.md,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.lg,
+    ...shadows.card,
   },
   stepTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   stepSubtitle: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 19,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 2,
     marginBottom: spacing.lg,
   },
   fieldLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
   chipsWrap: {
@@ -642,22 +653,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-    backgroundColor: colors.sand,
+    borderColor: colors.border,
+    backgroundColor: colors.glass,
   },
   chipSelected: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+    borderColor: `${colors.gold}55`,
   },
   chipText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.onyx,
+    color: colors.textSecondary,
   },
   chipTextSelected: {
-    color: colors.sand,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
   typeRow: {
     flexDirection: 'row',
@@ -669,23 +680,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-    backgroundColor: colors.sand,
+    borderColor: colors.border,
+    backgroundColor: colors.glass,
     alignItems: 'center',
   },
   typeCardSelected: {
-    backgroundColor: `${colors.terracotta}10`,
-    borderColor: colors.terracotta,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderColor: `${colors.gold}55`,
   },
   typeText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.textSecondary,
   },
   typeTextSelected: {
-    color: colors.terracotta,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
 
   // -- Tiers --
@@ -693,12 +704,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tierCard: {
-    backgroundColor: colors.sand,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}80`,
+    borderColor: `${colors.gold}2E`,
     padding: spacing.md,
     marginBottom: spacing.md,
+    ...shadows.card,
   },
   tierCardHeader: {
     flexDirection: 'row',
@@ -707,10 +719,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   tierIndex: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.terracotta,
+    color: colors.goldBright,
     letterSpacing: 0.4,
   },
   tierRow: {
@@ -726,15 +738,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: `${colors.terracotta}50`,
+    borderColor: `${colors.gold}55`,
     borderRadius: radius.lg,
     marginBottom: spacing.lg,
+    backgroundColor: 'rgba(216,180,90,0.06)',
   },
   addTierText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.terracotta,
+    color: colors.goldBright,
     marginLeft: spacing.sm,
   },
 
@@ -747,48 +760,51 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   backLinkText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginLeft: spacing.xs,
   },
 
   // -- Modal succes --
   successBackdrop: {
     flex: 1,
-    backgroundColor: `${colors.onyx}66`,
+    backgroundColor: 'rgba(10,9,8,0.72)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
   successCard: {
     width: '100%',
-    backgroundColor: colors.sand,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}2E`,
     padding: spacing.xl,
     alignItems: 'center',
+    ...shadows.elevated,
   },
   successCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.forest,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+    ...shadows.goldGlow,
   },
   successTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 26,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.3,
     marginBottom: spacing.sm,
   },
   successDescription: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: spacing.xl,
   },

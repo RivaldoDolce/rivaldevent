@@ -9,7 +9,8 @@
  * 5. CTA "Creer un evenement" -> onglet Vendre
  *
  * Donnees : store vendeur (mock en attendant Supabase).
- * Design coherent avec le profil client : derivee foret + or, cartes blanches.
+ * Design system « Noir & Or » : banniere hero graduee, anneaux dore,
+ * stats en cartes verre, statuts colores.
  */
 
 import { useCallback } from 'react';
@@ -37,7 +38,7 @@ import {
 } from 'lucide-react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
-import { colors, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,9 +50,9 @@ import { useSellerStore, useSellerTotals } from '@/stores/seller-store';
 // ============================================================
 
 const SALE_STATUS_META = {
-  completed: { label: 'Paye', color: colors.forest },
-  pending: { label: 'En attente', color: colors.goldDark },
-  failed: { label: 'Echoue', color: colors.terracotta },
+  completed: { label: 'Paye', color: colors.success },
+  pending: { label: 'En attente', color: colors.warning },
+  failed: { label: 'Echoue', color: colors.danger },
 } as const;
 
 // ============================================================
@@ -92,7 +93,7 @@ export default function SellerHomeScreen() {
   // -- Styles dynamiques --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   };
 
   const headerStyle: ViewStyle = {
@@ -105,9 +106,10 @@ export default function SellerHomeScreen() {
   };
 
   const headerTitleStyle: TextStyle = {
-    fontFamily: 'Lobster_400Regular',
-    fontSize: 32,
-    color: colors.forest,
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 28,
+    color: colors.text,
+    letterSpacing: -0.5,
   };
 
   return (
@@ -147,16 +149,18 @@ export default function SellerHomeScreen() {
             2. CARTE PORTEFEUILLE
             ============================================ */}
         <LinearGradient
-          colors={[colors.forestDeep, colors.forestMid, colors.forest]}
+          colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={styles.walletCard}
         >
-          <View pointerEvents="none" style={styles.walletRing} />
+          <View pointerEvents="none" style={styles.walletGlow} />
+          <View pointerEvents="none" style={styles.walletRingLarge} />
+          <View pointerEvents="none" style={styles.walletRingSmall} />
 
           <View style={styles.walletTopRow}>
             <View style={styles.walletLabelRow}>
-              <Wallet size={16} color={colors.goldSoft} strokeWidth={1.75} />
+              <Wallet size={16} color={colors.goldBright} strokeWidth={1.75} />
               <Text style={styles.walletLabel}>SOLDE DISPONIBLE</Text>
             </View>
             <Pressable
@@ -193,15 +197,15 @@ export default function SellerHomeScreen() {
             ============================================ */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: `${colors.forest}12` }]}>
-              <Ticket size={19} color={colors.forest} strokeWidth={1.75} />
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(216,180,90,0.12)' }]}>
+              <Ticket size={19} color={colors.goldBright} strokeWidth={1.75} />
             </View>
             <Text style={styles.statValue}>{totals.ticketsSold}</Text>
             <Text style={styles.statLabel}>Billets vendus</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: `${colors.terracotta}12` }]}>
+            <View style={[styles.statIcon, { backgroundColor: `${colors.terracotta}1A` }]}>
               <CalendarDays size={19} color={colors.terracotta} strokeWidth={1.75} />
             </View>
             <Text style={styles.statValue}>{totals.publishedEvents}</Text>
@@ -209,16 +213,16 @@ export default function SellerHomeScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: `${colors.goldDark}12` }]}>
-              <Percent size={19} color={colors.goldDark} strokeWidth={1.75} />
+            <View style={[styles.statIcon, { backgroundColor: `${colors.info}1A` }]}>
+              <Percent size={19} color={colors.info} strokeWidth={1.75} />
             </View>
             <Text style={styles.statValue}>{totals.averageFillRate}%</Text>
             <Text style={styles.statLabel}>Remplissage moyen</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: `${colors.forest}12` }]}>
-              <TrendingUp size={19} color={colors.forest} strokeWidth={1.75} />
+            <View style={[styles.statIcon, { backgroundColor: `${colors.success}1A` }]}>
+              <TrendingUp size={19} color={colors.success} strokeWidth={1.75} />
             </View>
             <Text style={[styles.statValue, styles.statValueSmall]}>
               {formatFCFA(totals.totalRevenue)}
@@ -245,7 +249,7 @@ export default function SellerHomeScreen() {
         <View style={styles.salesCard}>
           {recentSales.length === 0 ? (
             <View style={styles.emptySales}>
-              <ScanLine size={28} color={`${colors.stone}50`} strokeWidth={1.25} />
+              <ScanLine size={28} color={colors.goldMuted} strokeWidth={1.25} />
               <Text style={styles.emptySalesText}>Aucune vente pour le moment</Text>
             </View>
           ) : (
@@ -279,9 +283,11 @@ export default function SellerHomeScreen() {
                   </View>
                   <View style={styles.saleRight}>
                     <Text style={styles.salePrice}>{formatFCFA(sale.total_price)}</Text>
-                    <Text style={[styles.saleStatus, { color: statusMeta.color }]}>
-                      {statusMeta.label}
-                    </Text>
+                    <View style={[styles.saleStatusChip, { backgroundColor: `${statusMeta.color}1A` }]}>
+                      <Text style={[styles.saleStatus, { color: statusMeta.color }]}>
+                        {statusMeta.label}
+                      </Text>
+                    </View>
                   </View>
                 </Pressable>
               );
@@ -299,13 +305,13 @@ export default function SellerHomeScreen() {
           accessibilityLabel="Creer un evenement"
         >
           <LinearGradient
-            colors={[colors.terracotta, colors.terracottaSoft]}
+            colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.createCtaGradient}
           >
             <View style={styles.createCtaIcon}>
-              <Plus size={22} color={colors.sand} strokeWidth={2} />
+              <Plus size={22} color={colors.onyx} strokeWidth={2} />
             </View>
             <View style={styles.createCtaTextBlock}>
               <Text style={styles.createCtaTitle}>Creer un evenement</Text>
@@ -313,7 +319,7 @@ export default function SellerHomeScreen() {
                 Billetterie en ligne et paiement Mobile Money
               </Text>
             </View>
-            <ChevronRight size={20} color={colors.sand} strokeWidth={1.75} />
+            <ChevronRight size={20} color={colors.onyx} strokeWidth={1.75} />
           </LinearGradient>
         </Pressable>
       </ScrollView>
@@ -327,11 +333,11 @@ export default function SellerHomeScreen() {
 
 const styles = StyleSheet.create({
   greeting: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
-    marginTop: -4,
+    color: colors.textMuted,
+    marginTop: -2,
   },
 
   // -- Portefeuille --
@@ -341,21 +347,38 @@ const styles = StyleSheet.create({
     borderRadius: radius.xxl,
     padding: spacing.lg,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: `${colors.gold}2E`,
+    ...shadows.eventCard,
   },
-  walletRing: {
+  walletGlow: {
+    position: 'absolute',
+    top: -110,
+    right: -70,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+  },
+  walletRingLarge: {
     position: 'absolute',
     width: 180,
     height: 180,
     borderRadius: 90,
     borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}22`,
+    borderColor: `${colors.gold}2E`,
     top: -95,
     right: -60,
+  },
+  walletRingSmall: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}26`,
+    top: -38,
+    right: -14,
   },
   walletTopRow: {
     flexDirection: 'row',
@@ -367,10 +390,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   walletLabel: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 16,
-    color: colors.goldSoft,
+    color: colors.goldMuted,
     letterSpacing: 1.8,
     marginLeft: spacing.sm,
   },
@@ -379,18 +402,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
+    ...shadows.goldGlowSoft,
   },
   withdrawText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 13,
     lineHeight: 18,
     color: colors.onyx,
   },
   walletAmount: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 32,
     lineHeight: 42,
-    color: colors.sand,
+    color: colors.goldBright,
     letterSpacing: -0.5,
     marginTop: spacing.md,
   },
@@ -403,22 +427,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   walletFooterValue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.sand,
+    color: colors.text,
   },
   walletFooterLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 16,
-    color: `${colors.sand}A8`,
+    color: colors.textSecondary,
     marginTop: 1,
   },
   walletFooterDivider: {
     width: StyleSheet.hairlineWidth,
     height: 32,
-    backgroundColor: `${colors.sand}30`,
+    backgroundColor: `${colors.text}2B`,
     marginHorizontal: spacing.md,
   },
 
@@ -433,11 +457,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48.5%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.md,
+    ...shadows.card,
   },
   statIcon: {
     width: 36,
@@ -446,12 +471,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
   },
   statValue: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 26,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   statValueSmall: {
@@ -459,10 +486,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   statLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
 
@@ -476,26 +503,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 26,
     letterSpacing: -0.3,
-    color: colors.onyx,
+    color: colors.text,
   },
   seeAllText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.terracotta,
+    color: colors.goldBright,
     letterSpacing: 0.2,
   },
   salesCard: {
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     overflow: 'hidden',
+    ...shadows.card,
   },
   saleRow: {
     flexDirection: 'row',
@@ -505,7 +533,7 @@ const styles = StyleSheet.create({
   },
   saleRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${colors.stone}18`,
+    borderBottomColor: colors.divider,
   },
   saleDot: {
     width: 8,
@@ -518,49 +546,56 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   saleBuyer: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 19,
-    color: colors.onyx,
+    color: colors.text,
   },
   saleEvent: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
   saleMeta: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: `${colors.stone}90`,
+    color: colors.textFaint,
     marginTop: 2,
   },
   saleRight: {
     alignItems: 'flex-end',
   },
   salePrice: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.text,
+  },
+  saleStatusChip: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    marginTop: 3,
+    borderWidth: 1,
+    borderColor: `${colors.gold}22`,
   },
   saleStatus: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
-    marginTop: 2,
   },
   emptySales: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
   },
   emptySalesText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: spacing.sm,
   },
 
@@ -570,11 +605,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 5,
+    ...shadows.goldGlow,
   },
   createCtaGradient: {
     flexDirection: 'row',
@@ -585,7 +616,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: `${colors.sand}26`,
+    backgroundColor: 'rgba(10,9,8,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -594,17 +625,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   createCtaTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.sand,
+    color: colors.onyx,
     letterSpacing: -0.2,
   },
   createCtaSub: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: `${colors.sand}A8`,
+    color: 'rgba(10,9,8,0.65)',
     marginTop: 2,
   },
 });

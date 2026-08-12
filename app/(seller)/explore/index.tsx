@@ -10,6 +10,7 @@
  *
  * Donnees : store vendeur (mock en attendant Supabase).
  * La creation passe par l'onglet "Vendre" (wizard).
+ * Design system « Noir & Or » : cartes elevees, statuts colores, or pour les CTA.
  */
 
 import { useState, useCallback } from 'react';
@@ -25,6 +26,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Plus,
   MapPin,
@@ -37,7 +39,7 @@ import {
 
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { colors, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,9 +52,9 @@ import type { MockSellerEvent } from '@/data/mock';
 // ============================================================
 
 const STATUS_META = {
-  published: { label: 'En ligne', color: colors.forest, bg: `${colors.forest}12` },
-  draft: { label: 'Brouillon', color: colors.goldDark, bg: `${colors.goldDark}12` },
-  completed: { label: 'Termine', color: colors.stone, bg: `${colors.stone}12` },
+  published: { label: 'En ligne', color: colors.success, bg: `${colors.success}1A` },
+  draft: { label: 'Brouillon', color: colors.warning, bg: `${colors.warning}1A` },
+  completed: { label: 'Termine', color: colors.textMuted, bg: 'rgba(124,116,102,0.14)' },
 } as const;
 
 type EventFilter = 'all' | 'published' | 'draft' | 'completed';
@@ -91,7 +93,7 @@ export default function SellerExploreScreen() {
   // -- Styles dynamiques --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   };
 
   const headerStyle: ViewStyle = {
@@ -104,10 +106,10 @@ export default function SellerExploreScreen() {
   };
 
   const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 24,
     lineHeight: 32,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.4,
   };
 
@@ -138,7 +140,14 @@ export default function SellerExploreScreen() {
               accessibilityRole="button"
               accessibilityLabel="Nouvel evenement"
             >
-              <Plus size={20} color={colors.sand} strokeWidth={2} />
+              <LinearGradient
+                colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.newButtonGradient}
+              >
+                <Plus size={20} color={colors.onyx} strokeWidth={2} />
+              </LinearGradient>
             </Pressable>
             <Pressable
               onPress={() => {
@@ -176,7 +185,7 @@ export default function SellerExploreScreen() {
             >
               <LayoutGrid
                 size={18}
-                color={viewMode === 'grid' ? colors.sand : colors.stone}
+                color={viewMode === 'grid' ? colors.onyx : colors.textMuted}
                 strokeWidth={1.75}
               />
             </Pressable>
@@ -192,7 +201,7 @@ export default function SellerExploreScreen() {
             >
               <List
                 size={19}
-                color={viewMode === 'list' ? colors.sand : colors.stone}
+                color={viewMode === 'list' ? colors.onyx : colors.textMuted}
                 strokeWidth={1.75}
               />
             </Pressable>
@@ -239,7 +248,7 @@ export default function SellerExploreScreen() {
             ============================================ */}
         {filteredEvents.length === 0 ? (
           <EmptyState
-            icon={<CalendarDays size={34} color={colors.terracotta} strokeWidth={1.25} />}
+            icon={<CalendarDays size={34} color={colors.gold} strokeWidth={1.25} />}
             title="Aucun evenement ici"
             description="Creez votre premier evenement pour lancer votre billetterie."
             actionLabel="Creer un evenement"
@@ -294,7 +303,7 @@ function EventRow({ event }: { readonly event: MockSellerEvent }) {
         />
         <View pointerEvents="none" style={styles.imageShade} />
 
-        <View style={[styles.statusChip, { backgroundColor: statusMeta.bg }]}>
+        <View style={[styles.statusChip, { backgroundColor: 'rgba(10,9,8,0.62)' }]}>
           <Text style={[styles.statusChipText, { color: statusMeta.color }]}>
             {statusMeta.label}
           </Text>
@@ -312,10 +321,10 @@ function EventRow({ event }: { readonly event: MockSellerEvent }) {
         </Text>
 
         <View style={styles.eventMetaRow}>
-          <CalendarDays size={13} color={colors.stone} strokeWidth={1.75} />
+          <CalendarDays size={13} color={colors.goldMuted} strokeWidth={1.75} />
           <Text style={styles.eventMetaText}>{formatShortDate(event.start_date)}</Text>
           <View style={styles.metaDot} />
-          <MapPin size={13} color={colors.stone} strokeWidth={1.75} />
+          <MapPin size={13} color={colors.goldMuted} strokeWidth={1.75} />
           <Text style={styles.eventMetaText} numberOfLines={1}>
             {event.city} · {event.venue}
           </Text>
@@ -328,24 +337,24 @@ function EventRow({ event }: { readonly event: MockSellerEvent }) {
           <Text style={styles.progressValue}>{fillRate}%</Text>
         </View>
         <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${fillRate}%`,
-                backgroundColor:
-                  fillRate >= 80 ? colors.terracotta : colors.forest,
-              },
-            ]}
+          <LinearGradient
+            colors={
+              fillRate >= 80
+                ? ([...gradients.terracotta] as unknown as readonly [string, string, ...string[]])
+                : ([...gradients.gold] as unknown as readonly [string, string, ...string[]])
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${fillRate}%` }]}
           />
         </View>
 
         <View style={styles.eventFooter}>
           <View style={styles.eventFooterItem}>
-            <Ticket size={14} color={colors.forest} strokeWidth={1.75} />
+            <Ticket size={14} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.eventFooterText}>{event.tickets_sold} billets</Text>
           </View>
-          <ChevronRight size={18} color={`${colors.stone}70`} strokeWidth={1.5} />
+          <ChevronRight size={18} color={colors.textFaint} strokeWidth={1.5} />
         </View>
       </View>
     </Pressable>
@@ -380,8 +389,15 @@ function EventGridCard({ event }: { readonly event: MockSellerEvent }) {
           transition={200}
           cachePolicy="memory-disk"
         />
-        <View style={[styles.gridStatusChip, { backgroundColor: statusMeta.color }]}>
-          <Text style={styles.gridStatusText}>{statusMeta.label}</Text>
+        <View
+          style={[
+            styles.gridStatusChip,
+            { backgroundColor: 'rgba(10,9,8,0.62)', borderColor: `${statusMeta.color}55` },
+          ]}
+        >
+          <Text style={[styles.gridStatusText, { color: statusMeta.color }]}>
+            {statusMeta.label}
+          </Text>
         </View>
       </View>
 
@@ -391,35 +407,35 @@ function EventGridCard({ event }: { readonly event: MockSellerEvent }) {
         </Text>
 
         <View style={styles.gridMetaRow}>
-          <CalendarDays size={11} color={colors.stone} strokeWidth={1.75} />
+          <CalendarDays size={11} color={colors.goldMuted} strokeWidth={1.75} />
           <Text style={styles.gridMetaText} numberOfLines={1}>
             {formatShortDate(event.start_date)}
           </Text>
         </View>
         <View style={styles.gridMetaRow}>
-          <MapPin size={11} color={colors.stone} strokeWidth={1.75} />
+          <MapPin size={11} color={colors.goldMuted} strokeWidth={1.75} />
           <Text style={styles.gridMetaText} numberOfLines={1}>
             {event.city}
           </Text>
         </View>
 
         <View style={styles.gridProgressTrack}>
-          <View
-            style={[
-              styles.gridProgressFill,
-              {
-                width: `${fillRate}%`,
-                backgroundColor:
-                  fillRate >= 80 ? colors.terracotta : colors.forest,
-              },
-            ]}
+          <LinearGradient
+            colors={
+              fillRate >= 80
+                ? ([...gradients.terracotta] as unknown as readonly [string, string, ...string[]])
+                : ([...gradients.gold] as unknown as readonly [string, string, ...string[]])
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.gridProgressFill, { width: `${fillRate}%` }]}
           />
         </View>
 
         <View style={styles.gridFooter}>
           <Text style={styles.gridRevenue}>{formatFCFA(event.revenue)}</Text>
           <View style={styles.gridTicketsRow}>
-            <Ticket size={12} color={colors.stone} strokeWidth={1.75} />
+            <Ticket size={12} color={colors.goldMuted} strokeWidth={1.75} />
             <Text style={styles.gridTicketsText}>{event.tickets_sold}</Text>
           </View>
         </View>
@@ -438,10 +454,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   headerCount: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
   headerRight: {
@@ -453,14 +469,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: colors.terracotta,
+    overflow: 'hidden',
+    ...shadows.goldGlowSoft,
+  },
+  newButtonGradient: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
   },
 
   // -- Barre d'outils (mode d'affichage) --
@@ -473,9 +488,11 @@ const styles = StyleSheet.create({
   },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.full,
     padding: 3,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
   },
   viewToggleButton: {
     width: 40,
@@ -485,18 +502,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   viewToggleActive: {
-    backgroundColor: colors.forest,
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    backgroundColor: colors.gold,
+    ...shadows.goldGlowSoft,
   },
   resultCount: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
   },
 
   // -- Filtres --
@@ -515,22 +528,22 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.glass,
   },
   filterChipActive: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+    borderColor: `${colors.gold}55`,
   },
   filterText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   filterTextActive: {
-    color: colors.sand,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
 
   // -- Liste --
@@ -548,16 +561,12 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     width: '48.5%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.card,
   },
   gridImageWrap: {
     position: 'relative',
@@ -572,23 +581,23 @@ const styles = StyleSheet.create({
     left: spacing.xs + 2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm - 2,
-    paddingVertical: 2,
+    paddingVertical: 3,
+    borderWidth: 1,
   },
   gridStatusText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 9,
     lineHeight: 12,
-    color: colors.white,
     letterSpacing: 0.3,
   },
   gridBody: {
     padding: spacing.sm + 2,
   },
   gridTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
     minHeight: 36,
   },
@@ -599,16 +608,16 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   gridMetaText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.stone,
+    color: colors.textMuted,
     flexShrink: 1,
   },
   gridProgressTrack: {
     height: 4,
     borderRadius: 2,
-    backgroundColor: `${colors.forest}10`,
+    backgroundColor: `${colors.gold}14`,
     overflow: 'hidden',
     marginTop: spacing.sm,
   },
@@ -623,10 +632,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   gridRevenue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.onyx,
+    color: colors.goldBright,
     flexShrink: 1,
   },
   gridTicketsRow: {
@@ -635,22 +644,18 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   gridTicketsText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
+    color: colors.textMuted,
   },
   eventCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.card,
   },
   eventImageWrap: {
     position: 'relative',
@@ -665,7 +670,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 46,
-    backgroundColor: `${colors.onyx}33`,
+    backgroundColor: 'rgba(10,9,8,0.45)',
   },
   statusChip: {
     position: 'absolute',
@@ -673,10 +678,12 @@ const styles = StyleSheet.create({
     left: spacing.sm,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 3,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
   },
   statusChipText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 0.4,
@@ -685,26 +692,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    backgroundColor: `${colors.onyx}59`,
+    backgroundColor: 'rgba(10,9,8,0.62)',
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   revenueChipText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.white,
+    color: colors.goldBright,
     letterSpacing: 0.3,
   },
   eventBody: {
     padding: spacing.md,
   },
   eventTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   eventMetaRow: {
@@ -714,17 +723,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eventMetaText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
+    color: colors.textMuted,
     flexShrink: 1,
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: `${colors.stone}60`,
+    backgroundColor: colors.textFaint,
     marginHorizontal: 3,
   },
   progressHeader: {
@@ -734,21 +743,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm + 2,
   },
   progressLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
+    color: colors.textMuted,
   },
   progressValue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.onyx,
+    color: colors.text,
   },
   progressTrack: {
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: `${colors.forest}10`,
+    backgroundColor: `${colors.gold}14`,
     overflow: 'hidden',
     marginTop: 4,
   },
@@ -768,9 +777,9 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   eventFooterText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.forest,
+    color: colors.goldBright,
   },
 });

@@ -9,6 +9,7 @@
  * 5. CTA "Scanner un billet" (demo : marque la prochaine vente comme scannee)
  *
  * Donnees : store vendeur (mock en attendant Supabase).
+ * Design system « Noir & Or » : bandeau hero gradue, statuts colores, CTA or.
  */
 
 import { useState, useCallback } from 'react';
@@ -34,7 +35,7 @@ import {
 
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { colors, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,9 +49,9 @@ import { useRouter } from 'expo-router';
 // ============================================================
 
 const SALE_STATUS_META = {
-  completed: { label: 'Paye', color: colors.forest },
-  pending: { label: 'En attente', color: colors.goldDark },
-  failed: { label: 'Echoue', color: colors.terracotta },
+  completed: { label: 'Paye', color: colors.success },
+  pending: { label: 'En attente', color: colors.warning },
+  failed: { label: 'Echoue', color: colors.danger },
 } as const;
 
 type SaleFilter = 'all' | 'completed' | 'pending';
@@ -99,7 +100,7 @@ export default function SellerTicketsScreen() {
   // -- Styles dynamiques --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   };
 
   const headerStyle: ViewStyle = {
@@ -112,10 +113,10 @@ export default function SellerTicketsScreen() {
   };
 
   const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 24,
     lineHeight: 32,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.4,
   };
 
@@ -159,21 +160,22 @@ export default function SellerTicketsScreen() {
             2. BANDEAU DE STATISTIQUES
             ============================================ */}
         <LinearGradient
-          colors={[colors.forestDeep, colors.forestMid, colors.forest]}
+          colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={styles.summaryCard}
         >
+          <View pointerEvents="none" style={styles.summaryGlow} />
           <View pointerEvents="none" style={styles.summaryRing} />
 
           <View style={styles.summaryColumn}>
-            <Ticket size={17} color={colors.goldSoft} strokeWidth={1.75} />
+            <Ticket size={17} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.summaryValue}>{sales.length}</Text>
             <Text style={styles.summaryLabel}>Ventes</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryColumn}>
-            <Wallet size={17} color={colors.goldSoft} strokeWidth={1.75} />
+            <Wallet size={17} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={[styles.summaryValue, styles.summaryValueSmall]}>
               {formatFCFA(totalRevenue)}
             </Text>
@@ -181,7 +183,7 @@ export default function SellerTicketsScreen() {
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryColumn}>
-            <Clock3 size={17} color={colors.goldSoft} strokeWidth={1.75} />
+            <Clock3 size={17} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.summaryValue}>{pendingCount}</Text>
             <Text style={styles.summaryLabel}>En attente</Text>
           </View>
@@ -219,7 +221,7 @@ export default function SellerTicketsScreen() {
             ============================================ */}
         {filteredSales.length === 0 ? (
           <EmptyState
-            icon={<ScanLine size={34} color={colors.terracotta} strokeWidth={1.25} />}
+            icon={<ScanLine size={34} color={colors.gold} strokeWidth={1.25} />}
             title="Aucune vente ici"
             description="Les billets vendus apparaitront ici des le premier paiement."
           />
@@ -241,13 +243,13 @@ export default function SellerTicketsScreen() {
           accessibilityLabel="Scanner un billet"
         >
           <LinearGradient
-            colors={[colors.forestDeep, colors.forestMid]}
+            colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.scanCtaGradient}
           >
             <View style={styles.scanCtaIcon}>
-              <ScanLine size={24} color={colors.forestDeep} strokeWidth={1.75} />
+              <ScanLine size={24} color={colors.onyx} strokeWidth={1.75} />
             </View>
             <View style={styles.scanCtaTextBlock}>
               <Text style={styles.scanCtaTitle}>Scanner un billet</Text>
@@ -255,7 +257,7 @@ export default function SellerTicketsScreen() {
                 Validez l'entree de vos clients a l'evenement
               </Text>
             </View>
-            <ChevronRight size={20} color={colors.sand} strokeWidth={1.75} />
+            <ChevronRight size={20} color={colors.onyx} strokeWidth={1.75} />
           </LinearGradient>
         </Pressable>
       </ScrollView>
@@ -282,7 +284,12 @@ function SaleRow({ sale }: { readonly sale: MockSellerSale }) {
           <Text style={styles.buyerName} numberOfLines={1}>
             {sale.buyer_name}
           </Text>
-          <View style={[styles.statusChip, { backgroundColor: `${statusMeta.color}12` }]}>
+          <View
+            style={[
+              styles.statusChip,
+              { backgroundColor: `${statusMeta.color}1A`, borderColor: `${statusMeta.color}38` },
+            ]}
+          >
             <Text style={[styles.statusText, { color: statusMeta.color }]}>
               {statusMeta.label}
             </Text>
@@ -300,7 +307,7 @@ function SaleRow({ sale }: { readonly sale: MockSellerSale }) {
           <View style={styles.salePriceRow}>
             {sale.is_scanned ? (
               <View style={styles.scannedBadge}>
-                <BadgeCheck size={13} color={colors.forest} strokeWidth={1.75} />
+                <BadgeCheck size={13} color={colors.success} strokeWidth={1.75} />
                 <Text style={styles.scannedText}>Scanne</Text>
               </View>
             ) : null}
@@ -318,10 +325,10 @@ function SaleRow({ sale }: { readonly sale: MockSellerSale }) {
 
 const styles = StyleSheet.create({
   headerCount: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
 
@@ -335,11 +342,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: `${colors.gold}2E`,
+    ...shadows.eventCard,
+  },
+  summaryGlow: {
+    position: 'absolute',
+    top: -110,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(216,180,90,0.10)',
   },
   summaryRing: {
     position: 'absolute',
@@ -347,7 +361,7 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 75,
     borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}22`,
+    borderColor: `${colors.gold}2E`,
     top: -80,
     right: -50,
   },
@@ -358,13 +372,13 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: StyleSheet.hairlineWidth,
     height: 44,
-    backgroundColor: `${colors.sand}30`,
+    backgroundColor: `${colors.text}2B`,
   },
   summaryValue: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 19,
     lineHeight: 25,
-    color: colors.sand,
+    color: colors.goldBright,
     marginTop: spacing.xs,
   },
   summaryValueSmall: {
@@ -372,10 +386,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   summaryLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 10,
     lineHeight: 14,
-    color: `${colors.sand}A8`,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 1,
   },
@@ -393,22 +407,22 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.glass,
   },
   filterChipActive: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+    borderColor: `${colors.gold}55`,
   },
   filterText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   filterTextActive: {
-    color: colors.sand,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
 
   // -- Liste --
@@ -418,25 +432,28 @@ const styles = StyleSheet.create({
   },
   saleCard: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.md,
+    ...shadows.card,
   },
   buyerAvatar: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}33`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buyerInitial: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 17,
     lineHeight: 22,
-    color: colors.terracotta,
+    color: colors.goldBright,
   },
   saleBody: {
     flex: 1,
@@ -448,10 +465,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyerName: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 19,
-    color: colors.onyx,
+    color: colors.text,
     flex: 1,
     marginRight: spacing.sm,
   },
@@ -459,17 +476,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
+    borderWidth: 1,
   },
   statusText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
   },
   saleEvent: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 2,
   },
   saleBottomRow: {
@@ -479,10 +497,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   saleMeta: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: `${colors.stone}90`,
+    color: colors.textFaint,
     flex: 1,
   },
   salePriceRow: {
@@ -494,22 +512,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginRight: spacing.sm,
-    backgroundColor: `${colors.forest}10`,
+    backgroundColor: `${colors.success}1A`,
+    borderWidth: 1,
+    borderColor: `${colors.success}38`,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
   },
   scannedText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.forest,
+    color: colors.success,
   },
   salePrice: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.text,
   },
 
   // -- CTA scan --
@@ -518,11 +538,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 5,
+    ...shadows.goldGlow,
   },
   scanCtaGradient: {
     flexDirection: 'row',
@@ -533,7 +549,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.gold,
+    backgroundColor: 'rgba(10,9,8,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -542,17 +558,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   scanCtaTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.sand,
+    color: colors.onyx,
     letterSpacing: -0.2,
   },
   scanCtaSub: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: `${colors.sand}A8`,
+    color: 'rgba(10,9,8,0.65)',
     marginTop: 2,
   },
 });

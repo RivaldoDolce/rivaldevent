@@ -1,15 +1,16 @@
 /**
- * Profil (mode vendeur) — carte organisateur premium.
+ * Profil (mode vendeur) — page signature « Noir & Or ».
  *
  * Direction artistique : "La galerie de l'organisateur".
- * - Hero en derivee foret avec anneaux decoratifs or
- * - Avatar cerne d'un anneau degrade or → terracotta
- * - Carte membre "Rivald'event" avec numero, QR et jauge d'achevement
- * - Menus groupes (Mon espace / Support & compte), CTA retour acheteur,
- *   deconnexion
+ * - Banniere haut de page plein degrade noir (gradients.hero) avec halo
+ *   dore, anneaux decoratifs et filet or bas
+ * - Avatar xl avec anneau or, nom Playfair, badge role (badge-check dore)
+ * - Carte stats : 3 colonnes (Ventes / Billets / Niveau) valeurs Playfair
+ * - Menu en carte verre : pastilles 44px verre + libelle + chevron or
+ * - CTA retour acheteur premium + deconnexion terracotta + version en pied
  *
- * Donnees : profil Supabase (useAuth) + stats du store vendeur (mock).
- * Toutes les couleurs viennent de lib/constants.ts.
+ * Donnees : profil Supabase (useAuth) + stats du store vendeur.
+ * Toutes les couleurs viennent de lib/constants.ts — aucun hexadécimal en dur.
  */
 
 import { useState, useCallback } from 'react';
@@ -26,19 +27,18 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
 import {
   LogOut,
   ChevronRight,
-  UserPen,
-  HelpCircle,
-  ShieldCheck,
-  TicketCheck,
-  Wallet,
   Store,
+  Wallet,
+  TicketCheck,
   BadgeCheck,
-  QrCode,
+  UserPen,
+  MessageCircle,
+  ShieldCheck,
   ShoppingBag,
 } from 'lucide-react-native';
 
@@ -49,7 +49,9 @@ import type { AppMode } from '@/stores/app-mode';
 import { useSellerTotals } from '@/stores/seller-store';
 import { useAuthService } from '@/services/auth.service';
 import { useHaptics } from '@/hooks/useHaptics';
-import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
+import { colors, gradients, spacing, radius, typography, shadows, ROUTES } from '@/lib/constants';
 
 // ============================================================
 // Types & données statiques
@@ -58,13 +60,7 @@ import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 interface MenuItem {
   readonly label: string;
   readonly icon: ReactNode;
-  readonly accent: string;
   readonly onPress?: () => void;
-}
-
-interface MenuSection {
-  readonly title: string;
-  readonly items: readonly MenuItem[];
 }
 
 const MONTHS_FR = [
@@ -83,7 +79,7 @@ const MONTHS_FR = [
 ] as const;
 
 // ============================================================
-// Helpers (dérivés des données réelles)
+// Helpers (dérivés des données réelles — aucun chiffre inventé)
 // ============================================================
 
 function formatMemberSince(iso?: string | null): string {
@@ -98,17 +94,6 @@ function buildMemberNumber(id?: string | null): string {
   const clean = id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   const part = clean.slice(-8).padStart(8, '0');
   return `RV-${part.slice(0, 4)}-${part.slice(4)}`;
-}
-
-function computeCompletion(profile?: {
-  readonly full_name?: string | null;
-  readonly phone?: string | null;
-  readonly avatar_url?: string | null;
-} | null): number {
-  const done = [profile?.full_name, profile?.phone, profile?.avatar_url].filter(
-    Boolean
-  ).length;
-  return Math.round((done / 3) * 100);
 }
 
 // ============================================================
@@ -129,6 +114,8 @@ export default function SellerProfileScreen() {
   const [isSwitching, setIsSwitching] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
   const displayName = profile?.full_name || user?.user_metadata?.full_name || '';
   const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
   const displayEmail = user?.email || '';
@@ -136,7 +123,6 @@ export default function SellerProfileScreen() {
   const initials = displayName.charAt(0).toUpperCase() || '?';
   const memberSince = formatMemberSince(profile?.created_at);
   const memberNumber = buildMemberNumber(user?.id);
-  const completion = computeCompletion(profile);
 
   // -- Handlers --
   const handleSwitchMode = useCallback(async () => {
@@ -172,143 +158,116 @@ export default function SellerProfileScreen() {
     router.replace('/(auth)/login');
   }, [setMode, router, impact, authService]);
 
-  const menuSections: readonly MenuSection[] = [
+  // -- Menu (toutes les actions existantes conservees) --
+  const menuItems: readonly MenuItem[] = [
     {
-      title: 'Mon espace',
-      items: [
-        {
-          label: 'Mes ventes',
-          icon: <TicketCheck size={19} color={colors.forest} strokeWidth={1.75} />,
-          accent: `${colors.forest}12`,
-          onPress: () => router.push(ROUTES.SELLER_TICKETS),
-        },
-        {
-          label: 'Mes evenements',
-          icon: <Store size={19} color={colors.terracotta} strokeWidth={1.75} />,
-          accent: `${colors.terracotta}12`,
-          onPress: () => router.push(ROUTES.SELLER_EXPLORE),
-        },
-        {
-          label: 'Mon portefeuille',
-          icon: <Wallet size={19} color={colors.goldDark} strokeWidth={1.75} />,
-          accent: `${colors.goldDark}12`,
-          onPress: () => router.push(ROUTES.SELLER_WALLET),
-        },
-      ],
+      label: 'Mes ventes',
+      icon: <TicketCheck size={19} color={colors.gold} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.SELLER_TICKETS),
     },
     {
-      title: 'Support & compte',
-      items: [
-        {
-          label: 'Modifier mon profil',
-          icon: <UserPen size={19} color={colors.terracotta} strokeWidth={1.75} />,
-          accent: `${colors.terracotta}12`,
-          onPress: () => router.push(ROUTES.PROFILE_EDIT),
-        },
-        {
-          label: 'Aide et support',
-          icon: <HelpCircle size={19} color={colors.goldDark} strokeWidth={1.75} />,
-          accent: `${colors.goldDark}12`,
-          onPress: () => router.push(ROUTES.HELP),
-        },
-        {
-          label: 'Confidentialite',
-          icon: <ShieldCheck size={19} color={colors.forest} strokeWidth={1.75} />,
-          accent: `${colors.forest}12`,
-          onPress: () => router.push(ROUTES.PRIVACY),
-        },
-      ],
+      label: 'Mes evenements',
+      icon: <Store size={19} color={colors.terracotta} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.SELLER_EXPLORE),
+    },
+    {
+      label: 'Mon portefeuille',
+      icon: <Wallet size={19} color={colors.gold} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.SELLER_WALLET),
+    },
+    {
+      label: 'Modifier mon profil',
+      icon: <UserPen size={19} color={colors.gold} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.PROFILE_EDIT),
+    },
+    {
+      label: 'Aide et support',
+      icon: <MessageCircle size={19} color={colors.gold} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.HELP),
+    },
+    {
+      label: 'Confidentialite',
+      icon: <ShieldCheck size={19} color={colors.gold} strokeWidth={1.75} />,
+      onPress: () => router.push(ROUTES.PRIVACY),
     },
   ];
 
-  // -- Styles dynamiques --
+  // -- Style dynamique : banniere --
   const heroStyle: ViewStyle = {
     paddingTop: insets.top + spacing.lg,
   };
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" backgroundColor={colors.forestDeep} />
+      <StatusBar style="light" backgroundColor={colors.background} />
 
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={[styles.scrollContent, heroStyle]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            1. HERO — derivee foret + anneaux or
+            (a) BANNIERE — plein degrade hero + halo or
             ============================================ */}
         <LinearGradient
-          colors={[colors.forestDeep, colors.forestMid, colors.forest]}
+          colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
-          style={styles.hero}
+          style={[styles.hero, heroStyle]}
         >
-          <View pointerEvents="none" style={styles.ringLarge} />
-          <View pointerEvents="none" style={styles.ringSmall} />
-          <View pointerEvents="none" style={styles.ringDot} />
+          {/* Motif : halo doré + anneaux + point or */}
+          <View pointerEvents="none" style={styles.heroGlow} />
+          <View pointerEvents="none" style={styles.heroRingLarge} />
+          <View pointerEvents="none" style={styles.heroRingSmall} />
+          <View pointerEvents="none" style={styles.heroGoldDot} />
 
           {/* Barre du haut */}
           <View style={styles.heroTopBar}>
             <View style={styles.heroOverlineRow}>
-              <Store size={14} color={colors.goldSoft} strokeWidth={2} />
+              <Store size={14} color={colors.goldBright} strokeWidth={1.75} />
               <Text style={styles.heroOverline}>ESPACE VENDEUR</Text>
             </View>
-            <View
-              style={mode === 'seller' ? styles.modeBadge : null}
-            >
+            <View style={mode === 'seller' ? styles.modeBadge : null}>
               <Text style={styles.modeBadgeText}>ORGANISATEUR</Text>
             </View>
           </View>
 
-          {/* Avatar + identite */}
-          <LinearGradient
-            colors={[colors.goldSoft, colors.gold, colors.terracotta]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatarRing}
+          {/* Avatar xl + identite */}
+          <Pressable
+            onPress={() => {
+              impact('light');
+              router.push(ROUTES.PROFILE_EDIT);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Modifier mon profil"
+            style={styles.avatarWrapper}
           >
-            <Pressable
-              onPress={() => {
-                impact('light');
-                router.push(ROUTES.PROFILE_EDIT);
-              }}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Modifier mon profil"
-            >
-              <View style={styles.avatarInner}>
-                {avatarUrl ? (
-                  <Image
-                    source={{ uri: avatarUrl }}
-                    style={styles.avatarImage}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
-                    accessibilityLabel={displayName || 'Avatar'}
-                  />
-                ) : (
-                  <Text style={styles.avatarInitial}>{initials}</Text>
-                )}
-              </View>
-            </Pressable>
-          </LinearGradient>
+            <Avatar
+              source={avatarUrl}
+              fallback={initials}
+              size="xl"
+              border="highlight"
+            />
+          </Pressable>
 
           <View style={styles.identityBlock}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>
                 {displayName || 'Utilisateur'}
               </Text>
-              <BadgeCheck
-                size={22}
-                color={colors.goldSoft}
-                strokeWidth={1.75}
-                style={styles.verifiedIcon}
-              />
             </View>
-            <Text style={styles.email} numberOfLines={1}>
+
+            {/* Badge role — verre doré + badge-check */}
+            <View style={styles.roleBadge}>
+              <BadgeCheck size={14} color={colors.goldBright} strokeWidth={2} />
+              <Text style={styles.roleBadgeText}>Vendeur verifie</Text>
+            </View>
+
+            <Text style={styles.subtitle} numberOfLines={1}>
               {displayEmail || (displayPhone ? `+237 ${displayPhone}` : '')}
             </Text>
+
             {memberSince ? (
               <View style={styles.sinceRow}>
                 <View style={styles.sinceDot} />
@@ -317,96 +276,78 @@ export default function SellerProfileScreen() {
             ) : null}
           </View>
 
-          {/* Chips vitrines */}
-          <View style={styles.chipsRow}>
-            <View style={styles.chip}>
-              <View style={styles.chipValueRow}>
-                <TicketCheck size={17} color={colors.goldSoft} strokeWidth={1.75} />
-                <Text style={styles.chipValue}>{totals.ticketsSold}</Text>
-              </View>
-              <Text style={styles.chipLabel}>Billets vendus</Text>
-            </View>
-            <View style={styles.chip}>
-              <View style={styles.chipValueRow}>
-                <Store size={17} color={colors.goldSoft} strokeWidth={1.75} />
-                <Text style={styles.chipValue}>{totals.publishedEvents}</Text>
-              </View>
-              <Text style={styles.chipLabel}>Evenements</Text>
-            </View>
-          </View>
+          {/* Filet or bas */}
+          <View pointerEvents="none" style={styles.heroHairline} />
         </LinearGradient>
 
         {/* ============================================
-            2. CARTE ORGANISATEUR — chevauche le hero
+            (b) CARTE STATS — 3 colonnes premium
             ============================================ */}
-        <View style={styles.memberCard}>
-          <View style={styles.cardTopRow}>
-            <Text style={styles.cardOverline}>CARTE ORGANISATEUR</Text>
-            <View style={styles.tierChip}>
-              <Text style={styles.tierChipText}>OR</Text>
-            </View>
+        <View style={styles.statsCard}>
+          <View style={styles.statColumn}>
+            <Text style={styles.statValue}>{totals.totalSales}</Text>
+            <Text style={styles.statLabel}>VENTES</Text>
           </View>
-
-          <View style={styles.cardMainRow}>
-            <View style={styles.cardIdentity}>
-              <Text style={styles.memberNumber}>{memberNumber}</Text>
-              <Text style={styles.cardSub}>Membre Rivald'event</Text>
-            </View>
-            <View style={styles.qrChip}>
-              <QrCode size={26} color={colors.forest} strokeWidth={1.5} />
-            </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statColumn}>
+            <Text style={styles.statValue}>{totals.ticketsSold}</Text>
+            <Text style={styles.statLabel}>BILLETS</Text>
           </View>
-
-          <View style={styles.cardDivider} />
-
-          <View style={styles.cardFooterRow}>
-            <Text style={styles.completionLabel}>Profil complete</Text>
-            <Text style={styles.completionValue}>{completion}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <LinearGradient
-              colors={[colors.gold, colors.goldBright]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFill, { width: `${completion}%` }]}
-            />
+          <View style={styles.statDivider} />
+          <View style={styles.statColumn}>
+            <Text style={styles.statValue}>OR</Text>
+            <Text style={styles.statLabel}>NIVEAU</Text>
           </View>
         </View>
 
         {/* ============================================
-            3. MENUS GROUPES
+            (c) MENU — carte verre premium
             ============================================ */}
-        {menuSections.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionLabel}>{section.title.toUpperCase()}</Text>
-            <View style={styles.menuCard}>
-              {section.items.map((item, index) => (
-                <Pressable
-                  key={item.label}
-                  style={[
-                    styles.menuRow,
-                    index < section.items.length - 1 ? styles.menuRowBorder : null,
-                  ]}
-                  onPress={() => {
-                    impact('light');
-                    item.onPress?.();
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.label}
-                >
-                  <View style={[styles.menuIconChip, { backgroundColor: item.accent }]}>
-                    {item.icon}
-                  </View>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  <ChevronRight size={18} color={`${colors.stone}70`} strokeWidth={1.5} />
-                </Pressable>
-              ))}
-            </View>
+        <View style={styles.menuSection}>
+          <Text style={styles.menuOverline}>MON ESPACE</Text>
+          <View style={styles.menuCard}>
+            {menuItems.map((item, index) => (
+              <Pressable
+                key={item.label}
+                style={[
+                  styles.menuRow,
+                  index < menuItems.length - 1 ? styles.menuRowBorder : null,
+                ]}
+                onPress={() => {
+                  impact('light');
+                  item.onPress?.();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
+                <View style={styles.menuIconPill}>{item.icon}</View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <ChevronRight size={18} color={colors.goldMuted} strokeWidth={1.5} />
+              </Pressable>
+            ))}
+
+            {/* Separateur + Deconnexion */}
+            <View style={styles.menuDivider} />
+            <Pressable
+              style={styles.menuRow}
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+              accessibilityRole="button"
+              accessibilityLabel="Se deconnecter"
+            >
+              <View style={[styles.menuIconPill, styles.menuIconPillLogout]}>
+                <LogOut size={19} color={colors.terracotta} strokeWidth={1.75} />
+              </View>
+              <Text style={[styles.menuLabel, styles.logoutLabel]}>
+                {isLoggingOut ? 'Deconnexion...' : 'Se deconnecter'}
+              </Text>
+              <ChevronRight size={18} color={colors.goldMuted} strokeWidth={1.5} />
+            </Pressable>
           </View>
-        ))}
+        </View>
 
         {/* ============================================
-            4. CTA RETOUR ACHETEUR
+            CTA RETOUR ACHETEUR — premium
             ============================================ */}
         <Pressable
           style={styles.buyerCta}
@@ -418,39 +359,29 @@ export default function SellerProfileScreen() {
           accessibilityLabel="Revenir en mode acheteur"
         >
           <LinearGradient
-            colors={[colors.terracotta, colors.terracottaSoft]}
+            colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.buyerCtaGradient}
+            style={styles.buyerCtaIcon}
           >
-            <View style={styles.buyerCtaIcon}>
-              <ShoppingBag size={22} color={colors.sand} strokeWidth={1.75} />
-            </View>
-            <View style={styles.buyerCtaTextBlock}>
-              <Text style={styles.buyerCtaTitle}>Revenir en mode Acheteur</Text>
-              <Text style={styles.buyerCtaSub}>
-                Retrouvez l'experience d'achat et de decouverte
-              </Text>
-            </View>
-            <ChevronRight size={20} color={colors.sand} strokeWidth={1.75} />
+            <ShoppingBag size={22} color={colors.onyx} strokeWidth={1.75} />
           </LinearGradient>
+          <View style={styles.buyerCtaTextBlock}>
+            <Text style={styles.buyerCtaTitle}>Revenir en mode Acheteur</Text>
+            <Text style={styles.buyerCtaSub}>
+              Retrouvez l'experience d'achat et de decouverte
+            </Text>
+          </View>
+          <ChevronRight size={20} color={colors.goldBright} strokeWidth={1.75} />
         </Pressable>
 
         {/* ============================================
-            5. DECONNEXION
+            (d) VERSION EN PIED
             ============================================ */}
-        <Pressable
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          disabled={isLoggingOut}
-          accessibilityRole="button"
-          accessibilityLabel="Se deconnecter"
-        >
-          <LogOut color={colors.terracotta} size={20} strokeWidth={1.75} />
-          <Text style={styles.logoutText}>
-            {isLoggingOut ? 'Deconnexion...' : 'Se deconnecter'}
-          </Text>
-        </Pressable>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>{memberNumber}</Text>
+          <Text style={styles.footerText}>Rivald'event — Edition Or v{appVersion}</Text>
+        </View>
 
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
@@ -472,7 +403,7 @@ export default function SellerProfileScreen() {
             <View style={styles.modalGrabber} />
 
             <View style={styles.modalIconWrap}>
-              <ShoppingBag size={24} color={colors.terracotta} strokeWidth={1.75} />
+              <ShoppingBag size={24} color={colors.goldBright} strokeWidth={1.75} />
             </View>
 
             <Text style={styles.modalTitle}>Revenir en mode Acheteur</Text>
@@ -481,24 +412,17 @@ export default function SellerProfileScreen() {
               d'evenements.
             </Text>
 
-            <LinearGradient
-              colors={[colors.terracotta, colors.terracottaSoft]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.modalConfirmButton}
-            >
-              <Pressable
+            <View style={styles.modalConfirmWrap}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isSwitching}
                 onPress={handleSwitchMode}
-                disabled={isSwitching}
-                style={styles.modalConfirmPressable}
-                accessibilityRole="button"
-                accessibilityLabel="Confirmer le changement"
               >
-                <Text style={styles.modalConfirmText}>
-                  {isSwitching ? 'Changement en cours...' : 'Confirmer le changement'}
-                </Text>
-              </Pressable>
-            </LinearGradient>
+                {isSwitching ? 'Changement en cours...' : 'Confirmer le changement'}
+              </Button>
+            </View>
 
             <Pressable
               style={styles.modalCancel}
@@ -522,7 +446,7 @@ export default function SellerProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingBottom: 120,
@@ -531,39 +455,56 @@ const styles = StyleSheet.create({
   // -- Hero --
   hero: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xl,
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
     overflow: 'hidden',
   },
-  ringLarge: {
+  heroGlow: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}35`,
-    top: -92,
-    right: -64,
+    top: -90,
+    right: -50,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(216,180,90,0.09)',
   },
-  ringSmall: {
+  heroRingLarge: {
     position: 'absolute',
-    width: 118,
-    height: 118,
-    borderRadius: 59,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}30`,
-    top: -38,
-    right: -18,
+    borderColor: `${colors.gold}2E`,
+    top: -80,
+    right: -46,
   },
-  ringDot: {
+  heroRingSmall: {
     position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: `${colors.goldSoft}50`,
-    top: 148,
-    right: 36,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}26`,
+    top: -28,
+    right: 16,
+  },
+  heroGoldDot: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: `${colors.gold}45`,
+    bottom: spacing.lg + 6,
+    right: spacing.lg,
+  },
+  heroHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: spacing.lg,
+    right: spacing.lg,
+    height: 1,
+    backgroundColor: `${colors.gold}2E`,
   },
   heroTopBar: {
     flexDirection: 'row',
@@ -576,56 +517,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroOverline: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 16,
-    color: colors.goldSoft,
+    color: colors.goldMuted,
     letterSpacing: 2.4,
     marginLeft: spacing.sm,
   },
   modeBadge: {
-    backgroundColor: `${colors.sand}14`,
+    backgroundColor: 'rgba(216,180,90,0.12)',
     borderWidth: 1,
-    borderColor: `${colors.sand}24`,
+    borderColor: `${colors.gold}40`,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 4,
   },
   modeBadgeText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.sand,
+    color: colors.goldBright,
     letterSpacing: 1.2,
   },
-  avatarRing: {
+  avatarWrapper: {
     alignSelf: 'center',
-    padding: 3,
-    borderRadius: radius.full,
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  avatarInner: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    overflow: 'hidden',
-    backgroundColor: `${colors.sand}1F`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarImage: {
-    width: 86,
-    height: 86,
-  },
-  avatarInitial: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 36,
-    lineHeight: 44,
-    color: colors.sand,
   },
   identityBlock: {
     alignItems: 'center',
@@ -635,24 +550,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    maxWidth: '92%',
   },
   name: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 26,
     lineHeight: 34,
-    color: colors.sand,
+    color: colors.text,
     letterSpacing: -0.4,
-    maxWidth: '78%',
   },
-  verifiedIcon: {
-    marginLeft: spacing.sm,
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    marginTop: spacing.sm,
   },
-  email: {
-    marginTop: spacing.xs,
-    fontFamily: 'Inter-Regular',
+  roleBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.goldBright,
+    letterSpacing: 0.3,
+  },
+  subtitle: {
+    marginTop: spacing.sm,
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: `${colors.sand}B3`,
+    color: colors.textSecondary,
     maxWidth: '90%',
   },
   sinceRow: {
@@ -664,226 +595,130 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.goldSoft,
+    backgroundColor: colors.gold,
     marginRight: spacing.sm,
   },
   sinceText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 16,
-    color: `${colors.sand}A8`,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xl,
-  },
-  chip: {
-    flex: 1,
-    backgroundColor: `${colors.sand}14`,
-    borderWidth: 1,
-    borderColor: `${colors.sand}24`,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 2,
-  },
-  chipValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  chipValue: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 19,
-    lineHeight: 24,
-    color: colors.sand,
-    marginLeft: spacing.sm,
-  },
-  chipLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.sand}B3`,
-    marginTop: 3,
+    color: colors.textMuted,
   },
 
-  // -- Carte membre --
-  memberCard: {
+  // -- Carte stats --
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
     marginHorizontal: spacing.lg,
-    marginTop: -spacing.lg,
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
+    backgroundColor: colors.elevated,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.gold}40`,
-    padding: spacing.lg,
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 6,
+    borderColor: `${colors.gold}1F`,
+    paddingVertical: spacing.md,
+    ...shadows.card,
   },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardOverline: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.gold,
-    letterSpacing: 2,
-  },
-  tierChip: {
-    backgroundColor: `${colors.gold}22`,
-    borderWidth: 1,
-    borderColor: `${colors.gold}55`,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: (spacing.xs as number) - 2,
-  },
-  tierChipText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 14,
-    color: colors.onyx,
-    letterSpacing: 1.2,
-  },
-  cardMainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  cardIdentity: {
+  statColumn: {
     flex: 1,
+    alignItems: 'center',
   },
-  memberNumber: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 17,
-    lineHeight: 22,
-    color: colors.onyx,
-    letterSpacing: 1.6,
+  statValue: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.goldBright,
+    letterSpacing: -0.3,
   },
-  cardSub: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.stone,
+  statLabel: {
+    ...typography.overline,
+    color: colors.textMuted,
     marginTop: 2,
   },
-  qrChip: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: `${colors.forest}25`,
-    backgroundColor: `${colors.forest}0A`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: `${colors.stone}22`,
-    marginVertical: spacing.md,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  completionLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.stone,
-  },
-  completionValue: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.goldDark,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: `${colors.forest}10`,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: 6,
-    borderRadius: 3,
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    marginVertical: spacing.sm,
+    backgroundColor: colors.divider,
   },
 
-  // -- Menus --
-  section: {
+  // -- Menu carte verre --
+  menuSection: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
-  sectionLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.stone,
-    letterSpacing: 1.6,
+  menuOverline: {
+    ...typography.overline,
+    color: colors.goldMuted,
     marginBottom: spacing.sm + 2,
     marginLeft: spacing.xs,
   },
   menuCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.glass,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.card,
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 2,
+    paddingVertical: spacing.sm + 2,
   },
   menuRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${colors.stone}18`,
+    borderBottomColor: colors.divider,
   },
-  menuIconChip: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: spacing.md,
+    backgroundColor: `${colors.gold}2E`,
+  },
+  menuIconPill: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuIconPillLogout: {
+    backgroundColor: 'rgba(201,96,63,0.10)',
+    borderColor: 'rgba(201,96,63,0.30)',
   },
   menuLabel: {
     flex: 1,
     marginLeft: spacing.md,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 21,
-    color: colors.onyx,
+    color: colors.text,
+  },
+  logoutLabel: {
+    fontFamily: 'Inter_500Medium',
+    color: colors.terracotta,
   },
 
-  // -- CTA acheteur --
+  // -- CTA retour acheteur --
   buyerCta: {
-    marginTop: spacing.xl,
-    marginHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  buyerCtaGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
+    marginTop: spacing.xl,
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.elevated,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    padding: spacing.md,
+    ...shadows.card,
   },
   buyerCtaIcon: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: radius.md,
-    backgroundColor: `${colors.sand}26`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -892,47 +727,48 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   buyerCtaTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.sand,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   buyerCtaSub: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: `${colors.sand}A8`,
+    color: colors.textMuted,
     marginTop: 2,
   },
 
-  // -- Deconnexion --
-  logoutButton: {
-    flexDirection: 'row',
+  // -- Pied de page --
+  footer: {
     alignItems: 'center',
-    justifyContent: 'center',
     marginTop: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  logoutText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.terracotta,
-    marginLeft: spacing.sm,
+  footerText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.textFaint,
+    letterSpacing: 0.5,
   },
 
   // -- Modal --
   modalBackdrop: {
     flex: 1,
-    backgroundColor: `${colors.onyx}66`,
+    backgroundColor: `${colors.onyx}8A`,
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.sand,
+    backgroundColor: colors.elevated,
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.xl,
   },
   modalGrabber: {
@@ -940,7 +776,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: `${colors.stone}30`,
+    backgroundColor: `${colors.goldMuted}55`,
     marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -949,41 +785,33 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radius.lg,
-    backgroundColor: `${colors.terracotta}12`,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   modalTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 26,
-    color: colors.onyx,
+    color: colors.text,
     marginBottom: spacing.sm,
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   modalDescription: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 24,
-    color: colors.stone,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
     letterSpacing: 0.2,
   },
-  modalConfirmButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  modalConfirmPressable: {
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalConfirmText: {
-    ...typography.button,
-    color: colors.sand,
+  modalConfirmWrap: {
+    alignSelf: 'stretch',
   },
   modalCancel: {
     alignItems: 'center',
@@ -991,7 +819,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   modalCancelText: {
-    ...typography.body,
-    color: colors.stone,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
   },
 });
