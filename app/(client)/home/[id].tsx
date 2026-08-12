@@ -314,11 +314,14 @@ export default function EventDetail() {
 
   const handleSimilarPress = useCallback((similarId: string) => {
     impact('light');
-    // Navigation contextuelle : si on est dans l'onglet Explorer,
-    // pousser sur la stack Explorer ; sinon sur la stack Home
+    // Navigation contextuelle : on pousse le detail sur la stack de
+    // l'onglet d'origine (Explorer, Favoris ou Home) pour que le
+    // retour revienne toujours a la page de depart.
     const detailRoute = pathname.includes('/explore/')
       ? ROUTES.EXPLORE_EVENT_DETAIL
-      : ROUTES.EVENT_DETAIL;
+      : pathname.includes('/favorites/')
+        ? ROUTES.FAVORITES_EVENT_DETAIL
+        : ROUTES.EVENT_DETAIL;
     router.push({
       pathname: detailRoute,
       params: { id: similarId },

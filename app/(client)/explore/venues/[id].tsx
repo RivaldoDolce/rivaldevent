@@ -39,7 +39,7 @@ import {
   Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import {
   ChevronLeft,
   MapPin,
@@ -160,6 +160,7 @@ export default function VenueDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const { impact } = useHaptics();
   const isOffline = useOffline();
 
@@ -253,11 +254,15 @@ export default function VenueDetail() {
       return;
     }
     impact('medium');
+    // Contextuel : depuis les Favoris, la reservation reste dans la
+    // stack Favoris pour que le retour revienne au detail du lieu.
     router.push({
-      pathname: ROUTES.VENUE_RESERVE,
+      pathname: pathname.includes('/favorites/')
+        ? ROUTES.FAVORITES_VENUE_RESERVE
+        : ROUTES.VENUE_RESERVE,
       params: { id: venueId },
     });
-  }, [impact, router, venueId, isOffline]);
+  }, [impact, router, venueId, isOffline, pathname]);
 
   // -- Donnees derivees --
   const displayImages = useMemo(() => {

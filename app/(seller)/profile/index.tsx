@@ -150,9 +150,13 @@ export default function SellerProfileScreen() {
       setMode('buyer');
       notification('success');
       setShowSwitchModal(false);
-      // Push (et non replace) : le retour revient au profil vendeur
-      // avec son etat intact.
-      router.push('/(client)/home');
+      // dismissTo (et non push) : depile l'ecran vendeur pousse depuis le
+      // profil client et revele l'instance client D'ORIGINE, avec son etat
+      // exact (onglet, scroll, donnees). Un push cree au contraire une
+      // seconde instance client vierge, perdue sous le stack vendeur.
+      // Si l'instance client n'est pas dans la pile (mode vendeur atteint
+      // via le login), l'action est sans effet et l'on reste sur le vendeur.
+      router.dismissTo('/(client)/home');
     } else {
       notification('error');
     }

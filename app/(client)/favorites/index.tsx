@@ -84,8 +84,10 @@ export default function FavoritesScreen() {
 
   const handleEventPress = useCallback((eventId: string) => {
     impact('light');
+    // Pousse le detail DANS la stack Favoris : le retour revient
+    // ici, segment et scroll intacts.
     router.push({
-      pathname: ROUTES.EVENT_DETAIL,
+      pathname: ROUTES.FAVORITES_EVENT_DETAIL,
       params: { id: eventId },
     });
   }, [impact, router]);
@@ -100,8 +102,9 @@ export default function FavoritesScreen() {
 
   const handleVenuePress = useCallback((venueId: string) => {
     impact('light');
+    // Meme principe : detail du lieu dans la stack Favoris.
     router.push({
-      pathname: ROUTES.VENUE_DETAIL,
+      pathname: ROUTES.FAVORITES_VENUE_DETAIL,
       params: { id: venueId },
     });
   }, [impact, router]);
