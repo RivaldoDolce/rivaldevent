@@ -213,7 +213,7 @@ export default function LoginScreen() {
 
         {/* Logo — medaillon or centré */}
         <View style={styles.logoWrapper}>
-          <Logo size="md" withBackground />
+          <Logo size="xlg" withBackground />
         </View>
 
         {/* Titre */}

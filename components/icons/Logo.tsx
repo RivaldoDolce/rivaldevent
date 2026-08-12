@@ -6,9 +6,10 @@
  * « goldBody » défini dans le SVG source).
  *
  * Tailles :
- * - sm (32px)  : header, badges
- * - md (64px)  : login, register
- * - lg (120px) : splash, loading screens
+ * - sm (32px)   : header, badges
+ * - md (64px)   : login, register
+ * - xlg (108px) : login, register (grand cercle, logo bien visible)
+ * - lg (120px)  : splash, loading screens
  */
 
 import { Svg, Circle, G, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
@@ -16,7 +17,7 @@ import { Svg, Circle, G, Defs, LinearGradient as SvgLinearGradient, Stop } from 
 import AppLogoIcon from '@/assets/icons/app-logo-icon.svg';
 
 interface LogoProps {
-  readonly size?: 'sm' | 'md' | 'lg';
+  readonly size?: 'sm' | 'md' | 'lg' | 'xlg';
   readonly withBackground?: boolean;
   readonly testID?: string;
 }
@@ -25,6 +26,7 @@ const SIZE_PX: Record<NonNullable<LogoProps['size']>, number> = {
   sm: 32,
   md: 64,
   lg: 120,
+  xlg: 108,
 };
 
 /**

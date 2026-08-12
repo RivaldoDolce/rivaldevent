@@ -170,7 +170,7 @@ export default function RegisterScreen() {
 
         {/* Logo — medaillon or centré */}
         <View style={styles.logoWrapper}>
-          <Logo size="md" withBackground />
+          <Logo size="xlg" withBackground />
         </View>
 
         {/* En-tête */}
@@ -522,6 +522,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.divider,
   },
   loginText: {
     ...typography.bodySmall,
