@@ -46,7 +46,6 @@ import {
   Share2,
   Users,
   ChevronRight,
-  Star,
   BadgeCheck,
   Phone,
   Ticket,
@@ -57,6 +56,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
 
 import { colors, spacing, radius, shadows, typography, ROUTES } from '@/lib/constants';
+import { getTierQualityInfo } from '@/lib/tier-quality';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { eventService, formatPrice, formatDate, formatTime } from '@/services/event.service';
@@ -836,6 +836,8 @@ export default function EventDetail() {
 
 function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }) {
   const accent = getTierAccent(tier.name);
+  const quality = getTierQualityInfo(tier.name);
+  const QualityIcon = quality.icon;
 
   return (
     <View
@@ -848,9 +850,13 @@ function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }
       {/* Indicateur lateral colore */}
       <View style={[styles.tierSideIndicator, { backgroundColor: accent.icon }]} />
 
+      {/* Embleme officiel de la gamme */}
+      <View style={[styles.tierIconTile, { borderColor: `${quality.color}40` }]}>
+        <QualityIcon width={24} height={24} />
+      </View>
+
       <View style={styles.tierInfo}>
         <View style={styles.tierNameRow}>
-          <Star size={13} color={accent.icon} strokeWidth={2} />
           <Text
             style={[
               styles.tierName,
@@ -1234,6 +1240,16 @@ const styles = {
     bottom: spacing.md,
     width: 4,
     borderRadius: 2,
+  } as ViewStyle,
+  tierIconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
   } as ViewStyle,
   tierInfo: {
     flex: 1,

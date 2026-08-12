@@ -2,13 +2,14 @@
  * Carte d'un tier de billet pour la selection.
  *
  * Design « Noir & Or » premium :
- * - Surface élevée avec barre d'accent latérale (2.5px) selon la gamme :
- *   premium/vvip → forest, vip → gold, sinon terracotta
- * - Nom du tier en gras, prix or champagne bien visible
- * - Description et liste des benefices
+ * - Tuile d'emblème dégradée selon la gamme (PREMIUM → or, VIP → terracotta,
+ *   STANDARD → forêt) avec le logo SVG officiel de la qualité
+ * - Nom du tier en serif, prix or champagne bien visible
+ * - Description et liste des bénéfices
  * - Badge stock pill (disponible / stock faible / epuise) avec point indicateur
- * - Selecteur de quantite : pastilles verre rondes (+/- ) avec nombre au centre
+ * - Selecteur de quantite : pastilles verre rondes (+/-) avec nombre au centre
  * - Sous-total en overline dorée quand une quantite est choisie
+ * - Dégradé d'accent en filigrane sur la tranche supérieure de la carte
  * - Desactive si epuise (is_sold_out = true)
  *
  * Props :
@@ -18,6 +19,7 @@
  *
  * Conventions :
  * - Design tokens depuis lib/constants.ts
+ * - Logos de gamme via lib/tier-quality.ts
  * - lucide-react-native pour les icones
  * - Pas de type any, pas d'emojis
  * - Imports @/
@@ -34,8 +36,10 @@ import {
   type TextStyle,
 } from 'react-native';
 import { Minus, Plus } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors, spacing, radius, shadows } from '@/lib/constants';
+import { getTierQualityInfo } from '@/lib/tier-quality';
 import { formatPrice } from '@/services/event.service';
 import type { MockTicketTier } from '@/data/mock';
 
@@ -60,18 +64,7 @@ interface TicketTierCardProps {
 const MAX_QUANTITY = 10;
 
 /**
- * Couleur d'accent par nom de tier.
- * Standard -> terracotta, VIP -> gold, VVIP/Premium -> forest
- */
-function getTierAccent(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.includes('premium') || lower.includes('vvip')) return colors.forest;
-  if (lower.includes('vip')) return colors.gold;
-  return colors.terracotta;
-}
-
-/**
- * Configuration du badge stock — pastille pill avec point indicateur.
+ * Configuration du badge stock — pill avec point indicateur.
  * Disponible -> success, stock faible -> warning « Plus que N », epuise -> danger.
  */
 function getStockConfig(tier: MockTicketTier): {
@@ -93,9 +86,10 @@ function getStockConfig(tier: MockTicketTier): {
 // ============================================================
 
 export default function TicketTierCard({ tier, quantity, onQuantityChange }: TicketTierCardProps) {
-  const accent = useMemo(() => getTierAccent(tier.name), [tier.name]);
+  const quality = useMemo(() => getTierQualityInfo(tier.name), [tier.name]);
   const stockConfig = useMemo(() => getStockConfig(tier), [tier]);
   const isDisabled = tier.is_sold_out;
+  const QualityIcon = quality.icon;
 
   // -- Handlers --
   const handleIncrement = useCallback(() => {
@@ -117,25 +111,49 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
 
   return (
     <View style={[styles.card, isDisabled && styles.cardDisabled]}>
-      {/* Barre laterale d'accent */}
-      <View style={[styles.accentBar, { backgroundColor: accent }]} />
+      {/* Filigrane dégradé d'accent (tranche supérieure) */}
+      <LinearGradient
+        colors={[...quality.gradient] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.accentSheen}
+        pointerEvents="none"
+      />
 
       <View style={styles.cardContent}>
-        {/* En-tete : nom + badge stock */}
+        {/* En-tete : embleme + nom + badge stock */}
         <View style={styles.headerRow}>
           <View style={styles.nameContainer}>
-            <Text style={styles.tierName} numberOfLines={1}>
-              {tier.name}
-            </Text>
-            {/* Badge stock */}
-            <View style={[styles.stockBadge, { backgroundColor: stockConfig.bgColor }]}>
-              <View style={[styles.stockDot, { backgroundColor: stockConfig.color }]} />
-              <Text style={[styles.stockBadgeText, { color: stockConfig.color }]}>
-                {stockConfig.label}
+            {/* Tuile embleme degradee */}
+            <View style={[styles.qualityTile, { borderColor: `${quality.color}40` }]}>
+              <QualityIcon width={26} height={26} />
+            </View>
+
+            <View style={styles.nameBlock}>
+              <Text style={styles.tierName} numberOfLines={1}>
+                {tier.name}
+              </Text>
+              <Text style={[styles.qualityLabel, { color: quality.color }]}>
+                {quality.label}
               </Text>
             </View>
           </View>
-          <Text style={styles.price}>{formatPrice(tier.price)}</Text>
+
+          {/* Prix */}
+          <View style={styles.priceBlock}>
+            <Text style={styles.price}>{formatPrice(tier.price)}</Text>
+            <Text style={styles.pricePerTicket}>par billet</Text>
+          </View>
+        </View>
+
+        {/* Badge stock */}
+        <View style={styles.stockRow}>
+          <View style={[styles.stockBadge, { backgroundColor: stockConfig.bgColor }]}>
+            <View style={[styles.stockDot, { backgroundColor: stockConfig.color }]} />
+            <Text style={[styles.stockBadgeText, { color: stockConfig.color }]}>
+              {stockConfig.label}
+            </Text>
+          </View>
         </View>
 
         {/* Description */}
@@ -150,12 +168,15 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
           <View style={styles.benefitsContainer}>
             {tier.benefits.map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
-                <View style={[styles.benefitDot, { backgroundColor: accent }]} />
+                <View style={[styles.benefitDot, { backgroundColor: quality.color }]} />
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
             ))}
           </View>
         ) : null}
+
+        {/* Separateur filet */}
+        <View style={styles.divider} />
 
         {/* Selecteur quantite + sous-total */}
         <View style={styles.bottomRow}>
@@ -212,7 +233,6 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: colors.elevated,
     borderWidth: 1,
     borderColor: `${colors.gold}1F`,
@@ -223,15 +243,17 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   cardDisabled: {
     opacity: 0.5,
-  },
+  } as ViewStyle,
 
-  accentBar: {
-    width: 2.5,
-    flex: 1,
+  accentSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
   } as ViewStyle,
 
   cardContent: {
-    flex: 1,
     padding: spacing.md,
   } as ViewStyle,
 
@@ -245,17 +267,57 @@ const styles = StyleSheet.create({
   nameContainer: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
     gap: spacing.sm,
+  } as ViewStyle,
+  nameBlock: {
+    flex: 1,
+  } as ViewStyle,
+  qualityTile: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   } as ViewStyle,
   tierName: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 17,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.text,
     letterSpacing: -0.2,
   } as TextStyle,
+  qualityLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.6,
+    marginTop: 2,
+  } as TextStyle,
+
+  priceBlock: {
+    alignItems: 'flex-end',
+  } as ViewStyle,
+  price: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.goldBright,
+    letterSpacing: -0.2,
+  } as TextStyle,
+  pricePerTicket: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.textMuted,
+  } as TextStyle,
+
+  stockRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  } as ViewStyle,
   stockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,13 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 0.2,
-  } as TextStyle,
-  price: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.goldBright,
-    letterSpacing: -0.2,
   } as TextStyle,
 
   description: {
@@ -313,6 +368,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.textSecondary,
   } as TextStyle,
+
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: `${colors.gold}2E`,
+    marginBottom: spacing.md,
+  } as ViewStyle,
 
   bottomRow: {
     flexDirection: 'row',

@@ -4,9 +4,16 @@
 <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
  width="1016.000000pt" height="792.000000pt" viewBox="0 0 1016.000000 792.000000"
  preserveAspectRatio="xMidYMid meet">
+<defs>
+  <linearGradient id="goldBody" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#F2DC9B"/>
+    <stop offset="50%" stop-color="#D8B45A"/>
+    <stop offset="100%" stop-color="#A87F2E"/>
+  </linearGradient>
+</defs>
 
 <g transform="translate(0.000000,792.000000) scale(0.100000,-0.100000)"
-fill="#000000" stroke="none">
+fill="url(#goldBody)" stroke="none">
 <path d="M2562 6128 c-9 -9 -12 -548 -12 -2570 l0 -2558 655 0 655 0 0 628 0
 627 131 130 130 130 19 -25 c10 -14 127 -160 260 -325 133 -165 384 -478 557
 -695 174 -217 332 -412 352 -432 l35 -38 1173 0 1173 0 0 495 0 495 -822 2

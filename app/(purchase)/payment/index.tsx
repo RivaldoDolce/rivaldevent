@@ -59,6 +59,7 @@ import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { Button } from '@/components/ui/Button';
 
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { getTierQualityInfo } from '@/lib/tier-quality';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { formatPrice, formatDate } from '@/services/event.service';
@@ -76,6 +77,12 @@ interface OperatorInfo {
   readonly subtitle: string;
   readonly logoSource: React.ComponentType<{ width?: number; height?: number }>;
   readonly badge?: string;
+  /** Dégradé aux couleurs officielles de l'operateur */
+  readonly brandGradient: readonly [string, string];
+  /** Couleur principale de l'operateur */
+  readonly brandColor: string;
+  /** Couleur de texte sur le dégradé */
+  readonly textColor: string;
 }
 
 interface RecapRow {
@@ -96,18 +103,27 @@ const OPERATORS: readonly OperatorInfo[] = [
     subtitle: 'Mobile Money',
     logoSource: MtnLogo,
     badge: 'Populaire',
+    brandGradient: ['rgba(255,204,0,0.28)', 'rgba(255,204,0,0.04)'],
+    brandColor: '#FFCC00',
+    textColor: '#FFE766',
   },
   {
     id: 'orange',
     name: 'Orange Money',
     subtitle: 'Paiement mobile',
     logoSource: OrangeLogo,
+    brandGradient: ['rgba(255,121,0,0.28)', 'rgba(255,121,0,0.04)'],
+    brandColor: '#FF7900',
+    textColor: '#FFA366',
   },
   {
     id: 'moov',
     name: 'Moov Money',
     subtitle: 'Transfert mobile',
     logoSource: MoovLogo,
+    brandGradient: ['rgba(2,103,179,0.30)', 'rgba(2,103,179,0.04)'],
+    brandColor: '#0267B3',
+    textColor: '#7FBDF0',
   },
 ] as const;
 
@@ -211,6 +227,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xs,
   },
+  recapTierIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
   recapTierName: {
     flex: 1,
     fontFamily: 'Inter_400Regular',
@@ -294,33 +321,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  /* Carte operateur - surface sombre premium */
+  /* Carte operateur - degrade aux couleurs officielles */
   operatorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     marginBottom: spacing.md,
+    overflow: 'hidden',
     ...shadows.card,
   },
   operatorCardSelected: {
-    borderColor: `${colors.gold}66`,
-    backgroundColor: colors.glassGold,
+    borderColor: colors.goldMuted,
     ...shadows.goldGlowSoft,
   },
   operatorLogoWrap: {
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.glass,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.94)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+    ...shadows.card,
   },
   operatorInfo: {
     flex: 1,
@@ -701,16 +726,23 @@ export default function PaymentIndex() {
               </View>
             )}
 
-            {recapRows.map((row) => (
-              <View key={row.key} style={styles.recapTierRow}>
-                <Text style={styles.recapTierName} numberOfLines={1}>
-                  {row.quantity} billet{row.quantity > 1 ? 's' : ''} · {row.tierName}
-                </Text>
-                <Text style={styles.recapTierSubtotal}>
-                  {row.subtotal !== null ? formatPrice(row.subtotal) : `${row.quantity}x`}
-                </Text>
-              </View>
-            ))}
+            {recapRows.map((row) => {
+              const quality = getTierQualityInfo(row.tierName);
+              const TierQualityIcon = quality.icon;
+              return (
+                <View key={row.key} style={styles.recapTierRow}>
+                  <View style={[styles.recapTierIcon, { borderColor: `${quality.color}40` }]}>
+                    <TierQualityIcon width={18} height={18} />
+                  </View>
+                  <Text style={styles.recapTierName} numberOfLines={1}>
+                    {row.quantity} billet{row.quantity > 1 ? 's' : ''} · {row.tierName}
+                  </Text>
+                  <Text style={styles.recapTierSubtotal}>
+                    {row.subtotal !== null ? formatPrice(row.subtotal) : `${row.quantity}x`}
+                  </Text>
+                </View>
+              );
+            })}
 
             <View style={styles.recapSeparator} />
 
@@ -751,7 +783,16 @@ export default function PaymentIndex() {
                 accessibilityLabel={op.name}
                 accessibilityState={{ selected: isSelected }}
               >
-                {/* Logo */}
+                {/* Fond degrade aux couleurs officielles de l'operateur */}
+                <LinearGradient
+                  colors={[...op.brandGradient] as unknown as readonly [string, string, ...string[]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+
+                {/* Logo sur pastille blanche */}
                 <View style={styles.operatorLogoWrap}>
                   {(() => {
                     const OperatorLogo = op.logoSource;
@@ -766,8 +807,8 @@ export default function PaymentIndex() {
                       {op.name}
                     </Text>
                     {op.badge && (
-                      <View style={styles.operatorBadge}>
-                        <Text style={styles.operatorBadgeText}>
+                      <View style={[styles.operatorBadge, { borderColor: `${op.brandColor}66`, backgroundColor: `${op.brandColor}22` }]}>
+                        <Text style={[styles.operatorBadgeText, { color: op.textColor }]}>
                           {op.badge}
                         </Text>
                       </View>
