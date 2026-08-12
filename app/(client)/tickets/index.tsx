@@ -351,14 +351,14 @@ function GridGroupCard({
               cachePolicy="memory-disk"
             />
             <LinearGradient
-              colors={['rgba(10,9,8,0)', 'rgba(10,9,8,0.55)']}
+              colors={['rgba(10,9,8,0)', 'rgba(10,9,8,0.6)']}
               style={styles.gridCoverOverlay}
               pointerEvents="none"
             />
           </>
         ) : (
           <View style={styles.gridCoverPlaceholder}>
-            <Ticket size={24} color={colors.goldMuted} strokeWidth={1.5} />
+            <Ticket size={26} color={colors.goldMuted} strokeWidth={1.5} />
           </View>
         )}
         <StatusPill status={group.status} floating />
@@ -386,9 +386,12 @@ function GridGroupCard({
 
         {/* Pied : quantite + total */}
         <View style={styles.gridFooterRow}>
-          <Text style={styles.gridQuantity}>
-            {group.totalQuantity} billet{group.totalQuantity > 1 ? 's' : ''}
-          </Text>
+          <View style={styles.gridQuantityBlock}>
+            <Text style={styles.gridQuantityLabel}>BILLETS</Text>
+            <Text style={styles.gridQuantity}>
+              {group.totalQuantity} billet{group.totalQuantity > 1 ? 's' : ''}
+            </Text>
+          </View>
           <Text style={styles.gridTotal}>{formatPrice(group.totalAmount)}</Text>
         </View>
       </View>
@@ -597,8 +600,8 @@ const styles = StyleSheet.create({
   listCard: {
     flexDirection: 'row',
     backgroundColor: colors.elevated,
-    borderWidth: 1,
-    borderColor: `${colors.gold}1F`,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}45`,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
@@ -781,32 +784,32 @@ const styles = StyleSheet.create({
   gridCard: {
     width: '48.5%',
     backgroundColor: colors.elevated,
-    borderWidth: 1,
-    borderColor: `${colors.gold}1F`,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}45`,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
     ...shadows.card,
   },
   gridCover: {
-    height: 100,
+    height: 118,
     position: 'relative',
     backgroundColor: colors.surfaceAlt,
   },
   gridCoverImage: {
     width: '100%',
-    height: 100,
+    height: 118,
   },
   gridCoverOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 48,
+    height: 52,
   },
   gridCoverPlaceholder: {
     width: '100%',
-    height: 100,
+    height: 118,
     backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
@@ -818,10 +821,10 @@ const styles = StyleSheet.create({
   gridTitle: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 21,
     color: colors.text,
     letterSpacing: -0.2,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   gridMeta: {
     fontFamily: 'Inter_400Regular',
@@ -832,13 +835,25 @@ const styles = StyleSheet.create({
   },
   gridFooterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
+  gridQuantityBlock: {
+    flex: 1,
+  },
+  gridQuantityLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 1.2,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
   gridQuantity: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
     lineHeight: 15,
     color: colors.textSecondary,

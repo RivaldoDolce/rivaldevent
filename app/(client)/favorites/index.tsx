@@ -124,6 +124,7 @@ export default function FavoritesScreen() {
 
   const tabBarStyle: ViewStyle = {
     flexDirection: 'row',
+    alignSelf: 'center',
     backgroundColor: colors.glass,
     borderWidth: 1,
     borderColor: `${colors.gold}2E`,
@@ -133,21 +134,21 @@ export default function FavoritesScreen() {
   };
 
   const activeTabStyle: ViewStyle = {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm - 2,
     ...shadows.goldGlow,
   };
 
   const inactiveTabStyle: ViewStyle = {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm - 2,
   };
 
