@@ -268,20 +268,30 @@ export default function SellerProfileScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.avatarRing}
           >
-            <View style={styles.avatarInner}>
-              {avatarUrl ? (
-                <Image
-                  source={{ uri: avatarUrl }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                  accessibilityLabel={displayName || 'Avatar'}
-                />
-              ) : (
-                <Text style={styles.avatarInitial}>{initials}</Text>
-              )}
-            </View>
+            <Pressable
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.PROFILE_EDIT);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier mon profil"
+            >
+              <View style={styles.avatarInner}>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    accessibilityLabel={displayName || 'Avatar'}
+                  />
+                ) : (
+                  <Text style={styles.avatarInitial}>{initials}</Text>
+                )}
+              </View>
+            </Pressable>
           </LinearGradient>
 
           <View style={styles.identityBlock}>
