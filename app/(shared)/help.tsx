@@ -4,10 +4,11 @@
  * Ecran PARTAGE (hors groupes client/vendeur) : le retour ramene
  * toujours a l'ecran d'origine (client ou vendeur) avec son etat.
  *
- * Design :
+ * Design "Noir & Or" :
  * - Header partage via components/profile/ScreenHeader
- * - FAQ en cartes deployables (Pressable + chevron)
- * - Cartes contact : WhatsApp, appel, email
+ * - FAQ en cartes elevated (question semi-bold + reponse tamisee)
+ * - Rows de contact en verre fume (WhatsApp, appel, email)
+ * - Version du pied de page
  *
  * Conventions :
  * - Toutes les couleurs viennent de lib/constants.ts
@@ -26,7 +27,8 @@ import {
 import { ChevronDown, ChevronUp, MessageCircle, Phone, Mail } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
-import { colors, spacing, radius, shadows } from '@/lib/constants';
+import { Card } from '@/components/ui/Card';
+import { colors, spacing, radius } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -70,7 +72,7 @@ const CONTACTS: readonly {
   {
     label: 'WhatsApp',
     value: '+237 6 99 88 77 66',
-    icon: <MessageCircle size={20} color={colors.forest} strokeWidth={1.75} />,
+    icon: <MessageCircle size={20} color={colors.gold} strokeWidth={1.75} />,
     action: () => {
       Linking.openURL('https://wa.me/237699887766').catch(() => {
         // Silent fail hors ligne
@@ -80,7 +82,7 @@ const CONTACTS: readonly {
   {
     label: 'Appeler le support',
     value: '+237 6 99 88 77 66',
-    icon: <Phone size={20} color={colors.goldDark} strokeWidth={1.75} />,
+    icon: <Phone size={20} color={colors.gold} strokeWidth={1.75} />,
     action: () => {
       Linking.openURL('tel:+237699887766').catch(() => {
         // Silent fail
@@ -90,7 +92,7 @@ const CONTACTS: readonly {
   {
     label: 'Email',
     value: 'support@rivaldevent.cm',
-    icon: <Mail size={20} color={colors.terracotta} strokeWidth={1.75} />,
+    icon: <Mail size={20} color={colors.gold} strokeWidth={1.75} />,
     action: () => {
       Linking.openURL('mailto:support@rivaldevent.cm').catch(() => {
         // Silent fail
@@ -132,7 +134,7 @@ export default function HelpScreen() {
             ============================================ */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>QUESTIONS FREQUENTES</Text>
-          <View style={styles.card}>
+          <Card variant="elevated" padding="none">
             {FAQ_ITEMS.map((item, index) => {
               const isOpen = openIndex === index;
               return (
@@ -150,9 +152,9 @@ export default function HelpScreen() {
                   <View style={styles.faqHeader}>
                     <Text style={styles.faqQuestion}>{item.question}</Text>
                     {isOpen ? (
-                      <ChevronUp size={18} color={colors.stone} strokeWidth={1.75} />
+                      <ChevronUp size={18} color={colors.goldMuted} strokeWidth={1.75} />
                     ) : (
-                      <ChevronDown size={18} color={colors.stone} strokeWidth={1.75} />
+                      <ChevronDown size={18} color={colors.goldMuted} strokeWidth={1.75} />
                     )}
                   </View>
                   {isOpen ? (
@@ -161,7 +163,7 @@ export default function HelpScreen() {
                 </Pressable>
               );
             })}
-          </View>
+          </Card>
         </View>
 
         {/* ============================================
@@ -169,18 +171,15 @@ export default function HelpScreen() {
             ============================================ */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>NOUS CONTACTER</Text>
-          <View style={styles.card}>
-            {CONTACTS.map((contact, index) => (
+          <View style={styles.contactList}>
+            {CONTACTS.map((contact) => (
               <Pressable
                 key={contact.label}
                 onPress={() => {
                   impact('light');
                   contact.action();
                 }}
-                style={[
-                  styles.contactRow,
-                  index < CONTACTS.length - 1 ? styles.faqRowBorder : null,
-                ]}
+                style={styles.contactRow}
                 accessibilityRole="button"
                 accessibilityLabel={contact.label}
               >
@@ -198,12 +197,20 @@ export default function HelpScreen() {
             HORAIRES
             ============================================ */}
         <View style={styles.section}>
-          <View style={styles.hoursCard}>
+          <Card variant="elevated" padding="lg">
             <Text style={styles.hoursTitle}>Horaires du support</Text>
             <Text style={styles.hoursText}>
               Du lundi au samedi, de 8h00 a 20h00 (heure du Cameroun).
             </Text>
-          </View>
+          </Card>
+        </View>
+
+        {/* ============================================
+            VERSION
+            ============================================ */}
+        <View style={styles.versionBlock}>
+          <View style={styles.versionHairline} />
+          <Text style={styles.versionText}>Rivald'event — Version 1.0.0</Text>
         </View>
       </ScrollView>
     </View>
@@ -217,28 +224,20 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   section: {
     marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
-    lineHeight: 16,
-    color: colors.stone,
-    letterSpacing: 1.6,
+    lineHeight: 15,
+    color: colors.goldMuted,
+    letterSpacing: 1.4,
     marginBottom: spacing.sm + 2,
     marginLeft: spacing.xs,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: `${colors.border}60`,
-    overflow: 'hidden',
-    ...shadows.card,
   },
   faqRow: {
     paddingHorizontal: spacing.md,
@@ -246,7 +245,7 @@ const styles = StyleSheet.create({
   },
   faqRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${colors.stone}18`,
+    borderBottomColor: `${colors.gold}1F`,
   },
   faqHeader: {
     flexDirection: 'row',
@@ -255,70 +254,89 @@ const styles = StyleSheet.create({
   },
   faqQuestion: {
     flex: 1,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.text,
     marginRight: spacing.md,
   },
   faqAnswer: {
     marginTop: spacing.sm,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textSecondary,
+  },
+  contactList: {
+    gap: spacing.sm,
   },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   contactIcon: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: `${colors.forest}0A`,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: `${colors.gold}33`,
   },
   contactInfo: {
     flex: 1,
     marginLeft: spacing.md,
   },
   contactLabel: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 19,
-    color: colors.onyx,
+    color: colors.text,
   },
   contactValue: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
-  hoursCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: `${colors.border}60`,
-    padding: spacing.lg,
-    ...shadows.card,
-  },
   hoursTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   hoursText: {
     marginTop: spacing.xs,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textSecondary,
+  },
+  versionBlock: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  versionHairline: {
+    width: 48,
+    height: 1,
+    backgroundColor: `${colors.gold}38`,
+    marginBottom: spacing.md,
+  },
+  versionText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
+    letterSpacing: 0.4,
   },
 });

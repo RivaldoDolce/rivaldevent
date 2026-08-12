@@ -3,7 +3,10 @@
  *
  * Stack modal pour :
  * - filters        : filtres avances (bottom sheet)
+ * - venue-filters  : filtres lieux
  * - qr-fullscreen  : QR code plein ecran
+ *
+ * Design "Noir & Or" : fond profond colors.background pour toutes les modales.
  */
 
 import { Stack } from 'expo-router';
@@ -16,7 +19,7 @@ export default function ModalLayout() {
       screenOptions={{
         headerShown: false,
         presentation: 'modal',
-        contentStyle: { backgroundColor: colors.sand },
+        contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_bottom',
       }}
     >

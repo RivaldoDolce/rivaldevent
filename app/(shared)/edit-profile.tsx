@@ -5,9 +5,9 @@
  * (router.back) ramene toujours a l'ecran d'origine avec son etat,
  * quel que soit le mode (acheteur ou organisateur).
  *
- * Design :
- * - Header partage (derivee foret) via components/profile/ScreenHeader
- * - Carte identite : avatar editable (appui pour changer la photo) + nom
+ * Design « Noir & Or » :
+ * - Header partage via components/profile/ScreenHeader (degrade noir + halo)
+ * - Carte identite : avatar xl anneau or editable + pastille photo verre
  * - Formulaire react-hook-form + zod (nom, telephone +237, email verrouille)
  * - Bouton enregistrer desactive si formulaire inchange ou invalide
  *
@@ -191,7 +191,7 @@ export default function EditProfileScreen() {
               border="highlight"
             />
             <View style={styles.cameraBadge}>
-              <Camera color={colors.sand} size={14} strokeWidth={2} />
+              <Camera color={colors.goldBright} size={14} strokeWidth={2} />
             </View>
           </Pressable>
           <Text style={styles.identityName} numberOfLines={1}>
@@ -281,18 +281,17 @@ export default function EditProfileScreen() {
             {isLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </Button>
 
-          <Pressable
+          <Button
+            variant="ghost"
+            size="md"
+            fullWidth
             onPress={() => {
               impact('light');
               router.back();
             }}
-            style={styles.cancelButton}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Annuler"
           >
-            <Text style={styles.cancelText}>Annuler</Text>
-          </Pressable>
+            Annuler
+          </Button>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -302,23 +301,23 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   identityCard: {
-    marginTop: -spacing.md,
+    marginTop: spacing.md,
     marginHorizontal: spacing.lg,
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     shadowColor: colors.onyx,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
   },
   avatarWrapper: {
     position: 'relative',
@@ -327,21 +326,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -2,
     bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.terracotta,
-    borderWidth: 2.5,
-    borderColor: colors.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.glass,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}40`,
     alignItems: 'center',
     justifyContent: 'center',
   },
   identityName: {
     marginTop: spacing.sm,
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
     maxWidth: '88%',
   },
@@ -351,48 +350,45 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   completionText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginLeft: spacing.xs,
   },
   formCard: {
     marginTop: spacing.lg,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.lg,
     gap: 2,
+    shadowColor: colors.onyx,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
   },
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: 'rgba(255,107,94,0.10)',
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,94,0.30)',
   },
   errorText: {
     ...typography.bodySmall,
-    color: colors.terracotta,
+    color: colors.danger,
     textAlign: 'center',
   },
   phonePrefix: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.onyx,
+    color: colors.goldBright,
     marginRight: spacing.xs,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  cancelText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.stone,
   },
 });

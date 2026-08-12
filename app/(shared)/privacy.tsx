@@ -4,9 +4,10 @@
  * Ecran PARTAGE (hors groupes client/vendeur) : le retour ramene
  * toujours a l'ecran d'origine (client ou vendeur) avec son etat.
  *
- * Design :
+ * Design "Noir & Or" :
  * - Header partage via components/profile/ScreenHeader
- * - Sections legales en cartes avec icones
+ * - Titres de section serif, paragraphes textSecondary lineHeight 24
+ * - Derniere mise a jour en overline
  *
  * Conventions :
  * - Toutes les couleurs viennent de lib/constants.ts
@@ -29,7 +30,8 @@ import {
 } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
-import { colors, spacing, radius, shadows } from '@/lib/constants';
+import { Card } from '@/components/ui/Card';
+import { colors, spacing, radius } from '@/lib/constants';
 
 // ============================================================
 // Donnees statiques
@@ -43,32 +45,32 @@ const SECTIONS: readonly {
   {
     title: 'Donnees collectees',
     body: 'Nous collectons les informations necessaires au fonctionnement du service : nom, numero de telephone, adresse email, historique des achats et des evenements sauvegardes.',
-    icon: <Database size={20} color={colors.forest} strokeWidth={1.75} />,
+    icon: <Database size={20} color={colors.gold} strokeWidth={1.75} />,
   },
   {
     title: 'Paiements',
     body: 'Les paiements sont traites exclusivement via les operateurs Mobile Money (MTN, Orange, Moov). Rivald\'event ne conserve jamais votre code secret ni vos identifiants de paiement.',
-    icon: <Lock size={20} color={colors.goldDark} strokeWidth={1.75} />,
+    icon: <Lock size={20} color={colors.gold} strokeWidth={1.75} />,
   },
   {
     title: 'Utilisation des donnees',
     body: 'Vos donnees servent uniquement a la gestion de vos billets, a vos evenements favoris et aux communications liees a vos achats (confirmation, rappel, remboursement).',
-    icon: <Eye size={20} color={colors.terracotta} strokeWidth={1.75} />,
+    icon: <Eye size={20} color={colors.gold} strokeWidth={1.75} />,
   },
   {
     title: 'Partage avec les organisateurs',
     body: 'Lorsque vous achetez un billet, l\'organisateur recoit uniquement votre nom et votre numero de telephone pour la gestion des entrees et du scan de votre QR code.',
-    icon: <Share2 size={20} color={colors.forest} strokeWidth={1.75} />,
+    icon: <Share2 size={20} color={colors.gold} strokeWidth={1.75} />,
   },
   {
     title: 'Suppression de vos donnees',
     body: 'Vous pouvez demander la suppression de votre compte et de vos donnees a tout moment en contactant le support. Les donnees comptables sont conservees conformement a la loi.',
-    icon: <Trash2 size={20} color={colors.terracotta} strokeWidth={1.75} />,
+    icon: <Trash2 size={20} color={colors.gold} strokeWidth={1.75} />,
   },
   {
     title: 'Contact',
     body: 'Pour toute question relative a vos donnees personnelles : support@rivaldevent.cm — Rivald\'event, Yaounde, Cameroun.',
-    icon: <FileText size={20} color={colors.goldDark} strokeWidth={1.75} />,
+    icon: <FileText size={20} color={colors.gold} strokeWidth={1.75} />,
   },
 ];
 
@@ -90,15 +92,17 @@ export default function PrivacyScreen() {
         />
 
         {/* Intro */}
-        <View style={styles.introCard}>
-          <Text style={styles.introTitle}>
-            Politique de confidentialite
-          </Text>
-          <Text style={styles.introText}>
-            Rivald'event s'engage a proteger vos donnees personnelles.
-            Cette politique resume la maniere dont nous collectons,
-            utilisons et protegeons vos informations.
-          </Text>
+        <View style={styles.introWrapper}>
+          <Card variant="elevated" padding="lg">
+            <Text style={styles.introTitle}>
+              Politique de confidentialite
+            </Text>
+            <Text style={styles.introText}>
+              Rivald'event s'engage a proteger vos donnees personnelles.
+              Cette politique resume la maniere dont nous collectons,
+              utilisons et protegeons vos informations.
+            </Text>
+          </Card>
         </View>
 
         {/* Sections */}
@@ -107,21 +111,26 @@ export default function PrivacyScreen() {
             <View
               key={section.title}
               style={[
-                styles.sectionCard,
-                index < SECTIONS.length - 1 ? styles.sectionCardGap : null,
+                styles.sectionWrapper,
+                index < SECTIONS.length - 1 ? styles.sectionGap : null,
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionIcon}>{section.icon}</View>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-              </View>
-              <Text style={styles.sectionBody}>{section.body}</Text>
+              <Card variant="elevated" padding="lg">
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIcon}>{section.icon}</View>
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                </View>
+                <Text style={styles.sectionBody}>{section.body}</Text>
+              </Card>
             </View>
           ))}
         </View>
 
         {/* Date */}
-        <Text style={styles.footerNote}>Derniere mise a jour : aout 2026</Text>
+        <View style={styles.footerBlock}>
+          <View style={styles.footerHairline} />
+          <Text style={styles.footerNote}>Derniere mise a jour : aout 2026</Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -134,45 +143,34 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
-  introCard: {
-    marginTop: -spacing.md,
+  introWrapper: {
+    marginTop: -spacing.sm,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: `${colors.border}60`,
-    padding: spacing.lg,
-    ...shadows.card,
   },
   introTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
+    lineHeight: 26,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   introText: {
-    marginTop: spacing.xs,
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.stone,
+    marginTop: spacing.sm,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    lineHeight: 24,
+    color: colors.textSecondary,
   },
   section: {
     marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
   },
-  sectionCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: `${colors.border}60`,
-    padding: spacing.lg,
-    ...shadows.card,
+  sectionWrapper: {
+    width: '100%',
   },
-  sectionCardGap: {
+  sectionGap: {
     marginBottom: spacing.md,
   },
   sectionHeader: {
@@ -180,34 +178,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionIcon: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: `${colors.forest}0A`,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: `${colors.gold}33`,
   },
   sectionTitle: {
     flex: 1,
     marginLeft: spacing.md,
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.onyx,
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
+    letterSpacing: -0.2,
   },
   sectionBody: {
     marginTop: spacing.sm,
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.stone,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13.5,
+    lineHeight: 24,
+    color: colors.textSecondary,
+  },
+  footerBlock: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  footerHairline: {
+    width: 48,
+    height: 1,
+    backgroundColor: `${colors.gold}38`,
+    marginBottom: spacing.md,
   },
   footerNote: {
-    marginTop: spacing.lg,
     textAlign: 'center',
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 16,
-    color: colors.stone,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
   },
 });
