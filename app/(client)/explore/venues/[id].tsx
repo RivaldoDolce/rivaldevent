@@ -36,9 +36,10 @@ import {
   Alert,
   ActivityIndicator,
   PanResponder,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
 import {
   ChevronLeft,
   MapPin,
@@ -62,10 +63,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { venueService } from '@/services/venue.service';
+import { useFavoritesStore } from '@/stores/favorites-store';
 import { formatPrice } from '@/services/event.service';
 import { logger } from '@/lib/logger';
 import type { VenueWithPromotion } from '@/types';
@@ -158,6 +160,7 @@ export default function VenueDetail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
+  const pathname = usePathname();
   const { impact } = useHaptics();
   const isOffline = useOffline();
 
@@ -166,10 +169,14 @@ export default function VenueDetail() {
   // -- State --
   const [venue, setVenue] = useState<VenueWithPromotion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
   const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+
+  // -- Favoris (etat global partage) --
+  const venueIds = useFavoritesStore((s) => s.venueIds);
+  const toggleVenue = useFavoritesStore((s) => s.toggleVenue);
+  const isFavorited = venueIds.includes(venueId ?? '');
 
   // -- Chargement des donnees --
   useEffect(() => {
@@ -206,14 +213,24 @@ export default function VenueDetail() {
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
-    setIsFavorited((prev) => !prev);
-    // TODO: brancher le service favoris (Roadmap)
-  }, [impact]);
+    if (venueId) {
+      toggleVenue(venueId);
+    }
+  }, [impact, toggleVenue, venueId]);
 
-  const handleShare = () => {
+  const handleShare = useCallback(async () => {
+    if (!venue) return;
     impact('light');
-    logger.debug('[VenueDetail] share (TODO)');
-  };
+    const location = venue.address ?? venue.city ?? 'Adresse non precisee';
+    try {
+      await Share.share({
+        title: venue.name,
+        message: `Decouvrez le lieu "${venue.name}" a ${location} sur Rivald'Event.`,
+      });
+    } catch (err) {
+      logger.debug('[VenueDetail] share error:', err);
+    }
+  }, [impact, venue]);
 
   const handleContactWhatsApp = useCallback(() => {
     if (!venue) return;
@@ -237,9 +254,15 @@ export default function VenueDetail() {
       return;
     }
     impact('medium');
-    // TODO: naviguer vers la page de reservation de lieu
-    Alert.alert('Reservation', 'La reservation de lieu sera disponible dans une prochaine version.');
-  }, [impact, isOffline]);
+    // Contextuel : depuis les Favoris, la reservation reste dans la
+    // stack Favoris pour que le retour revienne au detail du lieu.
+    router.push({
+      pathname: pathname.includes('/favorites/')
+        ? ROUTES.FAVORITES_VENUE_RESERVE
+        : ROUTES.VENUE_RESERVE,
+      params: { id: venueId },
+    });
+  }, [impact, router, venueId, isOffline, pathname]);
 
   // -- Donnees derivees --
   const displayImages = useMemo(() => {

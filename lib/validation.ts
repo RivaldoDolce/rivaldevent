@@ -6,7 +6,7 @@
  *
  * Regles :
  * - Email : format valide
- * - Mot de passe : min 8, 1 maj, 1 chiffre, 1 special
+ * - Mot de passe : min 8 (minimum absolu autorise par Clerk)
  * - Telephone : format camerounais (6XXXXXXXX)
  * - OTP : 6 chiffres
  */
@@ -24,9 +24,41 @@ export const loginSchema = z.object({
     .email('Email invalide'),
   password: z
     .string()
-    .min(1, 'Mot de passe requis')
-    .min(8, 'Minimum 8 caractères'),
+    .min(1, 'Mot de passe requis'),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email requis')
+    .email('Email invalide'),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const forgotPasswordCodeSchema = z.object({
+  code: z
+    .string()
+    .min(1, 'Code requis')
+    .length(6, 'Le code doit contenir 6 chiffres'),
+});
+
+export type ForgotPasswordCodeInput = z.infer<typeof forgotPasswordCodeSchema>;
+
+export const newPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(1, 'Mot de passe requis')
+      .min(8, 'Minimum 8 caractères'),
+    confirm_password: z.string().min(1, 'Confirmation requise'),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['confirm_password'],
+  });
+
+export type NewPasswordInput = z.infer<typeof newPasswordSchema>;
 
 export const registerSchema = z
   .object({
@@ -45,10 +77,8 @@ export const registerSchema = z
       .regex(/^6[0-9]{8}$/, 'Format invalide (6XXXXXXXX)'),
     password: z
       .string()
-      .min(8, 'Minimum 8 caractères')
-      .regex(/[A-Z]/, '1 majuscule requise')
-      .regex(/[0-9]/, '1 chiffre requis')
-      .regex(/[!@#$%^&*(),.?":{}|<>]/, '1 caractère spécial requis'),
+      .min(1, 'Mot de passe requis')
+      .min(8, 'Minimum 8 caractères'),
     birth_date: z
       .string()
       .min(1, 'Date de naissance requise')

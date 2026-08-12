@@ -42,10 +42,11 @@ import {
 } from 'lucide-react-native';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { useAppMode } from '@/stores/app-mode';
 import type { AppMode } from '@/stores/app-mode';
 import { useTicketsStore } from '@/stores/tickets-store';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import { useHaptics } from '@/hooks/useHaptics';
 import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 
@@ -117,6 +118,7 @@ export default function ClientProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
+  const authService = useAuthService();
   const mode = useAppMode((state: { mode: AppMode }) => state.mode);
   const setMode = useAppMode((state: { setMode: (v: AppMode) => void }) => state.setMode);
   const ticketCount = useTicketsStore((state) => state.tickets.length);
@@ -127,6 +129,7 @@ export default function ClientProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const displayName = profile?.full_name || user?.user_metadata?.full_name || '';
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
   const displayEmail = user?.email || '';
   const displayPhone = profile?.phone || '';
   const initials = displayName.charAt(0).toUpperCase() || '?';
@@ -146,13 +149,15 @@ export default function ClientProfileScreen() {
       setMode('seller');
       notification('success');
       setShowSwitchModal(false);
-      router.replace('/(seller)/home');
+      // Push (et non replace) : le retour revient au profil client
+      // avec son etat intact (onglets, scroll, filtres).
+      router.push('/(seller)/home');
     } else {
       notification('error');
     }
 
     setIsSwitching(false);
-  }, [user, setMode, notification, router, impact]);
+  }, [user, setMode, notification, router, impact, authService]);
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -160,7 +165,7 @@ export default function ClientProfileScreen() {
     await authService.signOut();
     setMode('buyer');
     router.replace('/(auth)/login');
-  }, [setMode, router, impact]);
+  }, [setMode, router, impact, authService]);
 
   const menuSections: readonly MenuSection[] = [
     {
@@ -176,7 +181,7 @@ export default function ClientProfileScreen() {
           label: 'Favoris',
           icon: <Heart size={19} color={colors.terracotta} strokeWidth={1.75} />,
           accent: `${colors.terracotta}12`,
-          onPress: () => router.push(ROUTES.EXPLORE),
+          onPress: () => router.push(ROUTES.FAVORITES),
         },
         {
           label: 'Parametres',
@@ -199,11 +204,13 @@ export default function ClientProfileScreen() {
           label: 'Aide et support',
           icon: <HelpCircle size={19} color={colors.goldDark} strokeWidth={1.75} />,
           accent: `${colors.goldDark}12`,
+          onPress: () => router.push(ROUTES.HELP),
         },
         {
           label: 'Confidentialite',
           icon: <ShieldCheck size={19} color={colors.forest} strokeWidth={1.75} />,
           accent: `${colors.forest}12`,
+          onPress: () => router.push(ROUTES.PRIVACY),
         },
       ],
     },
@@ -248,7 +255,10 @@ export default function ClientProfileScreen() {
           <View style={styles.heroTopBar}>
             <Text style={styles.heroOverline}>MON ESPACE</Text>
             <Pressable
-              onPress={() => impact('light')}
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.PROFILE_SETTINGS);
+              }}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Parametres"
@@ -265,20 +275,30 @@ export default function ClientProfileScreen() {
             end={{ x: 1, y: 1 }}
             style={[styles.avatarRing, avatarRingStyle]}
           >
-            <View style={styles.avatarInner}>
-              {profile?.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                  cachePolicy="memory-disk"
-                  accessibilityLabel={displayName || 'Avatar'}
-                />
-              ) : (
-                <Text style={styles.avatarInitial}>{initials}</Text>
-              )}
-            </View>
+            <Pressable
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.PROFILE_EDIT);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier mon profil"
+            >
+              <View style={styles.avatarInner}>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                    accessibilityLabel={displayName || 'Avatar'}
+                  />
+                ) : (
+                  <Text style={styles.avatarInitial}>{initials}</Text>
+                )}
+              </View>
+            </Pressable>
           </LinearGradient>
 
           <View style={styles.identityBlock}>

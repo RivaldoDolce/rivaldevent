@@ -33,7 +33,11 @@ export type RootStackParamList = {
   '(client)/tickets/[id]': { id: string };
 
   '(client)/profile': undefined;
-  '(client)/profile/switch-seller': undefined;
+  '(client)/profile/settings': undefined;
+
+  '(shared)/edit-profile': undefined;
+  '(shared)/help': undefined;
+  '(shared)/privacy': undefined;
 
   '(seller)/sell': undefined;
   '(seller)/sell/create/step1': undefined;

@@ -366,6 +366,9 @@ export default function MTNPayment() {
           {
             text: 'Voir mes billets',
             onPress: () => {
+              // Ferme le flux d'achat (modale) avant d'afficher les billets :
+              // evite un doublon du groupe client et un retour incoherent.
+              router.dismissAll();
               router.push(ROUTES.TICKETS as never);
             },
           },
@@ -385,6 +388,7 @@ export default function MTNPayment() {
           text: 'Annuler',
           style: 'destructive',
           onPress: () => {
+            router.dismissAll();
             router.push(ROUTES.TICKETS as never);
           },
         },

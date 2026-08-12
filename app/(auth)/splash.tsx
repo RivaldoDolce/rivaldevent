@@ -10,112 +10,26 @@
  * - Baseline "CURATING EXCELLENCE"
  *
  * Logique session :
- * - Utilise supabase.auth.getSession() (lit via SecureStoreAdapter)
- * - Decode le JWT pour verifier l'expiration LOCALEMENT (pas de reseau)
- * - Si session valide et non expiree : home
- * - Si pas de session ou JWT expire : onboarding
- * - Timeout session : 24h (verifie via claim iat du JWT)
+ * - Etat auth Clerk (useAuth : isLoaded / isSignedIn)
+ * - Si session active : home (mode depuis unsafeMetadata)
+ * - Si pas de session : onboarding
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 
-import { supabase } from '@/lib/supabase';
 import { colors, spacing } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { useAuth } from '@/hooks/useAuth';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useAppMode, type AppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 const ANIMATION_DURATION = 2000;
-
-// ============================================================
-// Helpers : verification JWT locale (hors ligne)
-// ============================================================
-
-/**
- * Decode le payload d'un JWT sans dependance externe.
- * Retourne null si le token est invalide.
- */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const base64Url = token.split('.')[1];
-    if (!base64Url) return null;
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const json = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c: string) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    );
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Verifie si un token JWT est expire.
- * Un token est considere expire si :
- *   - Le claim exp est depasse (avec 30s de marge)
- *   - Le claim iat indique que le token a ete emis il y a plus de SESSION_TIMEOUT_HOURS heures
- */
-const SESSION_TIMEOUT_HOURS = 24;
-const SESSION_TIMEOUT_SECONDS = SESSION_TIMEOUT_HOURS * 60 * 60;
-
-function isJwtExpired(token: string): boolean {
-  const payload = decodeJwtPayload(token);
-  if (!payload) return true;
-
-  // Verifier le claim exp (expiration du token)
-  const exp = payload.exp as number | undefined;
-  if (exp) {
-    const nowSeconds = Date.now() / 1000;
-    if (nowSeconds > exp - 30) return true; // 30s de marge
-  }
-
-  // Verifier le claim iat (emission) pour le timeout 24h
-  const iat = payload.iat as number | undefined;
-  if (iat) {
-    const ageSeconds = Date.now() / 1000 - iat;
-    if (ageSeconds > SESSION_TIMEOUT_SECONDS) return true;
-  }
-
-  return false;
-}
-
-/**
- * Verifie la session de maniere fiable.
- * 1. Lit la session via supabase.auth.getSession() (utilise SecureStoreAdapter)
- * 2. Decode le JWT pour verifier l'expiration localement (pas d'appel reseau)
- * 3. Retourne true seulement si la session existe ET le token est valide
- */
-async function hasValidSession(): Promise<boolean> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      logger.debug('[Splash] No session found');
-      return false;
-    }
-
-    if (isJwtExpired(session.access_token)) {
-      logger.debug('[Splash] Session JWT expired');
-      // Nettoyer la session expiree
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {
-        /* Silent */
-      });
-      return false;
-    }
-
-    logger.debug('[Splash] Valid session found');
-    return true;
-  } catch (err) {
-    logger.error('[Splash] getSession error:', err);
-    return false;
-  }
-}
+const SESSION_TIMEOUT = 10000;
 
 // ============================================================
 // Composant
@@ -123,6 +37,11 @@ async function hasValidSession(): Promise<boolean> {
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+  const mode = useAppMode((state: { mode: AppMode }) => state.mode);
+  const { isConnected } = useNetworkStatus();
+  const [redirected, setRedirected] = useState(false);
+  const [waitingNote, setWaitingNote] = useState(false);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -176,20 +95,19 @@ export default function SplashScreen() {
       ]),
     ]).start();
 
-    // 2. Verification session (en parallele avec l'animation)
-    const sessionCheck = hasValidSession();
-
-    // 3. Naviguer apres l'animation
-    const timer = setTimeout(async () => {
+    // 2. Naviguer apres l'animation (une seule fois)
+    const timer = setTimeout(() => {
       if (cancelled) return;
 
-      const validSession = await sessionCheck;
-      if (cancelled) return;
-
-      if (validSession) {
-        router.replace('/(client)/home');
-      } else {
-        router.replace('/(auth)/onboarding');
+      if (!isLoading) {
+        if (cancelled) return;
+        setRedirected(true);
+        logger.debug(`[Splash] session ${isAuthenticated ? 'valide' : 'absente'}`);
+        if (isAuthenticated) {
+          router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
+        } else {
+          router.replace('/(auth)/onboarding');
+        }
       }
     }, ANIMATION_DURATION);
 
@@ -197,7 +115,33 @@ export default function SplashScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [router, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
+  }, [router, isAuthenticated, isLoading, mode, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
+
+  // Session Clerk qui ne se charge pas (hors ligne, serveur injoignable) :
+  // on informe l'utilisateur, puis on force la sortie plutot que d'attendre.
+  useEffect(() => {
+    if (!isLoading) return;
+    let cancelled = false;
+
+    const noteTimer = setTimeout(() => {
+      if (!cancelled) setWaitingNote(true);
+    }, ANIMATION_DURATION);
+
+    const forceTimer = setTimeout(() => {
+      if (cancelled) return;
+      logger.debug('[Splash] délai dépassé, session Clerk indisponible');
+      setRedirected(true);
+      router.replace(isAuthenticated ? (mode === 'seller' ? '/(seller)/home' : '/(client)/home') : '/(auth)/onboarding');
+    }, ANIMATION_DURATION + SESSION_TIMEOUT);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(noteTimer);
+      clearTimeout(forceTimer);
+    };
+  }, [isLoading, isAuthenticated, mode, router]);
+
+  if (redirected) return null;
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,
@@ -239,6 +183,16 @@ export default function SplashScreen() {
         <View style={styles.baselineBar} />
         <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
       </Animated.View>
+
+      {!isConnected || waitingNote ? (
+        <View style={styles.statusBox}>
+          <Text style={styles.statusText}>
+            {!isConnected
+              ? 'Aucune connexion Internet. Rétablissez le réseau pour continuer.'
+              : 'Vérification de votre session en cours...'}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -351,5 +305,19 @@ const styles = StyleSheet.create({
     color: `${colors.ivory}66`,
     letterSpacing: 3,
     fontStyle: 'italic',
+  },
+  statusBox: {
+    position: 'absolute',
+    bottom: 120,
+    left: spacing.lg,
+    right: spacing.lg,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: `${colors.ivory}AA`,
+    textAlign: 'center',
   },
 });

@@ -36,7 +36,9 @@
       "expo-font",
       "expo-secure-store",
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "@clerk/expo",
+      "expo-web-browser"
     ],
     "experiments": {
       "tsconfigPaths": true

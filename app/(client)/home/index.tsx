@@ -49,6 +49,7 @@ import TheatreIcon from '@/assets/icons/theatre.svg';
 import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
+import { useAvatarUrl } from '@/hooks/useAvatarUrl';
 import { Avatar } from '@/components/ui/Avatar';
 import { EventCard } from '@/components/events/EventCard';
 import { FeaturedCarousel } from '@/components/events/FeaturedCarousel';
@@ -57,6 +58,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useRouter } from 'expo-router';
 import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
+import { useFavoritesStore } from '@/stores/favorites-store';
 
 // ============================================================
 // Types (categories icones pour les cartes de navigation)
@@ -89,9 +91,14 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { impact } = useHaptics();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
 
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Favoris : etat global partage (home, detail, explorer, profil)
+  const isEventFavorited = useFavoritesStore((s) => s.isEventFavorited);
+  const toggleEvent = useFavoritesStore((s) => s.toggleEvent);
 
   // Compteur de notifications non lues
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(3);
@@ -300,8 +307,7 @@ export default function HomeScreen() {
   };
 
   const venuesScrollContainerStyle: ViewStyle = {
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
+    marginHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   };
 
@@ -334,7 +340,7 @@ export default function HomeScreen() {
               accessibilityLabel="Mon profil"
             >
               <Avatar
-                source={profile?.avatar_url ?? null}
+                source={avatarUrl}
                 fallback={profile?.full_name ?? 'U'}
                 size="sm"
                 border="highlight"
@@ -461,9 +467,8 @@ export default function HomeScreen() {
               isFeatured={event.isFeatured}
               onPress={() => handleEventPress(event.id)}
               onReserve={() => handleReserve(event.id)}
-              onToggleFavorite={() => {
-                // TODO: brancher la logique favoris avec TanStack Query
-              }}
+              isFavorited={isEventFavorited(event.id)}
+              onToggleFavorite={() => toggleEvent(event.id)}
             />
           ))}
         </View>

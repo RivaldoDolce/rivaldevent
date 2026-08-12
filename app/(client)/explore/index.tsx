@@ -1002,8 +1002,8 @@ const seeAllTextStyle: TextStyle = {
 };
 
 const venuesScrollContainerStyle: ViewStyle = {
-  paddingLeft: spacing.lg,
-  paddingRight: spacing.sm,
+  marginHorizontal: spacing.lg,
+  paddingBottom: spacing.xl,
 };
 
 // ============================================================

@@ -35,6 +35,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   PanResponder,
+  Share,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -64,6 +65,7 @@ import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { eventService, formatPrice, formatDate, formatTime } from '@/services/event.service';
+import { useFavoritesStore } from '@/stores/favorites-store';
 import { logger } from '@/lib/logger';
 import type { EventWithAvailability, TicketTierWithAvailability } from '@/types';
 
@@ -167,11 +169,15 @@ export default function EventDetail() {
     category: string | null;
   }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const galleryAutoScrollRef = useRef<NodeJS.Timeout | null>(null);
   const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(null);
+
+  // -- Favoris (etat global partage) --
+  const eventIds = useFavoritesStore((s) => s.eventIds);
+  const toggleEvent = useFavoritesStore((s) => s.toggleEvent);
+  const isFavorited = eventIds.includes(eventId ?? '');
 
   // -- Auto-scroll du carrousel d'images --
   const resetAutoScroll = useCallback(() => {
@@ -274,15 +280,10 @@ export default function EventDetail() {
 
   const handleToggleFavorite = useCallback(() => {
     impact('light');
-    setIsFavorited((prev) => !prev);
-    // TODO: brancher le service favoris (Roadmap #8)
-  }, [impact]);
-
-  const handleShare = useCallback(() => {
-    impact('light');
-    // TODO: brancher le partage social (Roadmap #18)
-    logger.debug('[EventDetail] share (TODO)');
-  }, [impact]);
+    if (eventId) {
+      toggleEvent(eventId);
+    }
+  }, [impact, toggleEvent, eventId]);
 
   const handleReserve = useCallback(() => {
     if (isOffline) {
@@ -313,11 +314,14 @@ export default function EventDetail() {
 
   const handleSimilarPress = useCallback((similarId: string) => {
     impact('light');
-    // Navigation contextuelle : si on est dans l'onglet Explorer,
-    // pousser sur la stack Explorer ; sinon sur la stack Home
+    // Navigation contextuelle : on pousse le detail sur la stack de
+    // l'onglet d'origine (Explorer, Favoris ou Home) pour que le
+    // retour revienne toujours a la page de depart.
     const detailRoute = pathname.includes('/explore/')
       ? ROUTES.EXPLORE_EVENT_DETAIL
-      : ROUTES.EVENT_DETAIL;
+      : pathname.includes('/favorites/')
+        ? ROUTES.FAVORITES_EVENT_DETAIL
+        : ROUTES.EVENT_DETAIL;
     router.push({
       pathname: detailRoute,
       params: { id: similarId },
@@ -335,6 +339,24 @@ export default function EventDetail() {
     if (!event) return 0;
     return event.tiers_with_availability.reduce((sum, t) => sum + t.available_quantity, 0);
   }, [event]);
+
+  const handleShare = useCallback(async () => {
+    if (!event) return;
+    impact('light');
+    const location = event.address ?? event.venue?.name ?? event.city ?? 'Lieu non precise';
+    const priceText =
+      minPrice !== null
+        ? `Billets a partir de ${formatPrice(minPrice)}.`
+        : 'Entree gratuite.';
+    try {
+      await Share.share({
+        title: event.title,
+        message: `Decouvrez "${event.title}" le ${formatDate(event.start_date)} a ${location} sur Rivald'Event. ${priceText}`,
+      });
+    } catch (err) {
+      logger.debug('[EventDetail] share error:', err);
+    }
+  }, [impact, event, minPrice]);
 
   const displayImages = useMemo(() => {
     if (!event) return [];

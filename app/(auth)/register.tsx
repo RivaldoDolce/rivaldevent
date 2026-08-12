@@ -3,22 +3,21 @@
  *
  * Design :
  * - Fond sable
- * - Pas de header de navigation
  * - Titre "Créer un compte"
  * - Sous-titre "Rejoignez l'élégance de vos événements"
  * - Prénom | Nom en ligne
  * - Email
  * - Date de naissance
- * - Mot de passe
+ * - Mot de passe (politique Clerk : 8 caractères min)
  * - Confirmer le mot de passe
- * - Case à cocher CGV
- * - Bouton "S'inscrire ->"
+ * - Case à cocher CGV + case "Je veux vendre"
+ * - Bouton "S'inscrire"
  * - OU
- * - S'inscrire avec Google
- * - Utiliser un autre fournisseur
+ * - S'inscrire avec Google / Apple (logos séparés des libellés)
  * - Déjà un compte ? Se connecter
  *
- * Tout est dans un flux de scroll naturel, SANS footer en position absolue !
+ * OAuth : useSSO experimental (@clerk/expo/experimental), retour
+ * navigateur via la route /oauth-callback.
  */
 
 import { useState, useCallback } from 'react';
@@ -35,25 +34,34 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, Lock, User, UserPlus, ArrowRight, Check } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import { useSSO } from '@clerk/expo/experimental';
+import { Mail, Lock, User, ArrowRight, Check, Eye, EyeOff } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
-import { GoogleLogo } from '@/components/icons/GoogleLogo';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
+import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
-import { authService } from '@/services/auth.service';
+import { useAuthService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
 import { useAppMode } from '@/stores/app-mode';
+import { logger } from '@/lib/logger';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
+  const authService = useAuthService();
+  const { startSSOFlow } = useSSO();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
-  
+
   const [isLoading, setIsLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -105,20 +113,50 @@ export default function RegisterScreen() {
         // Pas de session (confirm email active) → OTP
         notification('success');
         router.push({
-          pathname: '/(auth)/otp',
+          pathname: ROUTES.OTP,
           params: { email: data.email },
         });
       }
 
       setIsLoading(false);
     },
-    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile]
+    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile, authService]
   );
 
   const goToLogin = useCallback(() => {
     impact('light');
     router.back();
   }, [impact, router]);
+
+  const handleSocial = useCallback(
+    async (provider: SocialProvider) => {
+      if (socialLoading) return;
+      impact('light');
+      setAuthError(null);
+      setSocialLoading(provider);
+
+      try {
+        const { createdSessionId } = await startSSOFlow({
+          strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
+          redirectUrl: Linking.createURL('/oauth-callback'),
+        });
+
+        if (!createdSessionId) {
+          setAuthError('Inscription annulée.');
+          notification('error');
+        }
+        // Session active automatiquement : la route /oauth-callback
+        // redirige vers l'accueil.
+      } catch (err) {
+        logger.debug('Social signup error:', err);
+        setAuthError('Inscription impossible avec ce fournisseur. Réessayez.');
+        notification('error');
+      } finally {
+        setSocialLoading(null);
+      }
+    },
+    [socialLoading, startSSOFlow, impact, notification]
+  );
 
   return (
     <KeyboardAvoidingView
@@ -237,9 +275,9 @@ export default function RegisterScreen() {
                 iconRight={
                   <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
                     {showPassword ? (
-                      <Text style={{ fontSize: 16 }}>🙈</Text>
+                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
                     ) : (
-                      <Text style={{ fontSize: 16 }}>👁</Text>
+                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
                     )}
                   </Pressable>
                 }
@@ -263,24 +301,30 @@ export default function RegisterScreen() {
                 iconRight={
                   <Pressable onPress={() => setShowConfirm(!showConfirm)} hitSlop={12}>
                     {showConfirm ? (
-                      <Text style={{ fontSize: 16 }}>🙈</Text>
+                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
                     ) : (
-                      <Text style={{ fontSize: 16 }}>👁</Text>
+                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
                     )}
                   </Pressable>
                 }
               />
             )}
           />
+
+          <Text style={styles.passwordHint}>
+            Minimum 8 caractères.
+          </Text>
         </View>
 
         {/* CGV Checkbox */}
-        <Pressable 
-          style={styles.checkboxWrapper} 
+        <Pressable
+          style={styles.checkboxWrapper}
           onPress={() => {
             impact('light');
             setAcceptTerms(!acceptTerms);
           }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: acceptTerms }}
         >
           <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
             {acceptTerms && <Check color={colors.sand} size={14} strokeWidth={3} />}
@@ -291,12 +335,14 @@ export default function RegisterScreen() {
         </Pressable>
 
         {/* Checkbox organisateur */}
-        <Pressable 
-          style={styles.checkboxWrapper} 
+        <Pressable
+          style={styles.checkboxWrapper}
           onPress={() => {
             impact('light');
             setIsOrganizer(!isOrganizer);
           }}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isOrganizer }}
         >
           <View style={[styles.checkbox, isOrganizer && styles.checkboxOrganizerChecked]}>
             {isOrganizer && <Check color={colors.sand} size={14} strokeWidth={3} />}
@@ -307,11 +353,11 @@ export default function RegisterScreen() {
         </Pressable>
 
         {/* Bouton S'inscrire */}
-        <Button 
-          variant="primary" 
-          size="lg" 
-          fullWidth 
-          loading={isLoading} 
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isLoading}
           onPress={handleSubmit(onSubmit)}
           icon={<ArrowRight color={colors.sand} size={18} />}
           iconPosition="right"
@@ -326,18 +372,14 @@ export default function RegisterScreen() {
           <View style={styles.separatorLine} />
         </View>
 
-        {/* Boutons alternatifs */}
-        <View style={styles.alternatives}>
-          <Pressable style={styles.alternativeButton}>
-            <GoogleLogo size="md" />
-            <Text style={styles.alternativeText}>S'inscrire avec Google</Text>
-          </Pressable>
-
-          <Pressable style={styles.alternativeButton}>
-            <UserPlus color={colors.onyx} size={20} strokeWidth={1.5} />
-            <Text style={styles.alternativeText}>Utiliser un autre fournisseur</Text>
-          </Pressable>
-        </View>
+        {/* Boutons sociaux — logo et libelle separes */}
+        <SocialButtons
+          googleLabel="S'inscrire avec Google"
+          appleLabel="S'inscrire avec Apple"
+          loading={socialLoading}
+          onGoogle={() => handleSocial('google')}
+          onApple={() => handleSocial('apple')}
+        />
 
         {/* Lien Se connecter */}
         <View style={styles.loginWrapper}>
@@ -395,6 +437,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
   },
+  passwordHint: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.stone,
+    marginTop: -spacing.xs,
+  },
   checkboxWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -445,29 +494,6 @@ const styles = StyleSheet.create({
   separatorText: {
     ...typography.caption,
     color: colors.stone,
-  },
-  alternatives: {
-    marginBottom: spacing.xl,
-  },
-  alternativeButton: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    backgroundColor: colors.sand,
-    marginBottom: spacing.sm,
-  },
-  alternativeText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.onyx,
-    letterSpacing: 0.2,
   },
   loginWrapper: {
     flexDirection: 'row',

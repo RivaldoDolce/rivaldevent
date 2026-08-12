@@ -358,7 +358,10 @@ export default function OrangePayment() {
           ? `${ticketsCreated} billet${ticketsCreated > 1 ? 's' : ''} achete${ticketsCreated > 1 ? 's' : ''} avec succes.`
           : 'Votre paiement Orange Money a ete enregistre.',
         [
-          { text: 'Voir mes billets', onPress: () => { router.push(ROUTES.TICKETS as never); } },
+          { text: 'Voir mes billets', onPress: () => {
+            router.dismissAll();
+            router.push(ROUTES.TICKETS as never);
+          } },
         ],
       );
     }, 2000);
@@ -371,7 +374,10 @@ export default function OrangePayment() {
       'Votre reservation ne sera pas conservee.',
       [
         { text: 'Continuer', style: 'cancel' },
-        { text: 'Annuler', style: 'destructive', onPress: () => { router.push(ROUTES.TICKETS as never); } },
+        { text: 'Annuler', style: 'destructive', onPress: () => {
+          router.dismissAll();
+          router.push(ROUTES.TICKETS as never);
+        } },
       ],
     );
   }, [impact, router]);
