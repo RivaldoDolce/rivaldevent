@@ -8,7 +8,7 @@
  * - Prénom | Nom en ligne
  * - Email
  * - Date de naissance
- * - Mot de passe (politique Clerk : 15 caractères min)
+ * - Mot de passe (politique Clerk : 8 caractères min)
  * - Confirmer le mot de passe
  * - Case à cocher CGV + case "Je veux vendre"
  * - Bouton "S'inscrire"
@@ -312,7 +312,7 @@ export default function RegisterScreen() {
           />
 
           <Text style={styles.passwordHint}>
-            Minimum 15 caractères, une majuscule, un chiffre et un caractère spécial.
+            Minimum 8 caractères.
           </Text>
         </View>
 

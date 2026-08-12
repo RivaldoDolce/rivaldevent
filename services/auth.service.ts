@@ -51,9 +51,8 @@ const GENERIC_ERROR: ApiError = {
   message: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-// Politique mot de passe Clerk (instances sans reglage custom).
-const PASSWORD_MIN_LENGTH = 15;
-const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{15,}$/;
+// Politique mot de passe Clerk : minimum absolu 8 caracteres (Clerk ne permet pas moins).
+const PASSWORD_MIN_LENGTH = 8;
 
 /**
  * Traduction des erreurs Clerk vers des messages francais.
@@ -64,7 +63,8 @@ const FRENCH_ERRORS: Readonly<Record<string, string>> = {
   form_password_incorrect: 'Email ou mot de passe incorrect.',
   form_identifier_password_mismatch: 'Email ou mot de passe incorrect.',
   form_password_length_too_short: `Mot de passe trop court (${PASSWORD_MIN_LENGTH} caractères minimum).`,
-  form_password_validation_failed: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une majuscule, un chiffre et un caractère spécial.`,
+  form_password_validation_failed: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+  network_error: 'Connexion Internet indisponible. Vérifiez votre réseau et réessayez.',
   form_identifier_exists: 'Un compte existe déjà avec cette adresse email.',
   form_email_address_exists: 'Un compte existe déjà avec cette adresse email.',
   form_email_address_invalid: 'Adresse email invalide.',
@@ -92,7 +92,7 @@ function splitFullName(fullName: string): { firstName: string; lastName: string 
 }
 
 function matchesPasswordPolicy(password: string): boolean {
-  return password.length >= PASSWORD_MIN_LENGTH && PASSWORD_PATTERN.test(password);
+  return password.length >= PASSWORD_MIN_LENGTH;
 }
 
 /**

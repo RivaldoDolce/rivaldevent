@@ -24,10 +24,12 @@ import { Image } from 'expo-image';
 import { colors, spacing } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppMode, type AppMode } from '@/stores/app-mode';
 
 const LOGO_SOURCE = require('@/assets/images/logo.png');
 const ANIMATION_DURATION = 2000;
+const SESSION_TIMEOUT = 10000;
 
 // ============================================================
 // Composant
@@ -37,7 +39,9 @@ export default function SplashScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const mode = useAppMode((state: { mode: AppMode }) => state.mode);
+  const { isConnected } = useNetworkStatus();
   const [redirected, setRedirected] = useState(false);
+  const [waitingNote, setWaitingNote] = useState(false);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -113,6 +117,30 @@ export default function SplashScreen() {
     };
   }, [router, isAuthenticated, isLoading, mode, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
 
+  // Session Clerk qui ne se charge pas (hors ligne, serveur injoignable) :
+  // on informe l'utilisateur, puis on force la sortie plutot que d'attendre.
+  useEffect(() => {
+    if (!isLoading) return;
+    let cancelled = false;
+
+    const noteTimer = setTimeout(() => {
+      if (!cancelled) setWaitingNote(true);
+    }, ANIMATION_DURATION);
+
+    const forceTimer = setTimeout(() => {
+      if (cancelled) return;
+      logger.debug('[Splash] délai dépassé, session Clerk indisponible');
+      setRedirected(true);
+      router.replace(isAuthenticated ? (mode === 'seller' ? '/(seller)/home' : '/(client)/home') : '/(auth)/onboarding');
+    }, ANIMATION_DURATION + SESSION_TIMEOUT);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(noteTimer);
+      clearTimeout(forceTimer);
+    };
+  }, [isLoading, isAuthenticated, mode, router]);
+
   if (redirected) return null;
 
   const logoAnimatedStyle = {
@@ -155,6 +183,16 @@ export default function SplashScreen() {
         <View style={styles.baselineBar} />
         <Text style={styles.baseline}>CURATING EXCELLENCE</Text>
       </Animated.View>
+
+      {!isConnected || waitingNote ? (
+        <View style={styles.statusBox}>
+          <Text style={styles.statusText}>
+            {!isConnected
+              ? 'Aucune connexion Internet. Rétablissez le réseau pour continuer.'
+              : 'Vérification de votre session en cours...'}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -267,5 +305,19 @@ const styles = StyleSheet.create({
     color: `${colors.ivory}66`,
     letterSpacing: 3,
     fontStyle: 'italic',
+  },
+  statusBox: {
+    position: 'absolute',
+    bottom: 120,
+    left: spacing.lg,
+    right: spacing.lg,
+    alignItems: 'center',
+  },
+  statusText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    lineHeight: 20,
+    color: `${colors.ivory}AA`,
+    textAlign: 'center',
   },
 });
