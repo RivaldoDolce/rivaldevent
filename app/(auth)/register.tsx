@@ -1,23 +1,15 @@
 /**
  * Inscription - enregistrement email + mot de passe + métadonnées.
  *
- * Design :
- * - Fond sable
- * - Titre "Créer un compte"
- * - Sous-titre "Rejoignez l'élégance de vos événements"
- * - Prénom | Nom en ligne
- * - Email
- * - Date de naissance
- * - Mot de passe (politique Clerk : 8 caractères min)
- * - Confirmer le mot de passe
- * - Case à cocher CGV + case "Je veux vendre"
- * - Bouton "S'inscrire"
- * - OU
- * - S'inscrire avec Google / Apple (logos séparés des libellés)
- * - Déjà un compte ? Se connecter
+ * Design « Noir & Or » :
+ * - Fond noir profond + halo doré discret en haut
+ * - Logo medaillon or centré, titre Playfair, sous-titre textMuted
+ * - Champs Input dark, DateInput sombre
+ * - Cases à cocher or (CGV) et forest (organisateur)
+ * - CTA primary or champagne pleine largeur, boutons sociaux verre fumé
  *
- * OAuth : useSSO experimental (@clerk/expo/experimental), retour
- * navigateur via la route /oauth-callback.
+ * Logique (inchangée) : react-hook-form + zod, signUpWithEmail,
+ * OAuth useSSO experimental via la route /oauth-callback.
  */
 
 import { useState, useCallback } from 'react';
@@ -42,8 +34,9 @@ import { Mail, Lock, User, ArrowRight, Check, Eye, EyeOff } from 'lucide-react-n
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
+import { Logo } from '@/components/icons/Logo';
 import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
-import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, typography, spacing, radius, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
@@ -160,7 +153,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.sand }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
@@ -171,6 +164,15 @@ export default function RegisterScreen() {
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
+        {/* Halo doré discret en haut */}
+        <View pointerEvents="none" style={styles.glowTop} />
+        <View pointerEvents="none" style={styles.ringDeco} />
+
+        {/* Logo — medaillon or centré */}
+        <View style={styles.logoWrapper}>
+          <Logo size="md" withBackground />
+        </View>
+
         {/* En-tête */}
         <Text style={styles.title}>Créer un compte</Text>
         <Text style={styles.subtitle}>Rejoignez l'élégance de vos événements</Text>
@@ -200,7 +202,7 @@ export default function RegisterScreen() {
                     error={errors.full_name?.message}
                     isValid={!errors.full_name?.message && value.trim().length > 0}
                     autoCapitalize="words"
-                    iconLeft={<User color={colors.stone} size={20} strokeWidth={1.5} />}
+                    iconLeft={<User color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                   />
                 )}
               />
@@ -241,7 +243,7 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconLeft={<Mail color={colors.goldMuted} size={20} strokeWidth={1.5} />}
               />
             )}
           />
@@ -271,13 +273,13 @@ export default function RegisterScreen() {
                 error={errors.password?.message}
                 isValid={!errors.password?.message && value.length > 0}
                 secureTextEntry={!showPassword}
-                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconLeft={<Lock color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                 iconRight={
                   <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
                     {showPassword ? (
-                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
+                      <EyeOff color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     ) : (
-                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
+                      <Eye color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     )}
                   </Pressable>
                 }
@@ -297,13 +299,13 @@ export default function RegisterScreen() {
                 error={errors.confirm_password?.message}
                 isValid={!errors.confirm_password?.message && value.length > 0}
                 secureTextEntry={!showConfirm}
-                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconLeft={<Lock color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                 iconRight={
                   <Pressable onPress={() => setShowConfirm(!showConfirm)} hitSlop={12}>
                     {showConfirm ? (
-                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
+                      <EyeOff color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     ) : (
-                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
+                      <Eye color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     )}
                   </Pressable>
                 }
@@ -327,7 +329,7 @@ export default function RegisterScreen() {
           accessibilityState={{ checked: acceptTerms }}
         >
           <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-            {acceptTerms && <Check color={colors.sand} size={14} strokeWidth={3} />}
+            {acceptTerms && <Check color={colors.onyx} size={14} strokeWidth={3} />}
           </View>
           <Text style={styles.checkboxLabel}>
             J'accepte les conditions générales{'\n'}et la <Text style={styles.linkText}>politique de confidentialité</Text>
@@ -345,21 +347,21 @@ export default function RegisterScreen() {
           accessibilityState={{ checked: isOrganizer }}
         >
           <View style={[styles.checkbox, isOrganizer && styles.checkboxOrganizerChecked]}>
-            {isOrganizer && <Check color={colors.sand} size={14} strokeWidth={3} />}
+            {isOrganizer && <Check color={colors.onyx} size={14} strokeWidth={3} />}
           </View>
           <Text style={styles.checkboxLabel}>
             Je souhaite creer et vendre{'\n'}des evenements sur Rivald'event
           </Text>
         </Pressable>
 
-        {/* Bouton S'inscrire */}
+        {/* Bouton S'inscrire — or champagne, pleine largeur */}
         <Button
           variant="primary"
           size="lg"
           fullWidth
           loading={isLoading}
           onPress={handleSubmit(onSubmit)}
-          icon={<ArrowRight color={colors.sand} size={18} />}
+          icon={<ArrowRight color={colors.onyx} size={18} />}
           iconPosition="right"
         >
           S'inscrire
@@ -372,7 +374,7 @@ export default function RegisterScreen() {
           <View style={styles.separatorLine} />
         </View>
 
-        {/* Boutons sociaux — logo et libelle separes */}
+        {/* Boutons sociaux — cartes verre fumé */}
         <SocialButtons
           googleLabel="S'inscrire avec Google"
           appleLabel="S'inscrire avec Apple"
@@ -386,7 +388,7 @@ export default function RegisterScreen() {
           <Text style={styles.loginText}>Vous avez déjà un compte ? </Text>
           <Pressable onPress={goToLogin} hitSlop={12} style={styles.loginLinkWrapper}>
             <Text style={styles.loginLink}>Se connecter</Text>
-            <ArrowRight color={colors.terracotta} size={14} style={{ marginLeft: 2 }} />
+            <ArrowRight color={colors.goldBright} size={14} style={{ marginLeft: 2 }} />
           </Pressable>
         </View>
 
@@ -398,36 +400,58 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   content: {
     paddingHorizontal: spacing.lg,
   },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
+  },
+  logoWrapper: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    ...shadows.goldGlowSoft,
+  },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 28,
-    lineHeight: 36,
-    color: colors.onyx,
+    ...typography.h2,
+    color: colors.text,
     letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.stone,
+    ...typography.body,
+    color: colors.textMuted,
     letterSpacing: 0.2,
     marginBottom: spacing.xl,
   },
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   errorText: {
     ...typography.bodySmall,
-    color: colors.terracotta,
+    color: colors.danger,
     textAlign: 'center',
   },
   form: {
@@ -438,10 +462,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   passwordHint: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.stone,
+    ...typography.caption,
+    color: colors.textMuted,
     marginTop: -spacing.xs,
   },
   checkboxWrapper: {
@@ -455,29 +477,28 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: `${colors.stone}60`,
+    borderColor: colors.borderStrong,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
+    marginRight: spacing.md,
   },
   checkboxChecked: {
-    backgroundColor: colors.terracotta,
-    borderColor: colors.terracotta,
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
   },
   checkboxOrganizerChecked: {
     backgroundColor: colors.forest,
     borderColor: colors.forest,
   },
   checkboxLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.onyx,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     flex: 1,
   },
   linkText: {
-    color: colors.gold,
+    color: colors.goldBright,
     fontWeight: '500',
     textDecorationLine: 'underline',
   },
@@ -489,11 +510,13 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: `${colors.stone}30`,
+    backgroundColor: colors.divider,
   },
   separatorText: {
-    ...typography.caption,
-    color: colors.stone,
+    ...typography.overline,
+    color: colors.goldMuted,
+    marginHorizontal: spacing.md,
+    letterSpacing: 2,
   },
   loginWrapper: {
     flexDirection: 'row',
@@ -501,20 +524,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
+    ...typography.bodySmall,
+    color: colors.textMuted,
   },
   loginLinkWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   loginLink: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.terracotta,
+    ...typography.bodySmallSemiBold,
+    color: colors.goldBright,
     textDecorationLine: 'underline',
     letterSpacing: 0.2,
   },

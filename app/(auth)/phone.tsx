@@ -1,17 +1,14 @@
 /**
  * Connexion par telephone (SMS OTP).
  *
- * Meilleure utilisation du numero de telephone : le SMS reste le canal
- * le plus fiable pour une verification d'identite au Cameroun (couverture
- * mobile quasi totale vs email parfois ignore). L'ecran collecte le numero
- * (+237) puis envoie le code, avant de basculer sur l'ecran OTP.
+ * Design « Noir & Or » :
+ * - Fond noir profond + halo doré discret en haut
+ * - Bouton retour pastille verre + chevron or
+ * - Logo medaillon or centré, titre Playfair, sous-titre textMuted
+ * - Champ telephone avec badge pays "+237", CTA or champagne pleine largeur
+ * - Notes d'information en texte tamisé
  *
- * Design :
- * - Fond sable, fleche retour en haut a gauche
- * - Titre Playfair + sous-titre
- * - Champ telephone avec badge pays "+237" dans le champ
- * - CTA terracotta pleine largeur
- * - Note d'information sous le formulaire
+ * Logique (inchangée) : envoi du code via signInWithPhone puis bascule OTP.
  */
 
 import { useCallback, useState } from 'react';
@@ -28,11 +25,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ChevronLeft, MessageSquareText } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { colors, spacing, radius, ROUTES } from '@/lib/constants';
+import { Logo } from '@/components/icons/Logo';
+import { colors, radius, spacing, typography, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import { phoneLoginSchema, type PhoneLoginInput } from '@/lib/validation';
@@ -93,6 +91,10 @@ export default function PhoneLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
+      {/* Halo doré discret en haut */}
+      <View pointerEvents="none" style={styles.glowTop} />
+      <View pointerEvents="none" style={styles.ringDeco} />
+
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable
           onPress={goBack}
@@ -101,7 +103,7 @@ export default function PhoneLoginScreen() {
           accessibilityRole="button"
           accessibilityLabel="Retour"
         >
-          <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
+          <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
         </Pressable>
       </View>
 
@@ -110,9 +112,9 @@ export default function PhoneLoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Illustration */}
-        <View style={styles.iconCircle}>
-          <MessageSquareText size={30} color={colors.terracotta} strokeWidth={1.8} />
+        {/* Logo — medaillon or centré */}
+        <View style={styles.logoWrapper}>
+          <Logo size="md" withBackground />
         </View>
 
         <Text style={styles.title}>Connexion par téléphone</Text>
@@ -178,7 +180,27 @@ export default function PhoneLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
   },
   topBar: {
     paddingHorizontal: spacing.md,
@@ -187,6 +209,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -194,46 +220,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: `${colors.gold}15`,
-    borderWidth: 1,
-    borderColor: `${colors.gold}40`,
+  logoWrapper: {
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    ...shadows.goldGlowSoft,
   },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 28,
-    lineHeight: 36,
-    color: colors.onyx,
+    ...typography.h2,
+    color: colors.text,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.stone,
+    ...typography.body,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
   },
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   errorText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.terracotta,
+    ...typography.bodySmallMedium,
+    color: colors.danger,
     textAlign: 'center',
   },
   prefixBadge: {
@@ -241,29 +256,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingRight: spacing.sm,
     borderRightWidth: 1,
-    borderRightColor: `${colors.stone}30`,
+    borderRightColor: colors.divider,
     marginRight: spacing.xs,
     marginVertical: 6,
   },
   prefixText: {
-    fontFamily: 'Inter-SemiBold',
+    ...typography.bodySmallSemiBold,
     fontSize: 15,
-    lineHeight: 20,
-    color: colors.onyx,
+    color: colors.goldBright,
     letterSpacing: 0.2,
   },
   note: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmall,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.lg,
     paddingHorizontal: spacing.sm,
+    lineHeight: 21,
   },
   noteLink: {
-    fontFamily: 'Inter-SemiBold',
-    color: colors.terracotta,
+    ...typography.bodySmallSemiBold,
+    color: colors.goldBright,
     textDecorationLine: 'underline',
   },
 });

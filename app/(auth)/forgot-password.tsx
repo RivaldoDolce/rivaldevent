@@ -5,12 +5,12 @@
  * 2. Code : saisie du code recu par email
  * 3. Nouveau mot de passe : reinitialisation + session active
  *
- * Design aligne sur login.tsx :
- * - Fond sand, logo en haut, titre serif
- * - Cartes blanches par etape, retour en arriere possible
+ * Design « Noir & Or » aligne sur login.tsx :
+ * - Fond noir profond + halo doré, logo medaillon or en haut
+ * - Cartes verre fumé par etape, retour pastille verre
  *
- * Donnees : useAuthService (Clerk Core 3).
- * Conventions : couleurs depuis lib/constants.ts, pas d'emojis.
+ * Logique (inchangée) : useAuthService (Clerk Core 3), 3 formulaires
+ * react-hook-form + zod.
  */
 
 import { useCallback, useState } from 'react';
@@ -27,12 +27,12 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Image } from 'expo-image';
 import { ChevronLeft, Mail, KeyRound, Lock, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { Logo } from '@/components/icons/Logo';
+import { colors, typography, spacing, radius, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import {
@@ -44,8 +44,6 @@ import {
   type NewPasswordInput,
 } from '@/lib/validation';
 import { useAppMode } from '@/stores/app-mode';
-
-const LOGO_SOURCE = require('@/assets/images/logo.png');
 
 type Step = 'email' | 'code' | 'password' | 'success';
 
@@ -196,6 +194,10 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Halo doré discret en haut */}
+        <View pointerEvents="none" style={styles.glowTop} />
+        <View pointerEvents="none" style={styles.ringDeco} />
+
         {/* Bouton retour */}
         <Pressable
           onPress={handleBack}
@@ -204,17 +206,12 @@ export default function ForgotPasswordScreen() {
           accessibilityRole="button"
           accessibilityLabel="Retour"
         >
-          <ChevronLeft size={24} color={colors.onyx} strokeWidth={1.75} />
+          <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
         </Pressable>
 
-        {/* Logo */}
+        {/* Logo — medaillon or centré */}
         <View style={styles.logoWrap}>
-          <Image
-            source={LOGO_SOURCE}
-            style={styles.logo}
-            contentFit="contain"
-            transition={200}
-          />
+          <Logo size="md" withBackground />
         </View>
 
         {/* Titre */}
@@ -244,7 +241,7 @@ export default function ForgotPasswordScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
+                  iconLeft={<Mail color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                   helperText="Le code expirera apres 10 minutes"
                 />
               )}
@@ -288,7 +285,7 @@ export default function ForgotPasswordScreen() {
                   keyboardType="numeric"
                   autoCapitalize="none"
                   maxLength={6}
-                  iconLeft={<KeyRound color={colors.stone} size={20} strokeWidth={1.5} />}
+                  iconLeft={<KeyRound color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                   helperText="Verifiez votre boite de reception (et vos spams)"
                 />
               )}
@@ -343,7 +340,7 @@ export default function ForgotPasswordScreen() {
                   onBlur={onBlur}
                   error={passwordForm.formState.errors.password?.message}
                   secureTextEntry
-                  iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                  iconLeft={<Lock color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                 />
               )}
             />
@@ -365,7 +362,7 @@ export default function ForgotPasswordScreen() {
                     value === passwordForm.watch('password')
                   }
                   secureTextEntry
-                  iconLeft={<Check color={colors.stone} size={20} strokeWidth={1.5} />}
+                  iconLeft={<Check color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                 />
               )}
             />
@@ -392,35 +389,51 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
-    backgroundColor: colors.white,
+    backgroundColor: colors.glass,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: colors.border,
   },
   logoWrap: {
     alignItems: 'center',
     marginTop: spacing.xl,
-    marginBottom: spacing.md,
-  },
-  logo: {
-    width: 110,
-    height: 110,
+    marginBottom: spacing.lg,
+    ...shadows.goldGlowSoft,
   },
   title: {
     ...typography.h2,
-    color: colors.onyx,
+    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
@@ -428,22 +441,25 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   formCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.glass,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: 2,
+    ...shadows.card,
   },
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   errorText: {
     ...typography.bodySmall,
-    color: colors.terracotta,
+    color: colors.danger,
     textAlign: 'center',
   },
   submitWrap: {
@@ -454,9 +470,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   backLinkText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmallMedium,
+    color: colors.goldBright,
+    textDecorationLine: 'underline',
   },
 });

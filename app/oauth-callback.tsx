@@ -1,25 +1,30 @@
 /**
  * Retour OAuth (Google / Apple) — route `oauth-callback`.
  *
- * Le navigateur redirige vers exp://.../--/oauth-callback?rotating_token_nonce=...
- * apres le choix du compte. Cette route :
+ * Design « Noir & Or » : ecran d'attente premium — fond noir profond,
+ * medaillon or, anneau de chargement dore, message tamisé.
+ *
+ * Logique (inchangée) :
  * - complete la session navigateur (WebBrowser.maybeCompleteAuthSession)
  * - finalise elle-meme le flux SSO a partir du rotating_token_nonce
- *   (fiable meme si la promesse du startSSOFlow a ete perdue)
  * - redirige vers l'accueil (acheteur ou vendeur) une fois connecte
  * - n'abandonne jamais silencieusement : erreur claire + bouton reessayer
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useClerk, useSignUp } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
+import { CircleAlert } from 'lucide-react-native';
 
+import { Button } from '@/components/ui/Button';
+import { Logo } from '@/components/icons/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppMode } from '@/stores/app-mode';
-import { colors, spacing, typography, radius } from '@/lib/constants';
+import { colors, gradients, spacing, typography, shadows } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -140,22 +145,36 @@ export default function OAuthCallbackScreen() {
   }, [completeSso]);
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[...gradients.noir] as unknown as readonly [string, string, ...string[]]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}
+    >
+      {/* Halos dorés décoratifs */}
+      <View pointerEvents="none" style={styles.glowTop} />
+      <View pointerEvents="none" style={styles.ringDeco} />
+
       <View style={styles.iconCircle}>
         {busy && !offline ? (
-          <ActivityIndicator size="large" color={colors.terracotta} />
+          <ActivityIndicator size="small" color={colors.goldBright} />
+        ) : error ? (
+          <CircleAlert size={28} color={colors.goldBright} strokeWidth={1.5} />
         ) : (
-          <Text style={styles.stateIcon}>!</Text>
+          <Logo size="sm" withBackground />
         )}
       </View>
+
       <Text style={styles.title}>Connexion</Text>
 
       {error ? (
         <>
           <Text style={styles.subtitle}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={retry} accessibilityRole="button">
-            <Text style={styles.retryButtonText}>Réessayer</Text>
-          </Pressable>
+          <View style={styles.actionWrap}>
+            <Button variant="primary" size="md" onPress={retry}>
+              Réessayer
+            </Button>
+          </View>
           <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
             <Text style={styles.backLinkText}>Retour à la connexion</Text>
           </Pressable>
@@ -173,85 +192,87 @@ export default function OAuthCallbackScreen() {
           </Text>
           {slow ? <Text style={styles.slowText}>{SLOW_MESSAGE}</Text> : null}
           {offline ? (
-            <Pressable style={styles.retryButton} onPress={retry} accessibilityRole="button">
-              <Text style={styles.retryButtonText}>Réessayer</Text>
-            </Pressable>
+            <View style={styles.actionWrap}>
+              <Button variant="primary" size="md" onPress={retry}>
+                Réessayer
+              </Button>
+            </View>
           ) : null}
           <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
             <Text style={styles.backLinkText}>Retour à la connexion</Text>
           </Pressable>
         </>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    overflow: 'hidden',
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.09)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 60,
+    right: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.15)',
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${colors.gold}15`,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.glass,
     borderWidth: 1,
-    borderColor: `${colors.gold}40`,
+    borderColor: colors.borderGold,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadows.goldGlowSoft,
   },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 32,
-    color: colors.onyx,
-    marginTop: spacing.lg,
+    ...typography.h2,
+    color: colors.text,
+    marginTop: spacing.xl,
   },
   subtitle: {
     ...typography.bodySmall,
-    color: colors.stone,
-    marginTop: spacing.xs,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
     textAlign: 'center',
-  },
-  stateIcon: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 34,
-    lineHeight: 40,
-    color: colors.terracotta,
+    maxWidth: 300,
   },
   slowText: {
     ...typography.bodySmall,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: spacing.xs,
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  retryButton: {
-    backgroundColor: colors.terracotta,
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.lg,
-  },
-  retryButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.sand,
-    letterSpacing: 0.2,
+  actionWrap: {
+    marginTop: spacing.xl,
   },
   backLink: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
   backLinkText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.terracotta,
+    ...typography.bodySmallMedium,
+    color: colors.goldBright,
     textDecorationLine: 'underline',
   },
 });

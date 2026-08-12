@@ -1,19 +1,17 @@
 /**
  * OTP - verification du code.
  *
- * Design (mis a jour) :
- * - Fond creme/ivoire clair
- * - Fleche retour en haut a gauche
- * - Illustration : cercle jaune pale + shield terracotta avec check
- * - Titre "Verification" centre en gras
- * - Sous-titre avec "4 chiffres" mis en evidence
- * - 4 cases carrees arrondies (72x72) avec bordure grise
- * - Bouton "Valider" terracotta pill-shaped pleine largeur
- * - Lien "Renvoyer le code" en terracotta souligne
- * - Points indicateurs en bas
- * - Barre decorative alternee en fond
+ * Design « Noir & Or » (mis a jour) :
+ * - Fond noir profond + halo doré discret en haut
+ * - Fleche retour pastille verre en haut a gauche
+ * - Logo medaillon or centré
+ * - Titre « Verification » Playfair, sous-titre textMuted
+ * - Cases de code carrees sombres (surfaceAlt, filet or au remplissage,
+ *   texte Playfair or champagne)
+ * - Bouton « Valider » or champagne pleine largeur
+ * - Minuteur en overline, lien « Renvoyer le code » doré
  *
- * Securite :
+ * Securite (inchangée) :
  * - Rate limiting (3 tentatives, lock 15 min)
  * - Auto-fill SMS (Android)
  * - Countdown 60s avant renvoi possible
@@ -32,9 +30,11 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowRight, ChevronLeft, ShieldCheck, } from 'lucide-react-native';
+import { ArrowRight, ChevronLeft } from 'lucide-react-native';
 
-import { colors, spacing, radius, APP_CONFIG } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
+import { Logo } from '@/components/icons/Logo';
+import { colors, radius, spacing, typography, APP_CONFIG } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 
@@ -167,6 +167,10 @@ export default function OtpScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Halo doré discret en haut */}
+      <View pointerEvents="none" style={styles.glowTop} />
+      <View pointerEvents="none" style={styles.ringDeco} />
+
       {/* Barre du haut avec retour */}
       <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable
@@ -179,7 +183,7 @@ export default function OtpScreen() {
           accessibilityRole="button"
           accessibilityLabel="Retour"
         >
-          <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
+          <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
         </Pressable>
       </View>
 
@@ -188,11 +192,9 @@ export default function OtpScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.content}>
-          {/* Illustration : cercle pale + shield */}
-          <View style={styles.illustrationContainer}>
-            <View style={styles.illustrationCircle}>
-              <ShieldCheck size={52} color={colors.terracotta} strokeWidth={1.8} />
-            </View>
+          {/* Logo — medaillon or centré */}
+          <View style={styles.logoWrapper}>
+            <Logo size="md" withBackground />
           </View>
 
           {/* Titre */}
@@ -224,7 +226,7 @@ export default function OtpScreen() {
             </View>
           )}
 
-          {/* Cases OTP - carrees arrondies */}
+          {/* Cases OTP - carrees sombres */}
           <View style={styles.otpContainer}>
             {Array.from({ length: OTP_LENGTH }).map((_, index) => (
               <TextInput
@@ -250,17 +252,18 @@ export default function OtpScreen() {
             ))}
           </View>
 
-          {/* Bouton Valider - pill-shaped pleine largeur */}
-          <Pressable
-            style={[styles.validateButton, isLoading && styles.validateButtonDisabled]}
+          {/* Bouton Valider - or champagne pleine largeur */}
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={isLoading}
             onPress={() => handleVerify()}
-            disabled={isLoading}
-            accessibilityRole="button"
+            icon={<ArrowRight color={colors.onyx} size={18} />}
+            iconPosition="right"
           >
-            <Text style={styles.validateButtonText}>
-              Valider <ArrowRight size={18} color={colors.sand} strokeWidth={2.5} />
-            </Text>
-          </Pressable>
+            Valider
+          </Button>
 
           {/* Lien renvoyer */}
           <View style={styles.resendWrapper}>
@@ -285,13 +288,13 @@ export default function OtpScreen() {
         <View style={[styles.bottomSection, { paddingBottom: insets.bottom + spacing.xl }]}>
           {/* Barre decorative alternee */}
           <View style={styles.accentBar}>
-            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.background }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.background }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.background }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
-            <View style={[styles.accentSegment, { backgroundColor: colors.onyx }]} />
+            <View style={[styles.accentSegment, { backgroundColor: colors.background }]} />
             <View style={[styles.accentSegment, { backgroundColor: colors.gold }]} />
           </View>
         </View>
@@ -303,7 +306,27 @@ export default function OtpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
   },
 
   // Barre du haut
@@ -314,6 +337,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 44,
     height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -325,105 +352,75 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
   },
 
-  // Illustration shield
-  illustrationContainer: {
+  logoWrapper: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-    position: 'relative',
-  },
-  illustrationCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${colors.gold}20`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  magnifierBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.terracotta,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.terracotta,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    marginBottom: spacing.lg,
+    shadowColor: 'rgba(216,180,90,0.25)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    elevation: 6,
   },
 
   // Titre
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 30,
-    lineHeight: 38,
-    color: colors.onyx,
+    ...typography.h2,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
 
   // Sous-titre
   subtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.stone,
+    ...typography.body,
+    color: colors.textMuted,
     textAlign: 'center',
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.md,
   },
   subtitleHighlight: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.terracotta,
+    ...typography.bodySemiBold,
+    color: colors.goldBright,
   },
 
   // Banniere migration
   migrationBanner: {
-    backgroundColor: `${colors.gold}18`,
+    backgroundColor: colors.glassGold,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
     padding: spacing.md,
     marginBottom: spacing.md,
     marginHorizontal: spacing.sm,
   },
   migrationTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
+    ...typography.bodySmallSemiBold,
+    color: colors.goldBright,
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
   migrationText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.stone,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 
   // Erreur
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
     padding: spacing.md,
     marginBottom: spacing.md,
     marginHorizontal: spacing.sm,
   },
   errorText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.terracotta,
+    ...typography.bodySmallMedium,
+    color: colors.danger,
     textAlign: 'center',
   },
 
@@ -435,52 +432,30 @@ const styles = StyleSheet.create({
   },
   otpInput: {
     borderWidth: 1.5,
-    borderColor: `${colors.stone}25`,
-    borderRadius: 14,
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
     textAlign: 'center',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 26,
-    fontWeight: '700',
-    color: colors.onyx,
-    fontFamily: 'Inter-Bold',
+    lineHeight: 30,
+    color: colors.textSecondary,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 3,
   },
   otpInputFilled: {
-    borderColor: colors.terracotta,
-    backgroundColor: `${colors.terracotta}08`,
+    borderColor: colors.borderGold,
+    backgroundColor: colors.glass,
+    color: colors.goldBright,
+    textShadowColor: 'rgba(216,180,90,0.30)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   otpInputError: {
-    borderColor: `${colors.terracotta}60`,
-  },
-
-  // Bouton Valider
-  validateButton: {
-    backgroundColor: colors.terracotta,
-    borderRadius: 28,
-    paddingVertical: 18,
-    marginHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    shadowColor: colors.terracotta,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  validateButtonDisabled: {
-    opacity: 0.6,
-  },
-  validateButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 17,
-    lineHeight: 24,
-    color: colors.sand,
-    letterSpacing: 0.3,
+    borderColor: `${colors.danger}60`,
   },
 
   // Lien renvoyer
@@ -490,55 +465,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   countdownText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmall,
+    color: colors.textMuted,
     textAlign: 'center',
+    letterSpacing: 0.4,
   },
   countdownTimer: {
-    color: colors.terracotta,
-    fontWeight: '600',
+    ...typography.overline,
+    color: colors.goldMuted,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
   resendLink: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmall,
+    color: colors.textMuted,
     textAlign: 'center',
   },
   resendLinkBold: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.terracotta,
+    ...typography.bodySmallSemiBold,
+    color: colors.goldBright,
     textDecorationLine: 'underline',
   },
 
-  // Section bas : points + barre
+  // Section bas : barre decorative
   bottomSection: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-  },
-
-  // Points indicateurs
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: spacing.xl,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  dotActive: {
-    backgroundColor: `${colors.terracotta}90`,
-    width: 24,
-  },
-  dotInactive: {
-    backgroundColor: `${colors.stone}25`,
   },
 
   // Barre decorative alternee

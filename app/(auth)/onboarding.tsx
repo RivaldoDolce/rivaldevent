@@ -1,27 +1,29 @@
 /**
  * Onboarding - 3 slides carrousel.
  *
- * Design :
- * - Header : Logo de l'app (image) + "Passer" en haut a droite
- * - Image : 40% hauteur, 90% largeur
- * - Titre : h1 onyx gras, aligne a gauche
- * - Description : body stone (lisible, regulier), aligne a gauche
- * - Indicateurs : 3 points a gauche, actif terracotta
- * - Bouton : "Continuer" / "Commencer" terracotta, bas DROITE
+ * Design « Noir & Or » :
+ * - Fond noir profond avec halo doré décoratif
+ * - Bannière image arrondie avec dégradé sombre et anneau doré fin
+ * - Badges de pagination pilules (active : dorée large ; inactive : grisée)
+ * - Titre Playfair Display, description textSecondary
+ * - Skip ghost + Suivant / Commencer primary or champagne
+ *
+ * Logique (inchangée) : ScrollView paginée, callbacks existants.
  */
 
 import { useState, useCallback, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
-import { colors, spacing, radius } from '@/lib/constants';
+import { Logo } from '@/components/icons/Logo';
+import { colors, radius, spacing, typography } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
-const LOGO_SOURCE = require('@/assets/images/logo.png');
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface Slide {
@@ -84,12 +86,13 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+      {/* Halo doré décoratif */}
+      <View pointerEvents="none" style={styles.glowTop} />
+      <View pointerEvents="none" style={styles.ringDeco} />
+
       {/* Header */}
       <View style={styles.header}>
-        {/* Logo de l'app au lieu du cercle d'etoiles */}
-        <View style={styles.logoContainer}>
-          <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
-        </View>
+        <Logo size="sm" withBackground />
         <Pressable onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Passer">
           <Text style={styles.skipText}>Passer</Text>
         </Pressable>
@@ -111,14 +114,30 @@ export default function OnboardingScreen() {
       >
         {SLIDES.map((slide, index) => (
           <View key={index} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            {/* Image : plus large (90%) pour correspondre au mockup */}
-            <Image
-              source={slide.illustration}
-              style={styles.illustration}
-              contentFit="cover"
-              transition={300}
-              cachePolicy="memory-disk"
-            />
+            {/* Bannière image avec dégradé sombre */}
+            <View style={styles.illustrationCard}>
+              <Image
+                source={slide.illustration}
+                style={styles.illustration}
+                contentFit="cover"
+                transition={300}
+                cachePolicy="memory-disk"
+              />
+              <LinearGradient
+                colors={
+                  ['rgba(10,9,8,0.10)', 'rgba(10,9,8,0.45)', colors.background] as unknown as readonly [
+                    string,
+                    string,
+                    ...string[],
+                  ]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.illustrationFade}
+                pointerEvents="none"
+              />
+              <View pointerEvents="none" style={styles.illustrationRing} />
+            </View>
 
             {/* Texte : aligne a gauche */}
             <View style={styles.textContainer}>
@@ -147,7 +166,7 @@ export default function OnboardingScreen() {
           variant="primary"
           size="md"
           onPress={handleNext}
-          icon={<ArrowRight color={colors.sand} size={18} />}
+          icon={<ArrowRight color={colors.onyx} size={18} />}
           iconPosition="right"
         >
           {currentSlide.ctaLabel}
@@ -160,7 +179,27 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  glowTop: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(216,180,90,0.07)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: -40,
+    right: -30,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
   },
   header: {
     flexDirection: 'row',
@@ -169,27 +208,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  // Logo de l'app remplace le composant Logo (cercle etoiles)
-  logoContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: `${colors.gold}15`,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}40`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  logo: {
-    width: 26,
-    height: 26,
-  },
   skipText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmallMedium,
+    color: colors.goldBright,
     letterSpacing: 0.3,
   },
   scrollView: {
@@ -200,11 +221,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.md,
   },
-  illustration: {
-    width: '90%',
-    height: '45%',
+  illustrationCard: {
+    width: '92%',
+    height: '47%',
     borderRadius: radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderGold,
     marginBottom: spacing.xl,
+  },
+  illustration: {
+    width: '100%',
+    height: '100%',
+  },
+  illustrationFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  illustrationRing: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.35)',
   },
   textContainer: {
     width: '100%',
@@ -212,28 +257,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 32,
-    lineHeight: 42,
-    color: colors.onyx,
+    ...typography.h1,
+    color: colors.text,
     marginBottom: spacing.md,
-    letterSpacing: -0.5,
     textAlign: 'left',
   },
   description: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 16,
-    lineHeight: 26,
-    color: colors.stone,
+    ...typography.body,
+    color: colors.textSecondary,
     textAlign: 'left',
-    letterSpacing: 0.2,
+    lineHeight: 27,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   indicators: {
     flexDirection: 'row',
@@ -241,14 +281,19 @@ const styles = StyleSheet.create({
   },
   indicator: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: radius.full,
   },
   indicatorActive: {
     width: 24,
-    backgroundColor: colors.terracotta,
+    backgroundColor: colors.gold,
+    shadowColor: 'rgba(216,180,90,0.6)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
   },
   indicatorInactive: {
     width: 8,
-    backgroundColor: `${colors.stone}40`,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
 });

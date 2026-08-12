@@ -1,10 +1,11 @@
 /**
  * Boutons de connexion sociale (Google + Apple).
  *
- * Design :
- * - Bouton outline pleine largeur, logo isole dans un slot fixe a gauche
- *   (logo et libelle bien separes)
- * - Libelle centre horizontalement
+ * Design « Noir & Or » :
+ * - Rangée de cartes verre fumé (bg colors.glass, filet colors.border,
+ *   rayon lg, hauteur 52)
+ * - Logo isolé dans un slot fixe a gauche (logo et libelle bien separes)
+ * - Libelle centre horizontalement, texte textSecondary
  * - Etat de chargement par fournisseur (disabled + texte)
  */
 
@@ -12,7 +13,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Apple } from 'lucide-react-native';
 
 import { GoogleLogo } from '@/components/icons/GoogleLogo';
-import { colors, radius, spacing } from '@/lib/constants';
+import { colors, radius, spacing, typography } from '@/lib/constants';
 
 export type SocialProvider = 'google' | 'apple';
 
@@ -57,7 +58,7 @@ export function SocialButtons({
         accessibilityLabel={appleLabel}
       >
         <View style={styles.iconSlot} pointerEvents="none">
-          <Apple color={colors.onyx} size={22} strokeWidth={1.6} />
+          <Apple color={colors.goldBright} size={22} strokeWidth={1.6} />
         </View>
         <Text style={styles.label}>{appleBusy ? 'Connexion en cours...' : appleLabel}</Text>
       </Pressable>
@@ -72,10 +73,11 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     minHeight: 52,
-    backgroundColor: colors.sand,
+    height: 52,
+    backgroundColor: colors.glass,
     alignItems: 'center',
     position: 'relative',
   },
@@ -94,10 +96,9 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     textAlign: 'center',
-    fontFamily: 'Inter-Medium',
+    ...typography.bodySmallMedium,
     fontSize: 15,
-    lineHeight: 22,
-    color: colors.onyx,
+    color: colors.textSecondary,
     letterSpacing: 0.2,
     paddingHorizontal: spacing.xl,
   },

@@ -5,8 +5,8 @@
  * - ClerkProvider (auth : email/password, OTP, Google OAuth)
  * - QueryClientProvider (TanStack Query)
  * - SafeAreaProvider (insets)
- * - StatusBar (style auto, bg sand)
- * - useFonts (expo-font)
+ * - StatusBar (style light, fond noir)
+ * - useFonts (Playfair Display + Inter — design system Noir & Or)
  *
  * Redirige vers (auth)/splash au demarrage.
  */
@@ -20,7 +20,9 @@ import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { useFonts, Lobster_400Regular } from '@expo-google-fonts/lobster';
+import { useFonts } from 'expo-font';
+import { PlayfairDisplay_400Regular, PlayfairDisplay_500Medium, PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold, PlayfairDisplay_800ExtraBold, PlayfairDisplay_900Black } from '@expo-google-fonts/playfair-display';
+import { Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
@@ -66,8 +68,18 @@ preventAutoHideAsync().catch(() => {
 export default function RootLayout() {
   const [isQueryClientReady, setQueryClientReady] = useState(false);
   const [fontsLoaded] = useFonts({
-    Lobster_400Regular,
-    // On peut charger d'autres polices ici si besoin
+    PlayfairDisplay_400Regular,
+    PlayfairDisplay_500Medium,
+    PlayfairDisplay_600SemiBold,
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_800ExtraBold,
+    PlayfairDisplay_900Black,
+    Inter_300Light,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
   });
 
   // Initialise la persistance de React Query
@@ -102,11 +114,11 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <StatusBar style="dark" backgroundColor={colors.sand} />
+          <StatusBar style="light" backgroundColor={colors.background} />
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: colors.sand },
+              contentStyle: { backgroundColor: colors.background },
             }}
           >
             <Stack.Screen name="(auth)" />

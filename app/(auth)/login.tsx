@@ -1,24 +1,17 @@
 /**
  * Login - connexion email/password + alternatives.
  *
- * Design :
- * - Fond sand avec logo centré en haut
- * - Titre "Bienvenue" serif bold + sous-titre stone
- * - Formulaire : email + password (icone oeil pour reveal)
- * - Ligne : "Se souvenir de moi" (persiste l'email) + "Mot de passe oublié"
- * - Bouton "Se connecter" terracotta (CTA unique)
- * - Séparateur "OU"
- * - Boutons sociaux Google + Apple (logos séparés des libellés)
- * - Bouton téléphone (OTP SMS) séparé
- * - Lien "Inscrivez-vous" en bas
+ * Design « Noir & Or » :
+ * - Fond noir profond + halo doré discret en haut
+ * - Logo medaillon or centré, titre Playfair, sous-titre textMuted
+ * - Champs Input dark, CTA primary or champagne pleine largeur
+ * - Boutons sociaux en cartes verre fumé
+ * - Lien inscription doré
  *
- * OAuth (Google / Apple) : useSSO experimental (@clerk/expo/experimental)
- * qui active automatiquement la session ; le retour navigateur passe par
- * la route /oauth-callback qui redirige vers l'accueil.
- *
- * Migration : si l'email n'existe pas chez Clerk, on tente la connexion sur
- * l'ancien projet Supabase ; si elle réussit, le compte est recréé chez
- * Clerk et l'utilisateur finalise via un code email (écran OTP).
+ * Logique (inchangée) :
+ * - OAuth (Google / Apple) : useSSO experimental (@clerk/expo/experimental)
+ * - Migration Supabase via écran OTP
+ * - Formulaire react-hook-form + zod
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -36,7 +29,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { useSSO } from '@clerk/expo/experimental';
@@ -44,8 +36,9 @@ import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Logo } from '@/components/icons/Logo';
 import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
-import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
+import { colors, typography, spacing, radius, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthService } from '@/services/auth.service';
@@ -53,7 +46,6 @@ import { loginSchema, type LoginInput } from '@/lib/validation';
 import { logger } from '@/lib/logger';
 import { useAppMode } from '@/stores/app-mode';
 
-const LOGO_SOURCE = require('@/assets/images/logo.png');
 const REMEMBER_EMAIL_KEY = 'rivaldevent.remember_email';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -204,7 +196,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.sand }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
@@ -215,11 +207,13 @@ export default function LoginScreen() {
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo — centré, taille raisonnable */}
+        {/* Halo doré discret en haut */}
+        <View pointerEvents="none" style={styles.glowTop} />
+        <View pointerEvents="none" style={styles.ringDeco} />
+
+        {/* Logo — medaillon or centré */}
         <View style={styles.logoWrapper}>
-          <View style={styles.logoCircle}>
-            <Image source={LOGO_SOURCE} style={styles.logo} contentFit="contain" transition={300} />
-          </View>
+          <Logo size="md" withBackground />
         </View>
 
         {/* Titre */}
@@ -251,7 +245,7 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                iconLeft={<Mail color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconLeft={<Mail color={colors.goldMuted} size={20} strokeWidth={1.5} />}
               />
             )}
           />
@@ -268,13 +262,13 @@ export default function LoginScreen() {
                 onBlur={onBlur}
                 error={errors.password?.message}
                 secureTextEntry={!showPassword}
-                iconLeft={<Lock color={colors.stone} size={20} strokeWidth={1.5} />}
+                iconLeft={<Lock color={colors.goldMuted} size={20} strokeWidth={1.5} />}
                 iconRight={
                   <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12}>
                     {showPassword ? (
-                      <EyeOff color={colors.stone} size={20} strokeWidth={1.5} />
+                      <EyeOff color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     ) : (
-                      <Eye color={colors.stone} size={20} strokeWidth={1.5} />
+                      <Eye color={colors.goldMuted} size={20} strokeWidth={1.5} />
                     )}
                   </Pressable>
                 }
@@ -294,7 +288,7 @@ export default function LoginScreen() {
               accessibilityState={{ checked: rememberMe }}
             >
               <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe && <Check color={colors.sand} size={14} strokeWidth={3} />}
+                {rememberMe && <Check color={colors.onyx} size={14} strokeWidth={3} />}
               </View>
               <Text style={styles.checkboxLabel}>Se souvenir de moi</Text>
             </Pressable>
@@ -313,7 +307,7 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Bouton principal CTA — terracotta, pleine largeur */}
+        {/* Bouton principal CTA — or champagne, pleine largeur */}
         <Button
           variant="primary"
           size="lg"
@@ -331,7 +325,7 @@ export default function LoginScreen() {
           <View style={styles.separatorLine} />
         </View>
 
-        {/* Boutons sociaux — logo et libelle separes */}
+        {/* Boutons sociaux — cartes verre fumé */}
         <SocialButtons
           googleLabel="Se connecter avec Google"
           appleLabel="Se connecter avec Apple"
@@ -348,7 +342,7 @@ export default function LoginScreen() {
           accessibilityRole="button"
         >
           <View style={styles.iconSlot} pointerEvents="none">
-            <Phone color={colors.onyx} size={20} strokeWidth={1.8} />
+            <Phone color={colors.goldBright} size={20} strokeWidth={1.75} />
           </View>
           <Text style={styles.alternativeText}>Utiliser mon numéro de téléphone</Text>
         </Pressable>
@@ -368,57 +362,58 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   content: {
     paddingHorizontal: spacing.lg,
   },
+  glowTop: {
+    position: 'absolute',
+    top: -140,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  },
+  ringDeco: {
+    position: 'absolute',
+    top: 40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(216,180,90,0.14)',
+  },
   logoWrapper: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: `${colors.gold}15`,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}40`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  logo: {
-    width: 56,
-    height: 56,
+    marginBottom: spacing.xl,
+    ...shadows.goldGlowSoft,
   },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 32,
-    lineHeight: 40,
-    color: colors.onyx,
+    ...typography.h1,
+    color: colors.text,
     textAlign: 'center',
-    letterSpacing: -0.5,
   },
   subtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.stone,
+    ...typography.body,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.xl,
-    letterSpacing: 0.2,
   },
   errorBanner: {
-    backgroundColor: `${colors.terracotta}15`,
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   errorText: {
     ...typography.bodySmall,
-    color: colors.terracotta,
+    color: colors.danger,
     textAlign: 'center',
   },
   form: {
@@ -440,26 +435,23 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: `${colors.stone}60`,
+    borderColor: colors.borderStrong,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: colors.terracotta,
-    borderColor: colors.terracotta,
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
   },
   checkboxLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
   forgotPasswordText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.terracotta,
+    ...typography.bodySmallMedium,
+    color: colors.goldBright,
     letterSpacing: 0.1,
   },
   separator: {
@@ -470,23 +462,21 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: `${colors.stone}30`,
+    backgroundColor: colors.divider,
   },
   separatorText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1.5,
-    color: colors.stone,
-    textTransform: 'uppercase',
+    ...typography.overline,
+    color: colors.goldMuted,
+    marginHorizontal: spacing.md,
+    letterSpacing: 2,
   },
   alternativeButton: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: `${colors.stone}30`,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     minHeight: 52,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.glass,
     marginTop: spacing.sm,
     alignItems: 'center',
     position: 'relative',
@@ -503,10 +493,9 @@ const styles = StyleSheet.create({
   alternativeText: {
     flex: 1,
     textAlign: 'center',
-    fontFamily: 'Inter-Medium',
+    ...typography.bodySmallMedium,
     fontSize: 15,
-    lineHeight: 22,
-    color: colors.onyx,
+    color: colors.textSecondary,
     letterSpacing: 0.2,
     paddingHorizontal: spacing.xl,
   },
@@ -517,20 +506,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   signUpText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
+    ...typography.bodySmall,
+    color: colors.textMuted,
   },
   signUpLinkWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   signUpLink: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.terracotta,
+    ...typography.bodySmallSemiBold,
+    color: colors.goldBright,
     textDecorationLine: 'underline',
     letterSpacing: 0.2,
   },
