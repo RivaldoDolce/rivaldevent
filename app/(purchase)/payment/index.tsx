@@ -1,16 +1,17 @@
 /**
  * Page selection operateur Mobile Money - Tunnel d'achat.
  *
- * Design ultra-premium inspire de Stripe Checkout, Apple Pay et Revolut :
- * - Header elegant avec retour et sous-titre
- * - Recapitulatif style "ticket stub" sur carte onyx avec liseret
- *   perfore, montant en or, et badges qualite SVG (VIP/Premium/Standard)
- * - Selecteur d'operateur avec logos SVG, couleur de marque,
- *   badge "Populaire" et etat de selection affirmatif
- * - Champ telephone premium avec prefixe +237, auto-format sur 9 chiffres
- *   (maxLength corrige), validation temps reel et clavier non masquant
- * - Bouton "Confirmer le paiement" inline pour eviter les problemes de clavier
- * - Badge de securite discret
+ * Design system « Noir & Or » premium :
+ * - En-tete ScreenHeader (degrade sombre + halo or + retour pastille verre)
+ * - Recapitulatif commande compact en carte elevee (filet or subtil),
+ *   total en Inter_700Bold or champagne
+ * - Selection operateur : 3 cartes sombres (MTN, Orange, Moov) avec
+ *   logos SVG existants, pastille radio a droite (degrade or quand cochee)
+ *   et etat actif : filet or + fond verre dore + halo doux
+ * - Champ telephone premium : prefixe +237 en pastille doree, auto-format
+ *   sur 9 chiffres, validation temps reel, clavier non masquant
+ * - Bouton "Confirmer" or pleine largeur inline (evite les problemes
+ *   de clavier) + badge de securite discret
  *
  * Navigation :
  * - Recoit { eventId, tiers, totalAmount } en parametres
@@ -35,29 +36,29 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
-  ChevronLeft,
   ShieldCheck,
   Phone,
   ArrowRight,
   Ticket,
   CircleCheck,
-  AlertCircle,
+  CircleAlert,
   Info,
   CalendarDays,
   MapPin,
+  Check,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import MtnLogo from '@/assets/icons/mtn-logo.svg';
 import OrangeLogo from '@/assets/icons/orange-logo.svg';
 import MoovLogo from '@/assets/icons/moov-logo.svg';
-import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
-import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
-import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { ScreenHeader } from '@/components/profile/ScreenHeader';
+import { Button } from '@/components/ui/Button';
+
+import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { formatPrice, formatDate } from '@/services/event.service';
@@ -74,15 +75,7 @@ interface OperatorInfo {
   readonly name: string;
   readonly subtitle: string;
   readonly logoSource: React.ComponentType<{ width?: number; height?: number }>;
-  readonly gradient: readonly [string, string];
-  readonly textColor: string;
   readonly badge?: string;
-}
-
-interface QualityInfo {
-  readonly source: React.ComponentType<{ width?: number; height?: number }>;
-  readonly label: string;
-  readonly accent: string;
 }
 
 interface RecapRow {
@@ -90,7 +83,6 @@ interface RecapRow {
   readonly tierName: string;
   readonly quantity: number;
   readonly subtotal: number | null;
-  readonly quality: QualityInfo;
 }
 
 // ============================================================
@@ -103,8 +95,6 @@ const OPERATORS: readonly OperatorInfo[] = [
     name: 'MTN MoMo',
     subtitle: 'Mobile Money',
     logoSource: MtnLogo,
-    gradient: ['#FFD24A', '#E7A400'],
-    textColor: colors.onyx,
     badge: 'Populaire',
   },
   {
@@ -112,33 +102,14 @@ const OPERATORS: readonly OperatorInfo[] = [
     name: 'Orange Money',
     subtitle: 'Paiement mobile',
     logoSource: OrangeLogo,
-    gradient: ['#FF8A21', '#E05200'],
-    textColor: colors.white,
   },
   {
     id: 'moov',
     name: 'Moov Money',
     subtitle: 'Transfert mobile',
     logoSource: MoovLogo,
-    gradient: ['#2EAAFF', '#0068D6'],
-    textColor: colors.white,
   },
 ] as const;
-
-// ============================================================
-// Helper : badge qualite selon le nom du tier
-// ============================================================
-
-function getQualityForTier(name: string): QualityInfo {
-  const lower = name.toLowerCase();
-  if (lower.includes('premium') || lower.includes('vvip')) {
-    return { source: QualityPremiumIcon, label: 'PREMIUM', accent: colors.gold };
-  }
-  if (lower.includes('vip')) {
-    return { source: QualityVipIcon, label: 'VIP', accent: colors.mango };
-  }
-  return { source: QualityStandardIcon, label: 'STANDARD', accent: colors.ivory };
-}
 
 // ============================================================
 // Helper : valider numero camerounais
@@ -170,285 +141,186 @@ function formatPhoneNumber(input: string): string {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.sand,
-  },
-
-  /* Header premium */
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  headerBackButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-    ...shadows.search,
-  },
-  headerTitleArea: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 30,
-    color: colors.onyx,
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-    marginTop: 2,
+    backgroundColor: colors.background,
   },
 
   /* Contenu */
   content: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
 
   /* =====================================================
-     Recapitulatif "ticket stub" - carte onyx premium
+     Recapitulatif compact - carte elevee
      ===================================================== */
   recapCard: {
-    borderRadius: radii.xxl,
+    backgroundColor: colors.elevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.lg,
-    marginBottom: spacing.lg,
-    marginTop: spacing.sm,
-    overflow: 'hidden',
-    ...shadows.eventCard,
+    marginBottom: spacing.md,
+    ...shadows.card,
   },
   recapTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   recapOverline: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
     letterSpacing: 1.5,
-    color: colors.gold,
+    color: colors.goldMuted,
   },
   recapEventTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 19,
-    lineHeight: 26,
-    color: colors.white,
-    marginBottom: spacing.md,
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 17,
+    lineHeight: 23,
+    color: colors.text,
+    marginBottom: spacing.sm,
     letterSpacing: -0.2,
   },
-  /* Meta date / lieu sur le stub */
   recapMetaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   recapMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: `${colors.white}10`,
-    borderRadius: radii.full,
+    backgroundColor: colors.glass,
+    borderRadius: radius.full,
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 5,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   recapMetaText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}99`,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.textSecondary,
   },
   recapTierRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  recapQualityTile: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.md,
-    backgroundColor: `${colors.white}14`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  recapTierInfo: {
-    flex: 1,
+    marginBottom: spacing.xs,
   },
   recapTierName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  },
-  recapTierQuantity: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}99`,
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
   recapTierSubtotal: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.text,
   },
-
-  /* Liseret perfore */
-  recapDividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.md,
-    position: 'relative',
+  recapSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: `${colors.gold}2E`,
+    marginVertical: spacing.sm,
   },
-  dashedLine: {
-    flex: 1,
-    height: 1,
-    borderTopWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: `${colors.white}30`,
-  },
-  dividerDiamond: {
-    width: 8,
-    height: 8,
-    backgroundColor: colors.gold,
-    transform: [{ rotate: '45deg' }],
-    marginHorizontal: spacing.sm,
-  },
-  /* Encoches perforees - moities de cercles qui "mordent" les bords */
-  notchLeft: {
-    position: 'absolute',
-    left: -40,
-    top: 0,
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.sand,
-  },
-  notchRight: {
-    position: 'absolute',
-    right: -40,
-    top: 0,
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.sand,
-  },
-
-  /* Total */
   recapTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  recapTotalLabelArea: {
-    flex: 1,
+    alignItems: 'center',
   },
   recapTotalLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: `${colors.white}99`,
-  },
-  recapTotalCaption: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 11,
-    lineHeight: 15,
-    color: `${colors.white}66`,
-    marginTop: 2,
+    color: colors.textMuted,
   },
   recapTotalValue: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 26,
-    lineHeight: 32,
-    color: colors.gold,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 21,
+    lineHeight: 28,
+    color: colors.goldBright,
+    letterSpacing: -0.3,
   },
 
   /* Securite badge */
   securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${colors.forest}08`,
-    borderRadius: radii.md,
+    backgroundColor: colors.glass,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   securityText: {
-    fontFamily: 'Inter-Regular',
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.forest,
+    color: colors.textSecondary,
   },
 
   /* Section titre */
   sectionOverline: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
     letterSpacing: 2,
-    color: colors.gold,
+    color: colors.goldMuted,
     marginBottom: spacing.xs,
   },
   sectionTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 22,
     lineHeight: 28,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   sectionSubtitle: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 2,
     marginBottom: spacing.md,
   },
 
-  /* Carte operateur premium - degrade marque */
+  /* Carte operateur - surface sombre premium */
   operatorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.xl,
-    padding: spacing.md + 2,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    backgroundColor: colors.elevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
     marginBottom: spacing.md,
-    overflow: 'hidden',
+    ...shadows.card,
   },
   operatorCardSelected: {
-    borderColor: colors.white,
-    ...shadows.eventCard,
-  },
-  operatorCardPressable: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+    borderColor: `${colors.gold}66`,
+    backgroundColor: colors.glassGold,
+    ...shadows.goldGlowSoft,
   },
   operatorLogoWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
-    overflow: 'hidden',
-    ...shadows.search,
   },
   operatorInfo: {
     flex: 1,
@@ -460,44 +332,53 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   operatorName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 17,
-    lineHeight: 23,
-    color: colors.onyx,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   operatorBadge: {
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 3,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(216,180,90,0.12)',
     borderWidth: 1,
+    borderColor: `${colors.gold}40`,
   },
   operatorBadgeText: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 13,
-    letterSpacing: 0.8,
+    color: colors.goldBright,
+    letterSpacing: 0.4,
   },
   operatorSubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
-  operatorCheckOuter: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: `${colors.white}B3`,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
+  operatorRadioOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: spacing.sm,
+    backgroundColor: 'transparent',
   },
-  operatorCheckOuterSelected: {
-    borderColor: colors.white,
-    backgroundColor: colors.white,
+  operatorRadioSelected: {
+    borderColor: 'transparent',
+  },
+  operatorRadioInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   /* Indication dynamique sous la liste */
@@ -505,25 +386,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.search,
   },
   operatorHintText: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.text,
+    color: colors.textSecondary,
   },
   operatorHintTextSelected: {
-    color: colors.terracotta,
-    fontFamily: 'Inter-SemiBold',
+    color: colors.goldBright,
+    fontFamily: 'Inter_600SemiBold',
   },
 
   /* Champ telephone premium */
@@ -532,52 +412,53 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   phoneLabel: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 15,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.text,
     marginBottom: spacing.sm,
   },
   phoneInputOuter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: 1.5,
+    backgroundColor: colors.glass,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 56,
+    borderWidth: 1,
     borderColor: colors.border,
-    ...shadows.card,
   },
   phoneInputOuterFocused: {
-    borderColor: colors.terracotta,
-    ...shadows.eventCard,
+    borderColor: `${colors.gold}66`,
+    ...shadows.goldGlowSoft,
   },
   phoneInputOuterError: {
     borderColor: colors.danger,
   },
   phoneInputOuterValid: {
-    borderColor: colors.forest,
+    borderColor: colors.success,
   },
   phonePrefixBadge: {
-    backgroundColor: colors.ivory,
-    borderRadius: radii.md,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.xs + 1,
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
   },
   phonePrefixText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.onyx,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.goldBright,
   },
   phoneInput: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
-    fontSize: 18,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 17,
     lineHeight: 24,
-    color: colors.onyx,
+    color: colors.text,
     paddingVertical: 0,
     includeFontPadding: false,
   },
@@ -591,57 +472,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   phoneHintText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textMuted,
   },
   phoneErrorText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
     lineHeight: 16,
     color: colors.danger,
-  },
-
-  /* Bouton confirmer premium - pilule degrade or */
-  confirmButton: {
-    borderRadius: radii.xl,
-    marginBottom: spacing.sm,
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  confirmButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  confirmGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md + 4,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.xl,
-  },
-  confirmButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 17,
-    lineHeight: 24,
-    color: colors.onyx,
-  },
-  confirmButtonTextDisabled: {
-    color: colors.stone,
-  },
-  ctaHelperText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.stone,
-    textAlign: 'center',
-    marginBottom: spacing.md,
   },
 
   /* Bouton annuler */
@@ -651,10 +491,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   cancelButtonText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textMuted,
+  },
+  ctaHelperText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
 });
 
@@ -706,7 +555,6 @@ export default function PaymentIndex() {
           tierName: tier.tierName,
           quantity: tier.quantity,
           subtotal: tier.quantity * tier.unitPrice,
-          quality: getQualityForTier(tier.tierName),
         }));
     }
     return parsedTiers.map((tier) => ({
@@ -714,7 +562,6 @@ export default function PaymentIndex() {
       tierName: 'Billet',
       quantity: tier.quantity,
       subtotal: null,
-      quality: getQualityForTier('standard'),
     }));
   }, [flow.selectedTiers, parsedTiers]);
 
@@ -807,7 +654,6 @@ export default function PaymentIndex() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top + spacing.md,
           paddingBottom: insets.bottom + spacing.xxl,
         }}
         showsVerticalScrollIndicator={false}
@@ -815,34 +661,16 @@ export default function PaymentIndex() {
         keyboardDismissMode="on-drag"
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={handleBack}
-            style={styles.headerBackButton}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-          >
-            <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
-          </Pressable>
-          <View style={styles.headerTitleArea}>
-            <Text style={styles.headerTitle}>Paiement</Text>
-            <Text style={styles.headerSubtitle}>
-              Choisissez votre operateur Mobile Money
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title="Paiement"
+          subtitle="Choisissez votre operateur Mobile Money"
+        />
 
         <View style={styles.content}>
           {/* =============================================
-              RECAPITULATIF - ticket stub onyx premium
+              RECAPITULATIF COMPACT - carte elevee
               ============================================= */}
-          <LinearGradient
-            colors={['#26221E', colors.onyx]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.recapCard}
-          >
+          <View style={styles.recapCard}>
             <View style={styles.recapTopRow}>
               <Text style={styles.recapOverline}>VOTRE COMMANDE</Text>
               <Ticket size={18} color={colors.gold} strokeWidth={1.5} />
@@ -856,7 +684,7 @@ export default function PaymentIndex() {
               <View style={styles.recapMetaRow}>
                 {displayEventDate ? (
                   <View style={styles.recapMetaItem}>
-                    <CalendarDays size={13} color={`${colors.white}88`} strokeWidth={1.75} />
+                    <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.75} />
                     <Text style={styles.recapMetaText} numberOfLines={1}>
                       {displayEventDate}
                     </Text>
@@ -864,7 +692,7 @@ export default function PaymentIndex() {
                 ) : null}
                 {displayEventCity ? (
                   <View style={styles.recapMetaItem}>
-                    <MapPin size={13} color={`${colors.white}88`} strokeWidth={1.75} />
+                    <MapPin size={12} color={colors.goldMuted} strokeWidth={1.75} />
                     <Text style={styles.recapMetaText} numberOfLines={1}>
                       {displayEventCity}
                     </Text>
@@ -875,54 +703,33 @@ export default function PaymentIndex() {
 
             {recapRows.map((row) => (
               <View key={row.key} style={styles.recapTierRow}>
-                <View style={styles.recapQualityTile}>
-                  {(() => {
-                    const QualityIcon = row.quality.source;
-                    return <QualityIcon width={26} height={26} />;
-                  })()}
-                </View>
-                <View style={styles.recapTierInfo}>
-                  <Text style={styles.recapTierName} numberOfLines={1}>
-                    {row.tierName}
-                  </Text>
-                  <Text style={styles.recapTierQuantity}>
-                    {row.quantity} billet{row.quantity > 1 ? 's' : ''} - {row.quality.label}
-                  </Text>
-                </View>
+                <Text style={styles.recapTierName} numberOfLines={1}>
+                  {row.quantity} billet{row.quantity > 1 ? 's' : ''} · {row.tierName}
+                </Text>
                 <Text style={styles.recapTierSubtotal}>
                   {row.subtotal !== null ? formatPrice(row.subtotal) : `${row.quantity}x`}
                 </Text>
               </View>
             ))}
 
-            {/* Liseret perfore avec losange or + encoches */}
-            <View style={styles.recapDividerRow}>
-              <View style={styles.dashedLine} />
-              <View style={styles.dividerDiamond} />
-              <View style={styles.dashedLine} />
-              <View style={styles.notchLeft} pointerEvents="none" />
-              <View style={styles.notchRight} pointerEvents="none" />
-            </View>
+            <View style={styles.recapSeparator} />
 
             <View style={styles.recapTotalRow}>
-              <View style={styles.recapTotalLabelArea}>
-                <Text style={styles.recapTotalLabel}>Total a payer</Text>
-                <Text style={styles.recapTotalCaption}>Paiement en un versement</Text>
-              </View>
+              <Text style={styles.recapTotalLabel}>Total a payer</Text>
               <Text style={styles.recapTotalValue}>{formatPrice(displayTotal)}</Text>
             </View>
-          </LinearGradient>
+          </View>
 
           {/* Badge securise */}
           <View style={styles.securityRow}>
-            <ShieldCheck size={18} color={colors.forest} strokeWidth={2} />
+            <ShieldCheck size={17} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.securityText}>
               Paiement securise - Donnees chiffrees
             </Text>
           </View>
 
           {/* =============================================
-              SELECTION OPERATEUR - cartes degrade marque
+              SELECTION OPERATEUR - cartes sombres premium
               ============================================= */}
           <Text style={styles.sectionOverline}>PAIEMENT MOBILE</Text>
           <Text style={styles.sectionTitle}>Operateur Mobile Money</Text>
@@ -932,72 +739,62 @@ export default function PaymentIndex() {
 
           {OPERATORS.map((op) => {
             const isSelected = selectedOperator === op.id;
-            const textColor = op.textColor;
             return (
-              <LinearGradient
+              <Pressable
                 key={op.id}
-                colors={op.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                onPress={() => handleOperatorSelect(op.id)}
                 style={[
                   styles.operatorCard,
                   isSelected && styles.operatorCardSelected,
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={op.name}
+                accessibilityState={{ selected: isSelected }}
               >
-                <Pressable
-                  onPress={() => handleOperatorSelect(op.id)}
-                  style={({ pressed }) => [
-                    styles.operatorCardPressable,
-                    pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={op.name}
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  {/* Logo */}
-                  <View style={styles.operatorLogoWrap}>
-                    {(() => {
-                      const OperatorLogo = op.logoSource;
-                      return <OperatorLogo width={42} height={42} />;
-                    })()}
-                  </View>
+                {/* Logo */}
+                <View style={styles.operatorLogoWrap}>
+                  {(() => {
+                    const OperatorLogo = op.logoSource;
+                    return <OperatorLogo width={38} height={38} />;
+                  })()}
+                </View>
 
-                  {/* Info */}
-                  <View style={styles.operatorInfo}>
-                    <View style={styles.operatorNameRow}>
-                      <Text style={[styles.operatorName, { color: textColor }]}>
-                        {op.name}
-                      </Text>
-                      {op.badge && (
-                        <View style={[
-                          styles.operatorBadge,
-                          {
-                            backgroundColor: `${textColor}1F`,
-                            borderColor: `${textColor}40`,
-                          },
-                        ]}>
-                          <Text style={[styles.operatorBadgeText, { color: textColor }]}>
-                            {op.badge}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.operatorSubtitle, { color: `${textColor}B3` }]}>
-                      {op.subtitle}
+                {/* Info */}
+                <View style={styles.operatorInfo}>
+                  <View style={styles.operatorNameRow}>
+                    <Text style={styles.operatorName}>
+                      {op.name}
                     </Text>
-                  </View>
-
-                  {/* Indicateur selection */}
-                  <View style={[
-                    styles.operatorCheckOuter,
-                    isSelected && styles.operatorCheckOuterSelected,
-                  ]}>
-                    {isSelected && (
-                      <CircleCheck size={18} color={colors.onyx} strokeWidth={2.5} />
+                    {op.badge && (
+                      <View style={styles.operatorBadge}>
+                        <Text style={styles.operatorBadgeText}>
+                          {op.badge}
+                        </Text>
+                      </View>
                     )}
                   </View>
-                </Pressable>
-              </LinearGradient>
+                  <Text style={styles.operatorSubtitle}>
+                    {op.subtitle}
+                  </Text>
+                </View>
+
+                {/* Pastille radio */}
+                <View style={[
+                  styles.operatorRadioOuter,
+                  isSelected && styles.operatorRadioSelected,
+                ]}>
+                  {isSelected && (
+                    <LinearGradient
+                      colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.operatorRadioInner}
+                    >
+                      <Check size={14} color={colors.onyx} strokeWidth={3} />
+                    </LinearGradient>
+                  )}
+                </View>
+              </Pressable>
             );
           })}
 
@@ -1005,14 +802,14 @@ export default function PaymentIndex() {
           <View style={styles.operatorHintRow}>
             {selectedOperator ? (
               <>
-                <ArrowRight size={16} color={colors.terracotta} strokeWidth={2} />
+                <ArrowRight size={16} color={colors.goldBright} strokeWidth={1.75} />
                 <Text style={[styles.operatorHintText, styles.operatorHintTextSelected]}>
                   Redirection vers {OPERATORS.find((op) => op.id === selectedOperator)?.name}
                 </Text>
               </>
             ) : (
               <>
-                <Info size={16} color={colors.stone} strokeWidth={1.75} />
+                <Info size={16} color={colors.goldMuted} strokeWidth={1.75} />
                 <Text style={styles.operatorHintText}>
                   Choisissez un operateur, puis entrez votre numero
                 </Text>
@@ -1046,18 +843,20 @@ export default function PaymentIndex() {
                 onFocus={() => setPhoneFocused(true)}
                 onBlur={() => setPhoneFocused(false)}
                 placeholder="6 XX XX XX XX"
-                placeholderTextColor={colors.stone}
+                placeholderTextColor={colors.textMuted}
                 keyboardType="phone-pad"
                 maxLength={13}
                 autoComplete="tel"
                 textContentType="telephoneNumber"
+                selectionColor={colors.gold}
+                cursorColor={colors.gold}
                 accessibilityLabel="Numero de telephone"
               />
               <View style={styles.phoneIcon}>
                 {isPhoneComplete ? (
-                  <CircleCheck size={22} color={colors.forest} strokeWidth={2} />
+                  <CircleCheck size={22} color={colors.success} strokeWidth={2} />
                 ) : (
-                  <Phone size={22} color={colors.stone} strokeWidth={1.5} />
+                  <Phone size={22} color={colors.goldMuted} strokeWidth={1.5} />
                 )}
               </View>
             </Pressable>
@@ -1066,7 +865,7 @@ export default function PaymentIndex() {
             <View style={styles.phoneHint}>
               {!isPhoneValid && phoneDigits.length > 0 ? (
                 <>
-                  <AlertCircle size={14} color={colors.danger} strokeWidth={2} />
+                  <CircleAlert size={14} color={colors.danger} strokeWidth={2} />
                   <Text style={styles.phoneErrorText}>
                     Numero invalide. Format : 6 XX XX XX XX
                   </Text>
@@ -1082,39 +881,18 @@ export default function PaymentIndex() {
           </View>
 
           {/* =============================================
-              BOUTON CONFIRMER - degrade or dynamique
+              BOUTON CONFIRMER - or pleine largeur
               ============================================= */}
-          <Pressable
-            onPress={handleConfirmPayment}
-            style={({ pressed }) => [
-              styles.confirmButton,
-              !canProceed && styles.confirmButtonDisabled,
-              pressed && canProceed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
-            ]}
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
             disabled={!canProceed}
-            accessibilityRole="button"
-            accessibilityLabel="Confirmer le paiement"
-            accessibilityState={{ disabled: !canProceed }}
+            onPress={handleConfirmPayment}
+            icon={<ArrowRight size={20} strokeWidth={2.25} />}
           >
-            <LinearGradient
-              colors={canProceed ? ['#F0CD77', '#C9A84C'] : ['#EBE5DA', '#D8CFBE']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.confirmGradient}
-            >
-              <Text style={[
-                styles.confirmButtonText,
-                !canProceed && styles.confirmButtonTextDisabled,
-              ]}>
-                {canProceed ? `Confirmer ${formatPrice(displayTotal)}` : 'Confirmer'}
-              </Text>
-              <ArrowRight
-                size={20}
-                color={canProceed ? colors.onyx : colors.stone}
-                strokeWidth={2.25}
-              />
-            </LinearGradient>
-          </Pressable>
+            {canProceed ? `Confirmer ${formatPrice(displayTotal)}` : 'Confirmer'}
+          </Button>
 
           {!canProceed && ctaHelper ? (
             <Text style={styles.ctaHelperText}>{ctaHelper}</Text>

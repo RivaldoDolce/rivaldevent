@@ -1,12 +1,14 @@
 /**
  * Page paiement Orange Money - Tunnel d'achat.
  *
- * Design ultra-premium inspire de Revolut, Apple Pay et des
- * ecrans USSD d'Orange Money :
- * - Hero sombre en degrade avec logo, montant en or et numero de debit
- * - Panneau USSD focal avec code en gros, sur fond clair contraste
- * - Timeline d'etapes numerotees avec trait de liaison
- * - CTA terracotta pleine largeur + etat de verification
+ * Design system « Noir & Or » premium :
+ * - En-tete degrade sombre : retour pastille verre + logo operateur +
+ *   titre Playfair + sous-titre
+ * - Carte recapitulative (billet + montant or champagne)
+ * - Numero de debit affiche en champ style Input (prefixe +237 pastille)
+ * - Panneau USSD focal + timeline d'etapes numerotees
+ * - Note de securite (shield-check) + CTA "Payer {montant}" or pleine
+ *   largeur avec etat de traitement (spinner + message elegant)
  * - Bouton "Annuler" discret en lien fantome
  *
  * Navigation :
@@ -25,7 +27,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,12 +35,16 @@ import {
   ChevronLeft,
   CircleCheck,
   Smartphone,
+  Ticket,
+  ShieldCheck,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import OrangeLogo from '@/assets/icons/orange-logo.svg';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
+
+import { colors, spacing, radius, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { confirmPaymentAndCreateTickets } from '@/lib/payment-helper';
 import { formatPrice } from '@/services/event.service';
@@ -75,126 +80,189 @@ function formatPhoneDisplay(phone: string): string {
 // ============================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.sand },
+  root: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
+  /* =============================================
+     Header premium - degrade sombre + halo or
+     ============================================= */
   header: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.gold}26`,
+  },
+  headerGlow: {
+    position: 'absolute',
+    top: -90,
+    right: -50,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(216,180,90,0.09)',
+  },
+  headerRingLarge: {
+    position: 'absolute',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}2E`,
+    top: -70,
+    right: -40,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    marginTop: spacing.md,
   },
   headerBackButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-    ...shadows.search,
-  },
-  headerTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.onyx,
-  },
-
-  content: { paddingHorizontal: spacing.lg },
-
-  /* =============================================
-     Hero operateur - carte sombre en degrade
-     ============================================= */
-  heroCard: {
-    borderRadius: radii.xxl,
-    overflow: 'hidden',
-    marginBottom: spacing.lg,
-    ...shadows.eventCard,
-  },
-  heroAccentBar: {
-    height: 4,
-    width: '100%',
-    backgroundColor: OPERATOR_COLOR,
-  },
-  heroInner: {
-    padding: spacing.lg,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  heroLogoWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  heroLogo: {
+  headerLogoWrap: {
     width: 44,
     height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  heroTitleArea: {
+  headerTitleArea: {
     flex: 1,
   },
-  heroName: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.white,
-  },
-  heroTag: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}99`,
-  },
-  heroAmountLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}99`,
-    marginBottom: 2,
-  },
-  heroAmount: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 30,
-    lineHeight: 38,
-    color: colors.gold,
+  headerTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.text,
     letterSpacing: -0.3,
   },
-  heroDivider: {
-    height: 1,
-    backgroundColor: `${colors.white}22`,
-    marginVertical: spacing.md,
+  headerSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
+    marginTop: 1,
   },
-  heroPhoneRow: {
+
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+
+  /* =============================================
+     Carte recapitulative - billet + montant
+     ============================================= */
+  recapCard: {
+    backgroundColor: colors.elevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.card,
+  },
+  recapTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  heroPhoneLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: `${colors.white}80`,
+  recapOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.5,
+    color: colors.goldMuted,
   },
-  heroPhoneValue: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.white,
+  recapEventTitle: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
+    marginBottom: spacing.md,
+    letterSpacing: -0.2,
+  },
+  recapDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: `${colors.gold}2E`,
+    marginVertical: spacing.md,
+  },
+  amountLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    marginBottom: 2,
+  },
+  amountValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    lineHeight: 36,
+    color: colors.goldBright,
+    letterSpacing: -0.4,
+  },
+
+  /* Numero de debit - champ style Input (lecture seule) */
+  phoneField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glass,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
+  },
+  phonePrefixBadge: {
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+  },
+  phonePrefixText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 19,
+    color: colors.goldBright,
+  },
+  phoneValueText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
   },
 
   /* =============================================
      Panneau USSD focal
      ============================================= */
   ussdCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
+    backgroundColor: colors.elevated,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
@@ -207,44 +275,52 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
+  ussdDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.gold,
+  },
   ussdLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.stone,
-    letterSpacing: 0.8,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldMuted,
+    letterSpacing: 1.4,
   },
   ussdCode: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 34,
     lineHeight: 42,
-    color: colors.onyx,
+    color: colors.goldBright,
     letterSpacing: 2,
   },
   ussdHint: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
 
   /* Section titre */
   sectionTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: colors.onyx,
+    color: colors.text,
     marginBottom: spacing.md,
   },
 
   /* Timeline des etapes */
   stepContainer: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     ...shadows.card,
   },
   stepRow: {
@@ -261,63 +337,68 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: `${OPERATOR_COLOR}22`,
+    borderWidth: 1,
+    borderColor: `${OPERATOR_COLOR}45`,
     justifyContent: 'center',
     alignItems: 'center',
   },
   stepIndicatorCompleted: {
-    backgroundColor: `${colors.forest}15`,
+    backgroundColor: 'rgba(91,196,139,0.14)',
+    borderColor: 'rgba(91,196,139,0.45)',
   },
   stepNumber: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 14,
     lineHeight: 18,
     color: OPERATOR_COLOR,
   },
   stepConnector: {
-    width: 2,
+    width: 1.5,
     flex: 1,
     backgroundColor: `${OPERATOR_COLOR}30`,
     marginVertical: spacing.xs,
     minHeight: 24,
   },
   stepInstruction: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.text,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
     flex: 1,
-    paddingTop: 5,
+    paddingTop: 6,
     paddingBottom: spacing.md,
   },
 
-  /* Boutons */
-  confirmButton: {
+  /* Note de securite */
+  securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.xl,
-    paddingVertical: spacing.md + 4,
     gap: spacing.sm,
-    marginBottom: spacing.sm,
-    ...shadows.eventCard,
+    marginBottom: spacing.lg,
   },
-  confirmButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.white,
+  securityNoteText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
+
+  /* Bouton annuler */
   cancelButton: {
     alignItems: 'center',
     paddingVertical: spacing.md,
     marginBottom: spacing.lg,
   },
   cancelButtonText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textMuted,
+  },
+  payButtonRow: {
+    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
 });
 
@@ -382,72 +463,84 @@ export default function OrangePayment() {
     );
   }, [impact, router]);
 
+  const payLabel = `Payer ${formatPrice(displayAmount)}`;
+
   return (
     <View style={styles.root}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top,
           paddingBottom: insets.bottom + spacing.xl,
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.headerBackButton} hitSlop={12}>
-            <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Paiement Orange</Text>
-        </View>
+        <LinearGradient
+          colors={['#26211B', colors.background]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
+        >
+          <View pointerEvents="none" style={styles.headerGlow} />
+          <View pointerEvents="none" style={styles.headerRingLarge} />
+
+          <View style={styles.headerTopRow}>
+            <Pressable
+              onPress={handleBack}
+              style={styles.headerBackButton}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Retour"
+            >
+              <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
+            </Pressable>
+
+            <View style={styles.headerLogoWrap}>
+              <OrangeLogo width={32} height={32} />
+            </View>
+
+            <View style={styles.headerTitleArea}>
+              <Text style={styles.headerTitle}>Paiement Orange</Text>
+              <Text style={styles.headerSubtitle}>{OPERATOR_NAME}</Text>
+            </View>
+          </View>
+        </LinearGradient>
 
         <View style={styles.content}>
-          {/* Hero operateur */}
-          <LinearGradient
-            colors={['#26221E', colors.onyx]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroCard}
-          >
-            <View style={styles.heroAccentBar} />
-            <View style={styles.heroInner}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroLogoWrap}>
-                  <OrangeLogo width={44} height={44} />
-                </View>
-                <View style={styles.heroTitleArea}>
-                  <Text style={styles.heroName}>{OPERATOR_NAME}</Text>
-                  <Text style={styles.heroTag}>Paiement USSD</Text>
-                </View>
-              </View>
-
-              <Text style={styles.heroAmountLabel}>Montant a payer</Text>
-              <Text style={styles.heroAmount}>
-                {displayAmount > 0 ? formatPrice(displayAmount) : '0 FCFA'}
-              </Text>
-
-              <View style={styles.heroDivider} />
-
-              {displayPhone.length > 0 && (
-                <View style={styles.heroPhoneRow}>
-                  <Smartphone size={14} color={`${colors.white}80`} strokeWidth={1.5} />
-                  <Text style={styles.heroPhoneLabel}>Numero de debit</Text>
-                  <Text style={styles.heroPhoneValue}>+237 {displayPhone}</Text>
-                </View>
-              )}
+          {/* Carte recapitulative */}
+          <View style={styles.recapCard}>
+            <View style={styles.recapTopRow}>
+              <Text style={styles.recapOverline}>VOTRE COMMANDE</Text>
+              <Ticket size={18} color={colors.gold} strokeWidth={1.5} />
             </View>
-          </LinearGradient>
+
+            <Text style={styles.recapEventTitle} numberOfLines={2}>
+              {flow.eventTitle || 'Votre commande'}
+            </Text>
+
+            <Text style={styles.amountLabel}>MONTANT A PAYER</Text>
+            <Text style={styles.amountValue}>
+              {displayAmount > 0 ? formatPrice(displayAmount) : '0 FCFA'}
+            </Text>
+
+            {displayPhone.length > 0 && (
+              <>
+                <View style={styles.recapDivider} />
+                <View style={styles.phoneField}>
+                  <View style={styles.phonePrefixBadge}>
+                    <Text style={styles.phonePrefixText}>+237</Text>
+                  </View>
+                  <Text style={styles.phoneValueText}>{displayPhone}</Text>
+                  <Smartphone size={18} color={colors.goldMuted} strokeWidth={1.5} />
+                </View>
+              </>
+            )}
+          </View>
 
           {/* Code USSD focal */}
           <View style={styles.ussdCard}>
             <View style={styles.ussdLabelRow}>
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: colors.gold,
-                }}
-              />
+              <View style={styles.ussdDot} />
               <Text style={styles.ussdLabel}>CODE USSD A COMPOSER</Text>
             </View>
             <Text style={styles.ussdCode}>{USSD_CODE}</Text>
@@ -471,7 +564,7 @@ export default function OrangePayment() {
                       isCompleted && styles.stepIndicatorCompleted,
                     ]}>
                       {isCompleted ? (
-                        <CircleCheck size={16} color={colors.forest} strokeWidth={2} />
+                        <CircleCheck size={16} color={colors.success} strokeWidth={2} />
                       ) : (
                         <Text style={styles.stepNumber}>{step.step}</Text>
                       )}
@@ -484,23 +577,26 @@ export default function OrangePayment() {
             })}
           </View>
 
-          {/* Bouton confirmation */}
-          <Pressable
-            onPress={handleConfirmPayment}
-            style={[styles.confirmButton, isProcessing && { opacity: 0.7 }]}
-            disabled={isProcessing}
-            accessibilityRole="button"
-            accessibilityLabel="Confirmer le paiement"
-          >
-            {isProcessing ? (
-              <>
-                <ActivityIndicator size="small" color={colors.white} />
-                <Text style={styles.confirmButtonText}>Verification en cours...</Text>
-              </>
-            ) : (
-              <Text style={styles.confirmButtonText}>J'ai effectue le paiement</Text>
-            )}
-          </Pressable>
+          {/* Note de securite */}
+          <View style={styles.securityNote}>
+            <ShieldCheck size={16} color={colors.goldBright} strokeWidth={1.75} />
+            <Text style={styles.securityNoteText}>
+              Paiement securise - Confirmez le montant avec votre code PIN Orange
+            </Text>
+          </View>
+
+          {/* Bouton confirmation - or pleine largeur */}
+          <View style={styles.payButtonRow}>
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={isProcessing}
+              onPress={handleConfirmPayment}
+            >
+              {isProcessing ? 'Verification en cours...' : payLabel}
+            </Button>
+          </View>
 
           <Pressable
             onPress={handleCancel}
