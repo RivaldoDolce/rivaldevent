@@ -1,12 +1,13 @@
 /**
  * Mes favoris — evenements et lieux mis en favori.
  *
- * Design "Minimalisme Africain Camerounais" :
- * - En-tete derivee foret (ScreenHeader) avec compteurs
- * - Segmented control Evenements / Lieux avec badges de comptage
+ * Design « Noir & Or » :
+ * - En-tete hero degrade noir profond avec halo doré, anneaux et filet or bas
+ * - Titre Playfair Display 28px + sous-titre compteurs
+ * - Segmented control Evenements / Lieux : pastille verre, actif degrade or texte onyx
  * - Evenements : EventCard full-width (meme rendu que l'accueil)
  * - Lieux : VenueCard horizontale (meme rendu que l'accueil)
- * - Etat vide premium avec icone coeur + CTA vers Explorer
+ * - Etat vide premium : icone coeur en medaillon verre avec halo doré
  *
  * Source de verite : stores/favorites-store.ts (mock pour l'instant,
  * remplace par l'API Supabase au Jalon 6).
@@ -23,16 +24,17 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing, radius, shadows, ROUTES } from '@/lib/constants';
+import { colors, gradients, spacing, radius, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useFavoritesStore } from '@/stores/favorites-store';
-import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { EventCard } from '@/components/events/EventCard';
 import { VenueCard } from '@/components/venues/VenueCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 
 // ============================================================
@@ -116,43 +118,44 @@ export default function FavoritesScreen() {
 
   // -- Styles dynamiques --
   const contentStyle: ViewStyle = {
-    paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingBottom: insets.bottom + spacing.xxl + 40,
   };
 
   const tabBarStyle: ViewStyle = {
     flexDirection: 'row',
-    backgroundColor: `${colors.forest}0F`,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: `${colors.gold}2E`,
     borderRadius: radius.full,
-    padding: 3,
+    padding: 4,
     marginTop: spacing.lg,
   };
 
-  const tabStyle = (active: boolean): ViewStyle => ({
+  const activeTabStyle: ViewStyle = {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
     paddingVertical: spacing.sm - 2,
-    backgroundColor: active ? colors.forest : 'transparent',
-    ...(active
-      ? {
-          shadowColor: colors.forestDeep,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.18,
-          shadowRadius: 6,
-          elevation: 3,
-        }
-      : null),
-  });
+    ...shadows.goldGlow,
+  };
+
+  const inactiveTabStyle: ViewStyle = {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm - 2,
+  };
 
   const tabLabelStyle = (active: boolean): TextStyle => ({
-    fontFamily: active ? 'Inter-Bold' : 'Inter-SemiBold',
+    fontFamily: active ? 'Inter_700Bold' : 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: active ? colors.sand : colors.stone,
+    color: active ? colors.onyx : colors.textSecondary,
   });
 
   const countBadgeStyle = (active: boolean): ViewStyle => ({
@@ -163,18 +166,18 @@ export default function FavoritesScreen() {
     justifyContent: 'center',
     marginLeft: 6,
     paddingHorizontal: 5,
-    backgroundColor: active ? `${colors.sand}24` : `${colors.stone}14`,
+    backgroundColor: active ? 'rgba(10,9,8,0.22)' : 'rgba(255,255,255,0.08)',
   });
 
   const countBadgeTextStyle = (active: boolean): TextStyle => ({
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 11,
     lineHeight: 14,
-    color: active ? colors.sand : colors.stone,
+    color: active ? colors.onyx : colors.textSecondary,
   });
 
   const sectionTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
     color: colors.text,
@@ -185,14 +188,32 @@ export default function FavoritesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader
-        title="Mes favoris"
-        subtitle={
-          activeTab === 'events'
-            ? `${favoritedEvents.length} evenement${favoritedEvents.length > 1 ? 's' : ''} sauvegardes`
-            : `${favoritedVenues.length} lieu${favoritedVenues.length > 1 ? 'x' : ''} sauvegarde${favoritedVenues.length > 1 ? 's' : ''}`
-        }
-      />
+      {/* ============================================
+          EN-TETE HERO — degradef noir + halo doré
+          ============================================ */}
+      <LinearGradient
+        colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
+      >
+        {/* Halos et anneaux décoratifs */}
+        <View pointerEvents="none" style={styles.headerGlow} />
+        <View pointerEvents="none" style={styles.headerRingLarge} />
+        <View pointerEvents="none" style={styles.headerRingSmall} />
+        <View pointerEvents="none" style={styles.headerGoldDot} />
+
+        <Text style={styles.headerOverline}>VOTRE SELECTION</Text>
+        <Text style={styles.headerTitle}>Mes favoris</Text>
+        <Text style={styles.headerSubtitle}>
+          {activeTab === 'events'
+            ? `${favoritedEvents.length} evenement${favoritedEvents.length > 1 ? 's' : ''} sauvegarde${favoritedEvents.length > 1 ? 's' : ''}`
+            : `${favoritedVenues.length} lieu${favoritedVenues.length > 1 ? 'x' : ''} sauvegarde${favoritedVenues.length > 1 ? 's' : ''}`}
+        </Text>
+
+        {/* Filet or bas */}
+        <View pointerEvents="none" style={styles.headerHairline} />
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -207,14 +228,29 @@ export default function FavoritesScreen() {
               <Pressable
                 key={tab.key}
                 onPress={() => handleTabPress(tab.key)}
-                style={tabStyle(active)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
               >
-                <Text style={tabLabelStyle(active)}>{tab.label}</Text>
-                <View style={countBadgeStyle(active)}>
-                  <Text style={countBadgeTextStyle(active)}>{count}</Text>
-                </View>
+                {active ? (
+                  <LinearGradient
+                    colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={activeTabStyle}
+                  >
+                    <Text style={tabLabelStyle(active)}>{tab.label}</Text>
+                    <View style={countBadgeStyle(active)}>
+                      <Text style={countBadgeTextStyle(active)}>{count}</Text>
+                    </View>
+                  </LinearGradient>
+                ) : (
+                  <View style={inactiveTabStyle}>
+                    <Text style={tabLabelStyle(active)}>{tab.label}</Text>
+                    <View style={countBadgeStyle(active)}>
+                      <Text style={countBadgeTextStyle(active)}>{count}</Text>
+                    </View>
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -225,9 +261,18 @@ export default function FavoritesScreen() {
           <>
             {favoritedEvents.length === 0 ? (
               <EmptyState
-                onExplore={handleExplore}
+                icon={
+                  <Heart
+                    size={30}
+                    color={colors.goldBright}
+                    fill="rgba(216,180,90,0.25)"
+                    strokeWidth={1.5}
+                  />
+                }
                 title="Aucun evenement en favori"
-                subtitle="Touchez le coeur sur un evenement pour le retrouver ici."
+                description="Touchez le coeur sur un evenement pour le retrouver ici."
+                actionLabel="Explorer"
+                onAction={handleExplore}
               />
             ) : (
               <>
@@ -265,9 +310,18 @@ export default function FavoritesScreen() {
           <>
             {favoritedVenues.length === 0 ? (
               <EmptyState
-                onExplore={handleExplore}
+                icon={
+                  <Heart
+                    size={30}
+                    color={colors.goldBright}
+                    fill="rgba(216,180,90,0.25)"
+                    strokeWidth={1.5}
+                  />
+                }
                 title="Aucun lieu en favori"
-                subtitle="Touchez le coeur sur un lieu pour le retrouver ici."
+                description="Touchez le coeur sur un lieu pour le retrouver ici."
+                actionLabel="Explorer"
+                onAction={handleExplore}
               />
             ) : (
               <>
@@ -300,87 +354,84 @@ export default function FavoritesScreen() {
 }
 
 // ============================================================
-// Etat vide
+// Styles
 // ============================================================
 
-interface EmptyStateProps {
-  readonly title: string;
-  readonly subtitle: string;
-  readonly onExplore: () => void;
-}
-
-function EmptyState({ title, subtitle, onExplore }: EmptyStateProps) {
-  const cardStyle: ViewStyle = {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl * 2,
-    paddingHorizontal: spacing.xl,
-    marginTop: spacing.xxl,
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    ...shadows.card,
-  };
-
-  const heartCircleStyle: ViewStyle = {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${colors.terracotta}14`,
-    borderWidth: 1,
-    borderColor: `${colors.terracotta}28`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  };
-
-  const buttonStyle: ViewStyle = {
-    marginTop: spacing.lg,
-    backgroundColor: colors.terracotta,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm + 2,
-    ...shadows.card,
-  };
-
-  const buttonTextStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  };
-
-  return (
-    <View style={cardStyle}>
-      <View style={heartCircleStyle}>
-        <Heart size={30} color={colors.terracotta} fill="none" strokeWidth={1.5} />
-      </View>
-      <Text style={{
-        fontFamily: 'PlayfairDisplay-SemiBold',
-        fontSize: 17,
-        lineHeight: 24,
-        color: colors.text,
-        textAlign: 'center',
-      }}>
-        {title}
-      </Text>
-      <Text style={{
-        fontFamily: 'Inter-Regular',
-        fontSize: 13,
-        lineHeight: 19,
-        color: colors.stone,
-        textAlign: 'center',
-        marginTop: spacing.xs / 2,
-        maxWidth: 260,
-      }}>
-        {subtitle}
-      </Text>
-      <Pressable
-        onPress={onExplore}
-        style={buttonStyle}
-        accessibilityRole="button"
-        accessibilityLabel="Explorer les evenements"
-      >
-        <Text style={buttonTextStyle}>Explorer</Text>
-      </Pressable>
-    </View>
-  );
-}
+const styles = {
+  // -- En-tete hero --
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    overflow: 'hidden',
+  } as ViewStyle,
+  headerGlow: {
+    position: 'absolute',
+    top: -90,
+    right: -50,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(216,180,90,0.09)',
+  } as ViewStyle,
+  headerRingLarge: {
+    position: 'absolute',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}2E`,
+    top: -70,
+    right: -40,
+  } as ViewStyle,
+  headerRingSmall: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}26`,
+    top: -24,
+    right: 14,
+  } as ViewStyle,
+  headerGoldDot: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: `${colors.gold}45`,
+    bottom: spacing.xl + 8,
+    right: spacing.lg,
+  } as ViewStyle,
+  headerOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 2.2,
+    color: colors.goldMuted,
+    marginBottom: spacing.sm,
+  } as TextStyle,
+  headerTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 28,
+    lineHeight: 36,
+    letterSpacing: -0.4,
+    color: colors.text,
+  } as TextStyle,
+  headerSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  } as TextStyle,
+  headerHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: spacing.lg,
+    right: spacing.lg,
+    height: 1,
+    backgroundColor: `${colors.gold}2E`,
+  } as ViewStyle,
+} as const;

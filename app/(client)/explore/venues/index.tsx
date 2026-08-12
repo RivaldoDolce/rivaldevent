@@ -1,20 +1,22 @@
 /**
  * Ecran Liste des Lieux - Grille filtrable de lieux.
  *
+ * Design premium « Noir & Or » :
+ * - Header : retour pastille verre + titre serif + under-titre + filtres pill
+ * - Barre de recherche en pastille verre fumé avec filet doré
+ * - Chips catégories pill (or plein actif / verre inactif)
+ * - Grille 2 colonnes sombre : cartes ornées, filet doré, badge verre, note or
+ * - Etat vide premium avec EmptyState du design system
+ *
  * Structure :
  * 1. Header : Bouton retour + Titre "Lieux" + Bouton filtres
  * 2. Barre de recherche : champ editable + ville chips
- * 3. Grille de lieux : 2 colonnes avec VenueCard grandes
+ * 3. Grille de lieux : 2 colonnes avec VenueGridCard grandes
  * 4. Info resultat : nombre de lieux trouves
- *
- * Design "Minimalisme Africain Camerounais" :
- * - Fond sand, cartes blanches, ombre subtile
- * - Terracotta pour CTA, gold pour badges premium
- * - PlayfairDisplay pour titre, Inter pour le reste
  *
  * Conventions :
  * - expo-image pour les images
- * - lucide-react-native pour les icones
+ * - lucide-react-native pour les icones (noms vérifiés)
  * - Pas de type any, pas d'emojis
  * - Imports @/, design tokens depuis lib/constants.ts
  * - Commentaires en francais
@@ -34,12 +36,21 @@ import {
   type ImageStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, SlidersHorizontal, Search, X, MapPin } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  SlidersHorizontal,
+  Search,
+  X,
+  MapPin,
+  Star,
+} from 'lucide-react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Donnees mock
 import type { MockVenue } from '@/data/mock';
@@ -107,78 +118,6 @@ function VenueGridCard({ venue, onPress }: VenueGridCardProps) {
     onPress();
   }, [impact, onPress]);
 
-  const cardStyle: ViewStyle = {
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    ...shadows.card,
-    flex: 1,
-  };
-
-  const imageStyle: ImageStyle = {
-    height: 140,
-  };
-
-  const badgeContainerStyle: ViewStyle = {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: venue.badge === 'Or Savane' ? `${colors.gold}E6`
-      : venue.badge === 'Premium' ? colors.terracotta
-      : `${colors.forest}CC`,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  };
-
-  const badgeTextStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    lineHeight: 14,
-    color: colors.white,
-    letterSpacing: 0.8,
-  };
-
-  const contentStyle: ViewStyle = {
-    padding: spacing.md,
-  };
-
-  const nameStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.text,
-    letterSpacing: -0.2,
-    marginBottom: spacing.xs,
-  };
-
-  const locationRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  };
-
-  const locationTextStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-    marginLeft: spacing.xs / 2,
-  };
-
-  const ratingRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-  };
-
-  const ratingTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.gold,
-    marginLeft: spacing.xs / 2,
-  };
-
   return (
     <Pressable
       onPress={handlePress}
@@ -186,37 +125,49 @@ function VenueGridCard({ venue, onPress }: VenueGridCardProps) {
       accessibilityLabel={`Lieu: ${venue.name}`}
     >
       <View style={cardStyle}>
-        <View style={{ position: 'relative' }}>
-          <Image
-            source={{ uri: venue.image }}
-            style={imageStyle}
-            contentFit="cover"
-            transition={300}
-            cachePolicy="memory-disk"
-          />
-          {venue.badge && (
-            <View style={badgeContainerStyle}>
-              <Text style={badgeTextStyle}>{venue.badge}</Text>
-            </View>
-          )}
-        </View>
-        <View style={contentStyle}>
-          <Text style={nameStyle} numberOfLines={1} ellipsizeMode="tail">
-            {venue.name}
-          </Text>
-          <View style={locationRowStyle}>
-            <MapPin size={14} color={colors.stone} strokeWidth={1.5} />
-            <Text style={locationTextStyle} numberOfLines={1} ellipsizeMode="tail">
-              {venue.location}
-            </Text>
+        <View style={imageContainerStyle}>
+            <Image
+              source={{ uri: venue.image }}
+              style={imageStyle}
+              contentFit="cover"
+              transition={300}
+              cachePolicy="memory-disk"
+            />
+            {/* Dégradé sombre de fond */}
+            <LinearGradient
+              colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.5)']}
+              style={imageGradientStyle}
+              pointerEvents="none"
+            />
+            {/* Badge categorie — pastille verre doré */}
+            {venue.badge && (
+              <View style={badgeContainerStyle}>
+                <Text style={badgeTextStyle} numberOfLines={1}>
+                  {venue.badge}
+                </Text>
+              </View>
+            )}
+            {/* Note — etoile or sur l'image */}
+            {venue.rating > 0 && (
+              <View style={ratingPillStyle}>
+                <Star size={11} color={colors.goldBright} fill={colors.gold} strokeWidth={1.5} />
+                <Text style={ratingTextStyle}>{venue.rating.toFixed(1)} / 5</Text>
+              </View>
+            )}
           </View>
-          {venue.rating > 0 && (
-            <View style={ratingRowStyle}>
-              <Text style={ratingTextStyle}>{venue.rating.toFixed(1)} / 5</Text>
+
+          <View style={contentStyle}>
+            <Text style={nameStyle} numberOfLines={1} ellipsizeMode="tail">
+              {venue.name}
+            </Text>
+            <View style={locationRowStyle}>
+              <MapPin size={13} color={colors.goldMuted} strokeWidth={1.5} />
+              <Text style={locationTextStyle} numberOfLines={1} ellipsizeMode="tail">
+                {venue.location}
+              </Text>
             </View>
-          )}
+          </View>
         </View>
-      </View>
     </Pressable>
   );
 }
@@ -338,195 +289,50 @@ export default function VenuesScreen() {
     return result;
   }, [activeCategory, venueFilters, searchQuery]);
 
-  // -- Styles --
-  const screenStyle: ViewStyle = {
-    flex: 1,
-    backgroundColor: colors.sand,
-  };
-
-  const scrollContentStyle: ViewStyle = {
-    paddingTop: insets.top + spacing.lg,
-    paddingBottom: 100,
-  };
-
-  const headerStyle: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  };
-
-  const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 32,
-    color: colors.onyx,
-    letterSpacing: -0.3,
-  };
-
-  const searchContainerStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    height: 48,
-    borderWidth: isSearchFocused ? 2 : 1,
-    borderColor: isSearchFocused ? colors.terracotta : colors.border,
-    ...shadows.search,
-  };
-
-  const searchInputStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.text,
-    flex: 1,
-    marginLeft: spacing.sm,
-  };
-
-  const categoryChipsContainerStyle: ViewStyle = {
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    paddingBottom: spacing.md,
-  };
-
-  const chipActiveStyle: ViewStyle = {
-    backgroundColor: colors.forest,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-  };
-
-  const chipInactiveStyle: ViewStyle = {
-    backgroundColor: colors.ivory,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: `${colors.stone}30`,
-  };
-
-  const chipActiveTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  };
-
-  const chipInactiveTextStyle: TextStyle = {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-  };
-
-  const resultsInfoStyle: TextStyle = {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-  };
-
-  const gridStyle: ViewStyle = {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  };
-
-  const emptyContainerStyle: ViewStyle = {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  };
-
-  const emptyTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
-    marginBottom: spacing.sm,
-  };
-
-  const emptyTextStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  };
-
-  const emptyButtonStyle: ViewStyle = {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  };
-
-  const emptyButtonTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.white,
-    letterSpacing: 0.2,
-  };
-
   return (
     <View style={screenStyle}>
       <ScrollView
         style={screenStyle}
-        contentContainerStyle={scrollContentStyle}
+        contentContainerStyle={{
+          paddingTop: insets.top + spacing.lg,
+          paddingBottom: 100,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
             1. HEADER : Retour + Titre + Filtres
             ============================================ */}
         <View style={headerStyle}>
+          {/* Retour — pastille verre */}
           <Pressable
             onPress={handleBack}
+            style={glassPillStyle}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
           >
-            <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
+            <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
           </Pressable>
-          <Text style={headerTitleStyle}>Lieux</Text>
+
+          {/* Titre serif + under-titre */}
+          <View style={titleBlockStyle}>
+            <Text style={overlineStyle}>ADRESSES D'EXCEPTION</Text>
+            <Text style={headerTitleStyle}>Lieux</Text>
+          </View>
+
+          {/* Filtres — pastille verre avec badge compteur */}
           <Pressable
             onPress={handleFilterPress}
+            style={glassPillStyle}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Filtres"
           >
             <View style={{ position: 'relative' }}>
-              <SlidersHorizontal size={22} color={colors.forest} strokeWidth={1.5} />
+              <SlidersHorizontal size={20} color={colors.goldBright} strokeWidth={1.5} />
               {activeVenueFilterCount > 0 && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -8,
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: colors.terracotta,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingHorizontal: spacing.xs,
-                }}>
-                  <Text style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 10,
-                    lineHeight: 12,
-                    color: colors.white,
-                  }}>
+                <View style={filtersBadgeStyle}>
+                  <Text style={filtersBadgeTextStyle}>
                     {activeVenueFilterCount}
                   </Text>
                 </View>
@@ -536,10 +342,15 @@ export default function VenuesScreen() {
         </View>
 
         {/* ============================================
-            2. BARRE DE RECHERCHE
+            2. BARRE DE RECHERCHE — pastille verre
             ============================================ */}
-        <View style={searchContainerStyle}>
-          <Search size={20} color={isSearchFocused ? colors.forest : colors.muted} strokeWidth={1.5} />
+        <View
+          style={[
+            searchContainerStyle,
+            { borderColor: isSearchFocused ? `${colors.gold}66` : `${colors.gold}2E` },
+          ]}
+        >
+          <Search size={20} color={colors.goldMuted} strokeWidth={1.75} />
           <TextInput
             style={searchInputStyle}
             value={searchQuery}
@@ -547,8 +358,10 @@ export default function VenuesScreen() {
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
             placeholder="Rechercher un lieu..."
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={colors.textMuted}
             returnKeyType="search"
+            selectionColor={colors.gold}
+            cursorColor={colors.gold}
             accessibilityLabel="Rechercher un lieu"
           />
           {searchQuery.length > 0 && (
@@ -558,7 +371,7 @@ export default function VenuesScreen() {
               accessibilityRole="button"
               accessibilityLabel="Effacer"
             >
-              <X size={18} color={colors.stone} strokeWidth={2} />
+              <X size={18} color={colors.goldMuted} strokeWidth={1.75} />
             </Pressable>
           )}
         </View>
@@ -570,7 +383,7 @@ export default function VenuesScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={categoryChipsContainerStyle}
-          contentContainerStyle={{ paddingRight: spacing.lg }}
+          contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.sm }}
         >
           {VENUE_CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.id;
@@ -629,20 +442,14 @@ export default function VenuesScreen() {
             })}
           </View>
         ) : (
-          <View style={emptyContainerStyle}>
-            <Text style={emptyTitleStyle}>Aucun lieu trouve</Text>
-            <Text style={emptyTextStyle}>
-              Essayez une autre categorie, une autre ville ou modifiez vos filtres.
-            </Text>
-            <Pressable
-              onPress={handleResetAll}
-              style={emptyButtonStyle}
-              accessibilityRole="button"
-              accessibilityLabel="Reinitialiser la recherche et les filtres"
-            >
-              <Text style={emptyButtonTextStyle}>Reinitialiser</Text>
-            </Pressable>
-          </View>
+          /* Etat vide premium */
+          <EmptyState
+            icon={<Search size={34} color={colors.goldMuted} strokeWidth={1.5} />}
+            title="Aucun lieu trouve"
+            description="Essayez une autre categorie, une autre ville ou modifiez vos filtres."
+            actionLabel="Reinitialiser"
+            onAction={handleResetAll}
+          />
         )}
 
         {/* Espacement final */}
@@ -651,3 +458,259 @@ export default function VenuesScreen() {
     </View>
   );
 }
+
+// ============================================================
+// Styles — Noir & Or
+// ============================================================
+
+const screenStyle: ViewStyle = {
+  flex: 1,
+  backgroundColor: colors.background,
+};
+
+const headerStyle: ViewStyle = {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: spacing.lg,
+  marginBottom: spacing.md,
+};
+
+const glassPillStyle: ViewStyle = {
+  width: 44,
+  height: 44,
+  borderRadius: radius.full,
+  backgroundColor: 'rgba(10,9,8,0.62)',
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
+  justifyContent: 'center',
+  alignItems: 'center',
+  ...shadows.card,
+};
+
+const titleBlockStyle: ViewStyle = {
+  flex: 1,
+  alignItems: 'center',
+  marginHorizontal: spacing.sm,
+};
+
+const overlineStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 10,
+  lineHeight: 14,
+  letterSpacing: 1.4,
+  color: colors.goldMuted,
+  marginBottom: 2,
+};
+
+const headerTitleStyle: TextStyle = {
+  fontFamily: 'PlayfairDisplay_700Bold',
+  fontSize: 24,
+  lineHeight: 32,
+  color: colors.text,
+  letterSpacing: -0.3,
+};
+
+const filtersBadgeStyle: ViewStyle = {
+  position: 'absolute',
+  top: -6,
+  right: -8,
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  backgroundColor: colors.gold,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: spacing.xs,
+  borderWidth: 1.5,
+  borderColor: colors.background,
+};
+
+const filtersBadgeTextStyle: TextStyle = {
+  fontFamily: 'Inter_700Bold',
+  fontSize: 10,
+  lineHeight: 12,
+  color: colors.onyx,
+};
+
+const searchContainerStyle: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: colors.glass,
+  borderRadius: radius.full,
+  marginHorizontal: spacing.lg,
+  marginBottom: spacing.md,
+  paddingHorizontal: spacing.md,
+  height: 52,
+  borderWidth: 1,
+  gap: spacing.sm,
+  ...shadows.search,
+};
+
+const searchInputStyle: TextStyle = {
+  fontFamily: 'Inter_400Regular',
+  fontSize: 15,
+  lineHeight: 20,
+  color: colors.text,
+  flex: 1,
+  marginLeft: spacing.xs,
+  paddingVertical: 0,
+};
+
+const categoryChipsContainerStyle: ViewStyle = {
+  paddingLeft: spacing.lg,
+  paddingBottom: spacing.md,
+  flexGrow: 0,
+};
+
+const chipActiveStyle: ViewStyle = {
+  backgroundColor: colors.gold,
+  borderRadius: radius.full,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: `${colors.goldBright}66`,
+  shadowColor: 'rgba(216,180,90,0.45)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.5,
+  shadowRadius: 8,
+  elevation: 4,
+};
+
+const chipInactiveStyle: ViewStyle = {
+  backgroundColor: colors.glass,
+  borderRadius: radius.full,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.sm,
+  borderWidth: 1,
+  borderColor: `${colors.gold}26`,
+};
+
+const chipActiveTextStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 14,
+  lineHeight: 20,
+  color: colors.onyx,
+  letterSpacing: 0.2,
+};
+
+const chipInactiveTextStyle: TextStyle = {
+  fontFamily: 'Inter_500Medium',
+  fontSize: 14,
+  lineHeight: 20,
+  color: colors.textSecondary,
+  letterSpacing: 0.1,
+};
+
+const resultsInfoStyle: TextStyle = {
+  fontFamily: 'Inter_500Medium',
+  fontSize: 13,
+  lineHeight: 18,
+  color: colors.textMuted,
+  paddingHorizontal: spacing.lg,
+  marginBottom: spacing.md,
+  letterSpacing: 0.2,
+};
+
+const gridStyle: ViewStyle = {
+  paddingHorizontal: spacing.lg,
+  gap: spacing.md,
+};
+
+// -- Carte lieu (VenueGridCard) --
+const cardStyle: ViewStyle = {
+  backgroundColor: colors.elevated,
+  borderRadius: radius.lg,
+  overflow: 'hidden',
+  borderWidth: 1,
+  borderColor: `${colors.gold}1F`,
+  ...shadows.card,
+};
+
+const imageContainerStyle: ViewStyle = {
+  height: 140,
+  position: 'relative',
+};
+
+const imageStyle: ImageStyle = {
+  width: '100%',
+  height: 140,
+};
+
+const imageGradientStyle: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
+const badgeContainerStyle: ViewStyle = {
+  position: 'absolute',
+  top: spacing.sm,
+  left: spacing.sm,
+  maxWidth: 130,
+  backgroundColor: 'rgba(10,9,8,0.62)',
+  borderRadius: radius.full,
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
+  paddingHorizontal: spacing.sm + 2,
+  paddingVertical: 4,
+};
+
+const badgeTextStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 11,
+  lineHeight: 15,
+  color: colors.goldBright,
+  letterSpacing: 0.5,
+};
+
+const ratingPillStyle: ViewStyle = {
+  position: 'absolute',
+  bottom: spacing.sm,
+  right: spacing.sm,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+  backgroundColor: 'rgba(10,9,8,0.62)',
+  borderRadius: radius.full,
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 3,
+};
+
+const ratingTextStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 11,
+  lineHeight: 14,
+  color: colors.goldBright,
+};
+
+const contentStyle: ViewStyle = {
+  padding: spacing.md,
+};
+
+const nameStyle: TextStyle = {
+  fontFamily: 'PlayfairDisplay_600SemiBold',
+  fontSize: 16,
+  lineHeight: 22,
+  color: colors.text,
+  letterSpacing: -0.2,
+  marginBottom: spacing.xs,
+};
+
+const locationRowStyle: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 5,
+};
+
+const locationTextStyle: TextStyle = {
+  flex: 1,
+  fontFamily: 'Inter_400Regular',
+  fontSize: 12,
+  lineHeight: 17,
+  color: colors.textSecondary,
+};

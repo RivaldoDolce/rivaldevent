@@ -1,17 +1,15 @@
 /**
  * Page detail d'un billet - Espace client.
  *
- * Design ultra-premium "boarding pass" (Apple Wallet) :
- * - Carte billet unique type coupon avec :
- *   - Bandeau cover evenement + overlay + badge statut flottant
- *   - Sur-titre gamme (BILLET · PREMIUM) + titre evenement
- *   - Zone QR code (placeholder en Expo Go, plein ecran en dev build)
- *   - Liseret perfore avec losange or (meme langage que le recap paiement)
- *   - Gamme + prix, meta "x billets"
- * - Carte "Details du billet" en grille 2x2 : operateur, date d'achat,
- *   expiration, quantite
- * - Bandeau securite HMAC-SHA256
- * - Bouton retour
+ * Design « Noir & Or » — billet physique premium :
+ * - Bandeau héros dégradé avec filet or, retour pastille verre, titre serif
+ * - Carte « billet physique » : surface élevée, filet or, coins perforés
+ *   (pastilles rondes sur les bords), séparateur pointillé central
+ * - QR code réel (react-native-qrcode-svg) dans un médaillon doré
+ * - Référence billet en overline, infos événement (titre, date, lieu, tier)
+ * - Bouton « Agrandir le QR » ghost → plein écran (ROUTES.QR_FULLSCREEN)
+ * - Grille de détails 2x2 (opérateur, quantité, achat, expiration)
+ * - Bandeau sécurité HMAC-SHA256
  *
  * Conventions :
  * - Design tokens depuis lib/constants.ts
@@ -27,8 +25,10 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Alert,
   StyleSheet,
+  Platform,
+  type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -42,17 +42,17 @@ import {
   QrCode,
   Smartphone,
   Clock,
-  CircleCheck,
-  CircleX,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import QRCode from 'react-native-qrcode-svg';
 
 import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
 import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
 import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radius, gradients, shadows, ROUTES } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice, formatDate } from '@/services/event.service';
 import { useTicketsStore } from '@/stores/tickets-store';
@@ -92,39 +92,18 @@ function getTicketDisplayStatus(ticket: {
 function getStatusConfig(status: TicketStatus): {
   color: string;
   label: string;
-  icon: React.ReactNode;
 } {
   switch (status) {
     case 'valid':
-      return {
-        color: colors.forest,
-        label: 'Billet valide',
-        icon: <CircleCheck size={12} color={colors.forest} strokeWidth={2.5} />,
-      };
+      return { color: colors.success, label: 'Billet valide' };
     case 'used':
-      return {
-        color: colors.stone,
-        label: 'Billet utilise',
-        icon: <CircleX size={12} color={colors.stone} strokeWidth={2.5} />,
-      };
+      return { color: colors.textSecondary, label: 'Billet utilise' };
     case 'expired':
-      return {
-        color: colors.danger,
-        label: 'Billet expire',
-        icon: <CircleX size={12} color={colors.danger} strokeWidth={2.5} />,
-      };
+      return { color: colors.danger, label: 'Billet expire' };
     case 'pending':
-      return {
-        color: colors.mango,
-        label: 'Paiement en attente',
-        icon: <Clock size={12} color={colors.mango} strokeWidth={2.5} />,
-      };
+      return { color: colors.warning, label: 'Paiement en attente' };
     default:
-      return {
-        color: colors.stone,
-        label: status,
-        icon: <CircleCheck size={12} color={colors.stone} strokeWidth={2.5} />,
-      };
+      return { color: colors.textSecondary, label: status };
   }
 }
 
@@ -169,55 +148,106 @@ function getTierQualityInfo(name: string | null): TierQualityInfo {
 // ============================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.sand },
+  root: { flex: 1, backgroundColor: colors.background },
 
-  /* Header */
-  header: {
+  /* Bandeau héros dégradé avec filet or */
+  hero: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.gold}1F`,
+  },
+  heroRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
-  headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.full,
-    backgroundColor: colors.ivory,
+  heroBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  headerTitle: {
+  heroTexts: {
     flex: 1,
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.onyx,
   },
-  headerSpacer: {
-    width: 40,
+  heroOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  heroTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  heroSpacer: {
+    width: 44,
   },
 
   /* Contenu */
   content: { paddingHorizontal: spacing.lg },
 
-  /* Carte principale type coupon */
+  /* Carte principale type billet physique */
   mainCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xxl,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}30`,
+    borderRadius: radius.xxl,
+    marginTop: spacing.lg,
     marginBottom: spacing.xl,
-    overflow: 'hidden',
-    ...shadows.eventCard,
-  },
+    ...shadows.card,
+  } as ViewStyle,
   mainCardTopBar: {
-    height: 4,
+    height: 3,
+    borderTopLeftRadius: radius.xxl - 1,
+    borderTopRightRadius: radius.xxl - 1,
   },
+
+  /* Coins perforés : pastilles rondes sur les bords dorés */
+  perforation: {
+    position: 'absolute',
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: colors.background,
+    zIndex: 2,
+  } as ViewStyle,
+  perforationLeftTop: {
+    left: -4.5,
+    top: '42%',
+  } as ViewStyle,
+  perforationLeftBottom: {
+    left: -4.5,
+    top: '68%',
+  } as ViewStyle,
+  perforationRightTop: {
+    right: -4.5,
+    top: '42%',
+  } as ViewStyle,
+  perforationRightBottom: {
+    right: -4.5,
+    top: '68%',
+  } as ViewStyle,
 
   /* Bandeau cover evenement */
   cover: {
     height: 136,
     position: 'relative',
-  },
+    overflow: 'hidden',
+    borderTopLeftRadius: radius.xxl - 1,
+    borderTopRightRadius: radius.xxl - 1,
+  } as ViewStyle,
   coverImage: {
     width: '100%',
     height: 136,
@@ -228,16 +258,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-  },
+  } as ViewStyle,
   coverPlaceholder: {
     width: '100%',
     height: 136,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  coverPlaceholderIcon: {
-    marginBottom: spacing.xs,
-  },
+  } as ViewStyle,
   coverContent: {
     position: 'absolute',
     left: 0,
@@ -246,146 +273,152 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.md,
-  },
+  } as ViewStyle,
   coverOverline: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    letterSpacing: 2,
-    color: colors.gold,
+    letterSpacing: 1.6,
+    color: colors.goldBright,
+    textTransform: 'uppercase',
     marginBottom: 2,
-  },
+  } as TextStyle,
   coverTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 22,
     lineHeight: 28,
-    color: colors.white,
-  },
+    color: colors.text,
+    letterSpacing: -0.2,
+  } as TextStyle,
   coverMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     marginTop: spacing.xs,
-  },
+  } as ViewStyle,
   coverMetaText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: 'rgba(255,255,255,0.85)',
-  },
+    color: colors.textSecondary,
+  } as TextStyle,
 
-  /* Pastille statut flottante */
+  /* Pastille statut flottante (verre sombre) */
   statusPill: {
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    borderRadius: radii.full,
+    backgroundColor: 'rgba(10,9,8,0.68)',
+    borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 1,
     gap: spacing.xs,
     borderWidth: 1,
-    shadowColor: colors.onyx,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
-  },
+  } as ViewStyle,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  } as ViewStyle,
   statusPillText: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
     letterSpacing: 0.3,
-  },
+  } as TextStyle,
 
-  /* Corps du coupon */
+  /* Corps du billet */
   body: {
     padding: spacing.lg,
-  },
+  } as ViewStyle,
 
-  /* Zone QR code */
+  /* Zone QR code — médaillon doré */
   qrWrap: {
     alignItems: 'center',
-  },
-  qrContainer: {
-    width: 176,
-    height: 176,
-    backgroundColor: colors.ivory,
-    borderRadius: radii.lg,
+  } as ViewStyle,
+  qrMedallion: {
+    padding: 12,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.lg,
+    ...shadows.goldGlowSoft,
+  } as ViewStyle,
+  qrPlaceholder: {
+    width: 140,
+    height: 140,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: `${colors.gold}30`,
-    ...shadows.search,
-  },
+  } as ViewStyle,
   qrCaption: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  qrExpandButton: {
+    marginTop: spacing.md,
+  } as TextStyle,
+  qrRefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: `${colors.forest}10`,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     marginTop: spacing.md,
-  },
-  qrExpandText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.forest,
-  },
+  } as ViewStyle,
+  qrRefLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
+    marginRight: spacing.sm,
+  } as TextStyle,
+  qrRefValue: {
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 0.6,
+    color: colors.goldMuted,
+    flexShrink: 1,
+  } as TextStyle,
+  qrExpandWrap: {
+    marginTop: spacing.md,
+  } as ViewStyle,
 
-  /* Liseret perfore (meme langage que le recap paiement) */
+  /* Liseret perfore central */
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: spacing.md,
-    position: 'relative',
-  },
+  } as ViewStyle,
   dashedLine: {
     flex: 1,
     height: 1,
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: `${colors.onyx}25`,
-  },
+    borderColor: `${colors.gold}40`,
+  } as ViewStyle,
   dividerDiamond: {
     width: 8,
     height: 8,
     backgroundColor: colors.gold,
     transform: [{ rotate: '45deg' }],
     marginHorizontal: spacing.sm,
-  },
-  notchLeft: {
-    position: 'absolute',
-    left: -48,
-    top: 0,
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.sand,
-  },
-  notchRight: {
-    position: 'absolute',
-    right: -48,
-    top: 0,
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.sand,
-  },
+  } as ViewStyle,
 
   /* Gamme + prix */
   tierRow: {
@@ -393,135 +426,146 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-  },
+  } as ViewStyle,
   tierIconTile: {
     width: 44,
     height: 44,
-    borderRadius: radii.md,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: `${colors.white}CC`,
-  },
+    borderColor: `${colors.gold}2E`,
+    backgroundColor: colors.glassGold,
+  } as ViewStyle,
   tierName: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.onyx,
-  },
+    color: colors.text,
+  } as TextStyle,
   tierSub: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginTop: 2,
-  },
+  } as TextStyle,
   tierPrice: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 22,
     lineHeight: 28,
-    color: colors.gold,
-  },
+    color: colors.goldBright,
+    letterSpacing: -0.2,
+  } as TextStyle,
 
   /* Ligne date achat / expiration */
   datesRow: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.divider,
     paddingTop: spacing.md,
     marginTop: spacing.md,
     gap: spacing.lg,
-  },
+  } as ViewStyle,
   dateCell: {
     flex: 1,
-  },
+  } as ViewStyle,
   dateLabel: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    letterSpacing: 1,
-    color: colors.stone,
+    letterSpacing: 1.3,
+    color: colors.goldMuted,
     textTransform: 'uppercase',
     marginBottom: 2,
-  },
+  } as TextStyle,
   dateValue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
-  },
+    color: colors.text,
+  } as TextStyle,
 
   /* Section titre */
   sectionTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.onyx,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
     marginBottom: spacing.md,
-  },
+  } as TextStyle,
 
   /* Carte details (grille 2x2) */
   infoCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.lg,
     ...shadows.card,
-  },
+  } as ViewStyle,
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     rowGap: spacing.lg,
-  },
+  } as ViewStyle,
   infoCell: {
     width: '50%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingRight: spacing.md,
-  },
+  } as ViewStyle,
   infoIconTile: {
     width: 36,
     height: 36,
-    borderRadius: radii.md,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+  } as ViewStyle,
   infoCellTexts: {
     flex: 1,
-  },
+  } as ViewStyle,
   infoLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
-  },
+    color: colors.textMuted,
+  } as TextStyle,
   infoValue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.text,
     marginTop: 1,
-  },
+  } as TextStyle,
 
   /* Securite */
   securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${colors.forest}08`,
-    borderRadius: radii.md,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
     gap: spacing.sm,
-  },
+  } as ViewStyle,
   securityText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.forest,
+    color: colors.textSecondary,
     flex: 1,
-  },
+  } as TextStyle,
 
   /* Etat introuvable */
   notFound: {
@@ -529,35 +573,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-  },
+  } as ViewStyle,
   notFoundIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.ivory,
+    width: 88,
+    height: 88,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
-  },
+    ...shadows.goldGlowSoft,
+  } as ViewStyle,
   notFoundTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 20,
     lineHeight: 26,
-    color: colors.onyx,
-    marginBottom: spacing.md,
-  },
-  notFoundButton: {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.xl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  },
-  notFoundButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  },
+    color: colors.text,
+    marginBottom: spacing.lg,
+  } as TextStyle,
+  notFoundButtonWrap: {
+    width: 200,
+  } as ViewStyle,
 });
 
 // ============================================================
@@ -589,24 +627,27 @@ export default function TicketDetail() {
   }, [impact, router]);
 
   const handleExpandQR = useCallback(() => {
+    if (!ticket) return;
     impact('light');
-    Alert.alert(
-      'QR plein ecran',
-      'Le mode plein ecran QR sera disponible avec le development build (expo-camera).',
-    );
-  }, [impact]);
+    router.push({
+      pathname: ROUTES.QR_FULLSCREEN,
+      params: { ticketId: ticket.id },
+    } as never);
+  }, [impact, router, ticket]);
 
   // -- Si billet introuvable --
   if (!ticket) {
     return (
       <View style={[styles.root, styles.notFound, { paddingTop: insets.top }]}>
         <View style={styles.notFoundIconWrap}>
-          <Ticket size={28} color={colors.stone} strokeWidth={1.5} />
+          <Ticket size={30} color={colors.gold} strokeWidth={1.5} />
         </View>
         <Text style={styles.notFoundTitle}>Billet introuvable</Text>
-        <Pressable onPress={handleBack} style={styles.notFoundButton} accessibilityRole="button">
-          <Text style={styles.notFoundButtonText}>Retour</Text>
-        </Pressable>
+        <View style={styles.notFoundButtonWrap}>
+          <Button variant="outline" size="md" onPress={handleBack}>
+            Retour
+          </Button>
+        </View>
       </View>
     );
   }
@@ -622,12 +663,12 @@ export default function TicketDetail() {
   // Couleur de la barre laterale selon le statut
   const statusBarColor =
     displayStatus === 'valid'
-      ? colors.forest
+      ? colors.success
       : displayStatus === 'pending'
-        ? colors.mango
+        ? colors.warning
         : displayStatus === 'expired'
           ? colors.danger
-          : colors.stone;
+          : colors.textMuted;
 
   // Ligne meta du bandeau : "12 Aout 2026 · Yaounde"
   const coverMeta = [
@@ -653,32 +694,47 @@ export default function TicketDetail() {
 
   return (
     <View style={styles.root}>
+      {/* Bandeau héros dégradé avec filet or */}
+      <LinearGradient
+        colors={[...gradients.heroGold] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + spacing.md }]}
+      >
+        <View style={styles.heroRow}>
+          <Pressable onPress={handleBack} style={styles.heroBackButton} hitSlop={12}>
+            <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
+          </Pressable>
+          <View style={styles.heroTexts}>
+            <Text style={styles.heroOverline}>BILLET {'\u00B7'} {tierLabel}</Text>
+            <Text style={styles.heroTitle}>Mon billet</Text>
+          </View>
+          <View style={styles.heroSpacer} />
+        </View>
+      </LinearGradient>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top,
           // Compense la TabBar flottante (60px + inset) pour que le
           // contenu ne soit jamais masque en bas d'ecran.
           paddingBottom: insets.bottom + 60 + spacing.xl,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.headerBackButton} hitSlop={12}>
-            <ChevronLeft size={22} color={colors.onyx} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Mon billet</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <View style={styles.content}>
           {/* =============================================
-              CARTE PRINCIPALE : type coupon / boarding pass
+              CARTE PRINCIPALE : billet physique premium
               ============================================= */}
           <View style={styles.mainCard}>
             {/* Barre statut */}
             <View style={[styles.mainCardTopBar, { backgroundColor: statusBarColor }]} />
+
+            {/* Coins perforés simulés sur les bords dorés */}
+            <View style={[styles.perforation, styles.perforationLeftTop]} pointerEvents="none" />
+            <View style={[styles.perforation, styles.perforationLeftBottom]} pointerEvents="none" />
+            <View style={[styles.perforation, styles.perforationRightTop]} pointerEvents="none" />
+            <View style={[styles.perforation, styles.perforationRightBottom]} pointerEvents="none" />
 
             {/* Bandeau cover evenement */}
             <View style={styles.cover}>
@@ -692,19 +748,17 @@ export default function TicketDetail() {
                     cachePolicy="memory-disk"
                   />
                   <LinearGradient
-                    colors={['rgba(26,24,22,0.15)', 'rgba(26,24,22,0.82)']}
+                    colors={['rgba(10,9,8,0.10)', 'rgba(10,9,8,0.78)']}
                     style={styles.coverOverlay}
                     pointerEvents="none"
                   />
                 </>
               ) : (
                 <LinearGradient
-                  colors={['#2A2723', '#141210']}
+                  colors={[...gradients.heroGold] as unknown as readonly [string, string, ...string[]]}
                   style={styles.coverPlaceholder}
                 >
-                  <View style={styles.coverPlaceholderIcon}>
-                    <Ticket size={24} color={`${colors.gold}88`} strokeWidth={1.2} />
-                  </View>
+                  <Ticket size={26} color={colors.goldMuted} strokeWidth={1.5} />
                 </LinearGradient>
               )}
 
@@ -716,7 +770,7 @@ export default function TicketDetail() {
                 </Text>
                 {coverMeta.length > 0 && (
                   <View style={styles.coverMetaRow}>
-                    <MapPin size={12} color="rgba(255,255,255,0.85)" strokeWidth={1.5} />
+                    <MapPin size={12} color={colors.goldMuted} strokeWidth={1.75} />
                     <Text style={styles.coverMetaText} numberOfLines={1}>
                       {coverMeta}
                     </Text>
@@ -725,51 +779,66 @@ export default function TicketDetail() {
               </View>
 
               {/* Badge statut flottant */}
-              <View style={[styles.statusPill, { borderColor: `${statusConfig.color}33` }]}>
-                {statusConfig.icon}
+              <View style={[styles.statusPill, { borderColor: `${statusConfig.color}45` }]}>
+                <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
                 <Text style={[styles.statusPillText, { color: statusConfig.color }]}>
                   {statusConfig.label}
                 </Text>
               </View>
             </View>
 
-            {/* Corps du coupon */}
+            {/* Corps du billet */}
             <View style={styles.body}>
-              {/* QR code */}
+              {/* QR code — médaillon doré */}
               <View style={styles.qrWrap}>
-                <View style={styles.qrContainer}>
-                  {hasQr ? (
-                    <QrCode size={92} color={colors.onyx} strokeWidth={0.5} />
-                  ) : (
-                    <QrCode
-                      size={92}
-                      color={displayStatus === 'valid' ? colors.onyx : colors.border}
-                      strokeWidth={0.5}
+                {hasQr ? (
+                  <View style={styles.qrMedallion}>
+                    <QRCode
+                      value={ticket.qr_code ?? ''}
+                      size={140}
+                      color={colors.onyx}
+                      backgroundColor={colors.text}
                     />
-                  )}
-                </View>
+                  </View>
+                ) : (
+                  <View style={styles.qrPlaceholder}>
+                    <QrCode
+                      size={84}
+                      color={displayStatus === 'valid' ? colors.goldMuted : colors.textFaint}
+                      strokeWidth={0.75}
+                    />
+                  </View>
+                )}
                 <Text style={styles.qrCaption}>{qrCaption}</Text>
 
+                {/* Reference du billet */}
+                <View style={styles.qrRefRow}>
+                  <Text style={styles.qrRefLabel}>Ref</Text>
+                  <Text style={styles.qrRefValue} numberOfLines={1}>
+                    {ticket.id}
+                  </Text>
+                </View>
+
                 {isValid && (
-                  <Pressable
-                    onPress={handleExpandQR}
-                    style={styles.qrExpandButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Afficher QR en plein ecran"
-                  >
-                    <Maximize2 size={14} color={colors.forest} strokeWidth={2} />
-                    <Text style={styles.qrExpandText}>Plein ecran</Text>
-                  </Pressable>
+                  <View style={styles.qrExpandWrap}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onPress={handleExpandQR}
+                      icon={<Maximize2 size={15} strokeWidth={1.75} />}
+                      iconPosition="left"
+                    >
+                      Agrandir le QR
+                    </Button>
+                  </View>
                 )}
               </View>
 
-              {/* Liseret perfore */}
+              {/* Liseret perfore central */}
               <View style={styles.dividerRow}>
                 <View style={styles.dashedLine} />
                 <View style={styles.dividerDiamond} />
                 <View style={styles.dashedLine} />
-                <View style={styles.notchLeft} pointerEvents="none" />
-                <View style={styles.notchRight} pointerEvents="none" />
               </View>
 
               {/* Gamme + prix */}
@@ -823,8 +892,8 @@ export default function TicketDetail() {
             <View style={styles.infoGrid}>
               {/* Operateur */}
               <View style={styles.infoCell}>
-                <View style={[styles.infoIconTile, { backgroundColor: `${colors.terracotta}12` }]}>
-                  <Smartphone size={17} color={colors.terracotta} strokeWidth={1.8} />
+                <View style={styles.infoIconTile}>
+                  <Smartphone size={17} color={colors.gold} strokeWidth={1.75} />
                 </View>
                 <View style={styles.infoCellTexts}>
                   <Text style={styles.infoLabel}>Operateur</Text>
@@ -834,8 +903,8 @@ export default function TicketDetail() {
 
               {/* Quantite */}
               <View style={styles.infoCell}>
-                <View style={[styles.infoIconTile, { backgroundColor: `${colors.gold}14` }]}>
-                  <Ticket size={17} color={colors.gold} strokeWidth={1.8} />
+                <View style={styles.infoIconTile}>
+                  <Ticket size={17} color={colors.gold} strokeWidth={1.75} />
                 </View>
                 <View style={styles.infoCellTexts}>
                   <Text style={styles.infoLabel}>Quantite</Text>
@@ -847,8 +916,8 @@ export default function TicketDetail() {
 
               {/* Date d'achat */}
               <View style={styles.infoCell}>
-                <View style={[styles.infoIconTile, { backgroundColor: `${colors.forest}12` }]}>
-                  <CalendarDays size={17} color={colors.forest} strokeWidth={1.8} />
+                <View style={styles.infoIconTile}>
+                  <CalendarDays size={17} color={colors.gold} strokeWidth={1.75} />
                 </View>
                 <View style={styles.infoCellTexts}>
                   <Text style={styles.infoLabel}>Date d&apos;achat</Text>
@@ -860,8 +929,8 @@ export default function TicketDetail() {
 
               {/* Expiration */}
               <View style={styles.infoCell}>
-                <View style={[styles.infoIconTile, { backgroundColor: `${colors.mango}16` }]}>
-                  <Clock size={17} color={colors.mango} strokeWidth={1.8} />
+                <View style={styles.infoIconTile}>
+                  <Clock size={17} color={colors.gold} strokeWidth={1.75} />
                 </View>
                 <View style={styles.infoCellTexts}>
                   <Text style={styles.infoLabel}>Expiration</Text>
@@ -875,7 +944,7 @@ export default function TicketDetail() {
 
           {/* Securite */}
           <View style={styles.securityRow}>
-            <ShieldCheck size={18} color={colors.forest} strokeWidth={2} />
+            <ShieldCheck size={18} color={colors.gold} strokeWidth={1.75} />
             <Text style={styles.securityText}>
               Ce QR code est securise par HMAC-SHA256. Toute tentative de falsification sera detectee a l&apos;entree.
             </Text>

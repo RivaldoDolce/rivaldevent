@@ -1,25 +1,21 @@
 /**
- * Page Explorer - Catalogue de recherche interactif.
+ * Page Explorer - Catalogue de recherche premium « Noir & Or ».
  *
  * Design distinct de la page d'accueil (Showroom vs Catalogue) :
- * - Barre de recherche ACTIVE (TextInput avec autofocus)
- * - Filtres categories superieurs fonctionnels (chips)
- * - Filtres avances via icone SlidersHorizontal (BottomSheet)
- * - Toggle Vue Grille / Vue Liste (libelle fonce)
+ * - Barre de recherche ACTIVE (TextInput avec autofocus) en pastille verre
+ * - Titre serif + sous-titre
+ * - Filtres categories fonctionnels (chips pill verre / dégradé or actif)
+ * - Filtres avances via icone SlidersHorizontal (badge compteur)
+ * - Toggle Vue Grille / Vue Liste (pastille verre)
  * - Grille 2 colonnes compacte avec prix bien visible et bouton Reserver
  * - Section "Lieux a decouvrir"
  * - Resultats filtres par recherche + categorie + filtres avances
  * - Pas de section "Tendances" (celle-ci appartient a l'Accueil)
  *
  * Conventions :
- * - expo-image pour les images
- * - lucide-react-native pour les icones
  * - Design tokens depuis lib/constants.ts
- * - Pas de type any, pas d'emojis
- * - Imports @/
- * - Commentaires en francais
- * - TextInput natif (pas de composant custom)
- * - BottomSheet du design system pour les filtres avances
+ * - Pas de type any, pas d'emojis, commentaires en francais
+ * - TextInput natif, BottomSheet du design system pour les filtres
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -37,6 +33,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Search,
   SlidersHorizontal,
@@ -47,13 +44,15 @@ import {
   CalendarDays,
   Clock,
   TrendingUp,
+  ChevronRight,
 } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
 import { VenueCard } from '@/components/venues/VenueCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
@@ -112,8 +111,13 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
   }, [impact, onReserve]);
 
   return (
-    <Pressable onPress={handlePress} style={gridCardStyle}>
-      {/* Image */}
+    <Pressable
+      onPress={handlePress}
+      style={gridCardStyle}
+      accessibilityRole="button"
+      accessibilityLabel={`Evenement: ${event.title}`}
+    >
+      {/* Image avec dégradé sombre */}
       <View style={gridImageContainerStyle}>
         <Image
           source={{ uri: event.image }}
@@ -122,9 +126,16 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
           transition={200}
           cachePolicy="memory-disk"
         />
-        {/* Badge categorie */}
+        <LinearGradient
+          colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.6)']}
+          style={gridImageGradientStyle}
+          pointerEvents="none"
+        />
+        {/* Badge categorie — verre doré */}
         <View style={gridCategoryBadgeStyle}>
-          <Text style={gridCategoryBadgeTextStyle}>{event.category}</Text>
+          <Text style={gridCategoryBadgeTextStyle} numberOfLines={1}>
+            {event.category}
+          </Text>
         </View>
         {/* Badge featured */}
         {event.isFeatured && (
@@ -133,7 +144,7 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
             <Text style={gridFeaturedBadgeTextStyle}>Tendance</Text>
           </View>
         )}
-        {/* Prix superimpose sur l'image en bas a gauche - montant complet en Or brillant */}
+        {/* Prix superimpose sur l'image en bas a gauche */}
         <View style={gridPriceOverlayStyle}>
           <Text style={gridPriceOverlayTextStyle}>{formattedPrice}</Text>
         </View>
@@ -145,18 +156,25 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
           {event.title}
         </Text>
         <View style={gridInfoRowStyle}>
-          <CalendarDays size={12} color={colors.stone} strokeWidth={1.5} />
+          <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.5} />
           <Text style={gridInfoTextStyle} numberOfLines={1}>{event.date}</Text>
         </View>
         <View style={gridInfoRowStyle}>
-          <MapPin size={12} color={colors.stone} strokeWidth={1.5} />
+          <MapPin size={12} color={colors.goldMuted} strokeWidth={1.5} />
           <Text style={gridInfoTextStyle} numberOfLines={1}>{event.location}</Text>
         </View>
 
-        {/* Bouton Reserver seul, toujours visible */}
-        <Pressable onPress={handleReserve} style={gridReserveButtonStyle}>
-          <Text style={gridReserveTextStyle}>Reserver</Text>
-        </Pressable>
+        {/* Bouton Reserver seul, toujours visible — dégradé or */}
+        <LinearGradient
+          colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={gridReserveButtonStyle}
+        >
+          <Pressable onPress={handleReserve} style={gridReserveInnerStyle} hitSlop={4} accessibilityRole="button" accessibilityLabel="Reserver">
+            <Text style={gridReserveTextStyle}>Reserver</Text>
+          </Pressable>
+        </LinearGradient>
       </View>
     </Pressable>
   );
@@ -195,8 +213,13 @@ function ListCard({ event, onPress, onReserve }: ListCardProps) {
   }, [impact, onReserve]);
 
   return (
-    <Pressable onPress={handlePress} style={listCardStyle}>
-      {/* Image */}
+    <Pressable
+      onPress={handlePress}
+      style={listCardStyle}
+      accessibilityRole="button"
+      accessibilityLabel={`Evenement: ${event.title}`}
+    >
+      {/* Image avec dégradé */}
       <View style={listImageContainerStyle}>
         <Image
           source={{ uri: event.image }}
@@ -205,9 +228,16 @@ function ListCard({ event, onPress, onReserve }: ListCardProps) {
           transition={200}
           cachePolicy="memory-disk"
         />
-        {/* Badge categorie */}
+        <LinearGradient
+          colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.55)']}
+          style={StyleAbsoluteFill}
+          pointerEvents="none"
+        />
+        {/* Badge categorie — verre doré */}
         <View style={listCategoryBadgeStyle}>
-          <Text style={listCategoryBadgeTextStyle}>{event.category}</Text>
+          <Text style={listCategoryBadgeTextStyle} numberOfLines={1}>
+            {event.category}
+          </Text>
         </View>
       </View>
 
@@ -217,20 +247,28 @@ function ListCard({ event, onPress, onReserve }: ListCardProps) {
           {event.title}
         </Text>
         <View style={listInfoRowStyle}>
-          <CalendarDays size={12} color={colors.stone} strokeWidth={1.5} />
-          <Text style={listInfoTextStyle}>{event.date}</Text>
-          <Clock size={12} color={colors.stone} strokeWidth={1.5} />
-          <Text style={listInfoTextStyle}>{event.time}</Text>
+          <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.5} />
+          <Text style={listInfoTextStyle} numberOfLines={1}>{event.date}</Text>
+          <View style={listInfoDotStyle} />
+          <Clock size={12} color={colors.goldMuted} strokeWidth={1.5} />
+          <Text style={listInfoTextStyle} numberOfLines={1}>{event.time}</Text>
         </View>
         <View style={listInfoRowStyle}>
-          <MapPin size={12} color={colors.stone} strokeWidth={1.5} />
-          <Text style={listInfoTextStyle} numberOfLines={1}>{event.location}</Text>
+          <MapPin size={12} color={colors.goldMuted} strokeWidth={1.5} />
+          <Text style={[listInfoTextStyle, { flex: 1 }]} numberOfLines={1}>{event.location}</Text>
         </View>
         <View style={listFooterStyle}>
           <Text style={listPriceStyle}>{formattedPrice}</Text>
-          <Pressable onPress={handleReserve} style={listReserveButtonStyle}>
-            <Text style={listReserveTextStyle}>Reserver</Text>
-          </Pressable>
+          <LinearGradient
+            colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={listReserveButtonStyle}
+          >
+            <Pressable onPress={handleReserve} style={listReserveInnerStyle} hitSlop={4} accessibilityRole="button" accessibilityLabel="Reserver">
+              <Text style={listReserveTextStyle}>Reserver</Text>
+            </Pressable>
+          </LinearGradient>
         </View>
       </View>
     </Pressable>
@@ -394,7 +432,7 @@ export default function ExploreScreen() {
   // -- Styles --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   };
 
   return (
@@ -403,26 +441,37 @@ export default function ExploreScreen() {
           HEADER STICKY : Recherche + Toggle vue + Filtres categories
           (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
           ============================================= */}
-      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.xl }]}>
-        {/* Barre de recherche active */}
+      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+        {/* Titre serif + sous-titre */}
+        <View style={titleBlockStyle}>
+          <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
+          <Text style={titleStyle}>Explorer</Text>
+          <Text style={subtitleStyle}>
+            Decouvrez tous les evenements disponibles pres de chez vous
+          </Text>
+        </View>
+
+        {/* Barre de recherche active — pastille verre */}
         <View style={searchContainerStyle}>
-          <Search size={20} color={colors.muted} strokeWidth={1.5} />
+          <Search size={20} color={colors.goldMuted} strokeWidth={1.75} />
           <TextInput
             ref={searchInputRef}
             style={searchInputStyle}
             placeholder="Rechercher evenement, artiste, lieu..."
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
+            selectionColor={colors.gold}
+            cursorColor={colors.gold}
             accessibilityRole="search"
             accessibilityLabel="Rechercher un evenement"
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={handleClearSearch} hitSlop={12} accessibilityLabel="Effacer">
-              <X size={18} color={colors.stone} strokeWidth={2} />
+              <X size={18} color={colors.goldMuted} strokeWidth={1.75} />
             </Pressable>
           )}
           <Pressable
@@ -430,28 +479,13 @@ export default function ExploreScreen() {
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Filtres avances"
+            style={styles.divider}
           >
             <View style={{ position: 'relative' }}>
-              <SlidersHorizontal size={20} color={colors.text} strokeWidth={1.5} />
+              <SlidersHorizontal size={20} color={colors.goldBright} strokeWidth={1.5} />
               {activeAdvancedFilterCount > 0 && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -8,
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: colors.terracotta,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingHorizontal: spacing.xs,
-                }}>
-                  <Text style={{
-                    fontFamily: 'Inter-Bold',
-                    fontSize: 10,
-                    lineHeight: 12,
-                    color: colors.white,
-                  }}>
+                <View style={filtersBadgeStyle}>
+                  <Text style={filtersBadgeTextStyle}>
                     {activeAdvancedFilterCount}
                   </Text>
                 </View>
@@ -464,9 +498,9 @@ export default function ExploreScreen() {
         <View style={viewToggleRowStyle}>
           <Pressable onPress={handleViewModeToggle} style={viewToggleButtonStyle}>
             {viewMode === 'grid' ? (
-              <List size={18} color={colors.onyx} strokeWidth={1.5} />
+              <List size={17} color={colors.goldBright} strokeWidth={1.75} />
             ) : (
-              <LayoutGrid size={18} color={colors.onyx} strokeWidth={1.5} />
+              <LayoutGrid size={17} color={colors.goldBright} strokeWidth={1.75} />
             )}
             <Text style={viewToggleTextStyle}>
               {viewMode === 'grid' ? 'Vue liste' : 'Vue grille'}
@@ -482,7 +516,7 @@ export default function ExploreScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={filterChipsContainerStyle}
-          contentContainerStyle={{ paddingRight: spacing.lg }}
+          contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.sm }}
         >
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.id;
@@ -551,27 +585,19 @@ export default function ExploreScreen() {
             </View>
           )
         ) : (
-          /* Etat vide */
-          <View style={emptyStateStyle}>
-            <Search size={48} color={`${colors.stone}30`} strokeWidth={1} />
-            <Text style={emptyStateTitleStyle}>Aucun evenement trouve</Text>
-            <Text style={emptyStateTextStyle}>
-              Essayez de modifier vos filtres ou votre recherche
-            </Text>
-            <Pressable
-              onPress={() => {
-                impact('light');
-                setSearchQuery('');
-                setActiveCategory('all');
-                handleResetFilters();
-              }}
-              style={emptyStateButtonStyle}
-              accessibilityRole="button"
-              accessibilityLabel="Reinitialiser les filtres"
-            >
-              <Text style={emptyStateButtonTextStyle}>Reinitialiser</Text>
-            </Pressable>
-          </View>
+          /* Etat vide premium */
+          <EmptyState
+            icon={<Search size={34} color={colors.goldMuted} strokeWidth={1.5} />}
+            title="Aucun evenement trouve"
+            description="Essayez de modifier vos filtres ou votre recherche"
+            actionLabel="Reinitialiser"
+            onAction={() => {
+              impact('light');
+              setSearchQuery('');
+              setActiveCategory('all');
+              handleResetFilters();
+            }}
+          />
         )}
 
         {/* Espacement entre resultats et lieux */}
@@ -581,17 +607,22 @@ export default function ExploreScreen() {
             SECTION "LIEUX A DECOUVRIR"
             ============================================= */}
         <View style={sectionHeaderStyle}>
-          <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
+          <View>
+            <Text style={sectionOverlineStyle}>ADRESSES D'EXCEPTION</Text>
+            <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
+          </View>
           <Pressable
             onPress={() => {
               impact('light');
               router.push(ROUTES.VENUES);
             }}
             hitSlop={8}
+            style={seeAllPressableStyle}
             accessibilityRole="button"
             accessibilityLabel="Voir tous les lieux"
           >
             <Text style={seeAllTextStyle}>Voir tout</Text>
+            <ChevronRight size={15} color={colors.gold} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -626,34 +657,86 @@ export default function ExploreScreen() {
 // Styles - Sticky Header (hors ScrollView)
 // ============================================================
 
+const StyleAbsoluteFill: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
+const styles: { divider: ViewStyle } = {
+  divider: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(216,180,90,0.1)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.xs,
+  },
+};
+
 const stickyHeaderStyle: ViewStyle = {
-  backgroundColor: colors.sand,
+  backgroundColor: colors.background,
   paddingHorizontal: spacing.lg,
   paddingBottom: spacing.sm,
   borderBottomWidth: 1,
-  borderBottomColor: `${colors.border}50`,
+  borderBottomColor: `${colors.gold}1F`,
   // Pas de zIndex probleme car hors du ScrollView
+};
+
+const titleBlockStyle: ViewStyle = {
+  marginBottom: spacing.md,
+};
+
+const overlineStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 10,
+  lineHeight: 14,
+  letterSpacing: 1.4,
+  color: colors.goldMuted,
+  marginBottom: 3,
+};
+
+const titleStyle: TextStyle = {
+  fontFamily: 'PlayfairDisplay_700Bold',
+  fontSize: 30,
+  lineHeight: 38,
+  color: colors.text,
+  letterSpacing: -0.4,
+};
+
+const subtitleStyle: TextStyle = {
+  fontFamily: 'Inter_400Regular',
+  fontSize: 13,
+  lineHeight: 19,
+  color: colors.textMuted,
+  marginTop: 2,
 };
 
 const searchContainerStyle: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: colors.white,
-  borderRadius: radii.xl,
-  paddingHorizontal: spacing.md,
-  height: 48,
+  height: 58,
+  borderRadius: radius.full,
+  backgroundColor: colors.glass,
   borderWidth: 1,
-  borderColor: colors.border,
+  borderColor: `${colors.gold}2E`,
+  paddingHorizontal: spacing.md,
+  gap: spacing.sm,
   ...shadows.search,
 };
 
 const searchInputStyle: TextStyle = {
-  fontFamily: 'Inter-Regular',
+  fontFamily: 'Inter_400Regular',
   fontSize: 15,
   lineHeight: 20,
-  color: colors.onyx,
+  color: colors.text,
   flex: 1,
-  marginLeft: spacing.sm,
+  marginLeft: spacing.xs,
   paddingVertical: 0,
 };
 
@@ -669,28 +752,49 @@ const viewToggleButtonStyle: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   gap: spacing.xs,
-  backgroundColor: colors.ivory,
-  borderRadius: radii.sm,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs,
+  backgroundColor: colors.glass,
+  borderRadius: radius.full,
   borderWidth: 1,
-  borderColor: `${colors.stone}20`,
+  borderColor: `${colors.gold}26`,
+  paddingHorizontal: spacing.md,
+  paddingVertical: spacing.xs + 1,
 };
 
-// Libelle vue en ecriture FONCE (onyx, pas stone)
 const viewToggleTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 13,
-  lineHeight: 18,
-  color: colors.onyx,
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 12,
+  lineHeight: 17,
+  color: colors.textSecondary,
   letterSpacing: 0.2,
 };
 
 const resultCountStyle: TextStyle = {
-  fontFamily: 'Inter-Regular',
+  fontFamily: 'Inter_400Regular',
   fontSize: 13,
   lineHeight: 18,
-  color: colors.stone,
+  color: colors.textMuted,
+};
+
+const filtersBadgeStyle: ViewStyle = {
+  position: 'absolute',
+  top: -6,
+  right: -8,
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  backgroundColor: colors.gold,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: spacing.xs,
+  borderWidth: 1.5,
+  borderColor: colors.background,
+};
+
+const filtersBadgeTextStyle: TextStyle = {
+  fontFamily: 'Inter_700Bold',
+  fontSize: 10,
+  lineHeight: 12,
+  color: colors.onyx,
 };
 
 // ============================================================
@@ -699,44 +803,50 @@ const resultCountStyle: TextStyle = {
 
 const filterChipsContainerStyle: ViewStyle = {
   paddingBottom: spacing.sm,
+  flexGrow: 0,
 };
 
 const chipActiveStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.full,
+  backgroundColor: colors.gold,
+  borderRadius: radius.full,
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
-  marginRight: spacing.sm,
+  borderWidth: 1,
+  borderColor: `${colors.goldBright}66`,
+  shadowColor: 'rgba(216,180,90,0.45)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.5,
+  shadowRadius: 8,
+  elevation: 4,
 };
 
 const chipInactiveStyle: ViewStyle = {
-  backgroundColor: colors.ivory,
-  borderRadius: radii.full,
+  backgroundColor: colors.glass,
+  borderRadius: radius.full,
   paddingHorizontal: spacing.md,
   paddingVertical: spacing.sm,
-  marginRight: spacing.sm,
   borderWidth: 1,
-  borderColor: `${colors.stone}30`,
+  borderColor: `${colors.gold}26`,
 };
 
 const chipActiveTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 14,
-  lineHeight: 20,
-  color: colors.white,
-  letterSpacing: 0.3,
-};
-
-const chipInactiveTextStyle: TextStyle = {
-  fontFamily: 'Inter-Medium',
+  fontFamily: 'Inter_600SemiBold',
   fontSize: 14,
   lineHeight: 20,
   color: colors.onyx,
   letterSpacing: 0.2,
 };
 
+const chipInactiveTextStyle: TextStyle = {
+  fontFamily: 'Inter_500Medium',
+  fontSize: 14,
+  lineHeight: 20,
+  color: colors.textSecondary,
+  letterSpacing: 0.1,
+};
+
 // ============================================================
-// Styles - Grille (prix overlay sur image, boutton seul)
+// Styles - Grille (prix overlay sur image, bouton seul)
 // ============================================================
 
 const gridContainerStyle: ViewStyle = {
@@ -752,9 +862,11 @@ const gridRowStyle: ViewStyle = {
 
 const gridCardStyle: ViewStyle = {
   width: GRID_CARD_WIDTH,
-  backgroundColor: colors.white,
-  borderRadius: radii.lg,
+  backgroundColor: colors.elevated,
+  borderRadius: radius.lg,
   overflow: 'hidden',
+  borderWidth: 1,
+  borderColor: `${colors.gold}1F`,
   ...shadows.card,
 };
 
@@ -768,21 +880,32 @@ const gridImageStyle: ImageStyle = {
   height: GRID_IMAGE_HEIGHT,
 };
 
+const gridImageGradientStyle: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
 const gridCategoryBadgeStyle: ViewStyle = {
   position: 'absolute',
   top: spacing.xs,
   left: spacing.xs,
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.sm,
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
+  backgroundColor: 'rgba(10,9,8,0.62)',
+  borderRadius: radius.full,
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 3,
+  maxWidth: GRID_CARD_WIDTH - 40,
 };
 
 const gridCategoryBadgeTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
+  fontFamily: 'Inter_600SemiBold',
   fontSize: 10,
   lineHeight: 14,
-  color: colors.white,
+  color: colors.goldBright,
   letterSpacing: 0.3,
 };
 
@@ -793,14 +916,14 @@ const gridFeaturedBadgeStyle: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   backgroundColor: colors.gold,
-  borderRadius: radii.sm,
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
-  gap: 2,
+  borderRadius: radius.full,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 3,
+  gap: 3,
 };
 
 const gridFeaturedBadgeTextStyle: TextStyle = {
-  fontFamily: 'Inter-Bold',
+  fontFamily: 'Inter_700Bold',
   fontSize: 10,
   lineHeight: 14,
   color: colors.onyx,
@@ -812,14 +935,16 @@ const gridPriceOverlayStyle: ViewStyle = {
   position: 'absolute',
   bottom: spacing.sm,
   left: spacing.xs,
-  backgroundColor: 'rgba(26,24,22,0.7)',
-  borderRadius: radii.sm,
+  backgroundColor: 'rgba(26,22,16,0.75)',
+  borderRadius: radius.full,
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
   paddingHorizontal: spacing.sm,
-  paddingVertical: spacing.xs,
+  paddingVertical: 3,
 };
 
 const gridPriceOverlayTextStyle: TextStyle = {
-  fontFamily: 'Inter-Bold',
+  fontFamily: 'Inter_700Bold',
   fontSize: 12,
   lineHeight: 16,
   color: colors.goldBright,
@@ -831,10 +956,10 @@ const gridContentStyle: ViewStyle = {
 };
 
 const gridTitleStyle: TextStyle = {
-  fontFamily: 'PlayfairDisplay-SemiBold',
+  fontFamily: 'PlayfairDisplay_600SemiBold',
   fontSize: 14,
   lineHeight: 19,
-  color: colors.onyx,
+  color: colors.text,
   letterSpacing: -0.2,
   marginBottom: spacing.xs,
 };
@@ -847,27 +972,36 @@ const gridInfoRowStyle: ViewStyle = {
 };
 
 const gridInfoTextStyle: TextStyle = {
-  fontFamily: 'Inter-Regular',
+  fontFamily: 'Inter_400Regular',
   fontSize: 11,
   lineHeight: 15,
-  color: colors.stone,
+  color: colors.textMuted,
 };
 
 // Bouton Reserver seul (pas de row avec prix - prix est sur l'image)
 const gridReserveButtonStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.sm,
+  borderRadius: radius.full,
+  overflow: 'hidden',
+  marginTop: spacing.sm,
+  shadowColor: 'rgba(216,180,90,0.4)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.45,
+  shadowRadius: 6,
+  elevation: 4,
+};
+
+const gridReserveInnerStyle: ViewStyle = {
   paddingHorizontal: spacing.sm,
   paddingVertical: spacing.xs + 2,
-  marginTop: spacing.sm,
   alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const gridReserveTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
+  fontFamily: 'Inter_700Bold',
   fontSize: 12,
   lineHeight: 16,
-  color: colors.white,
+  color: colors.onyx,
   letterSpacing: 0.2,
 };
 
@@ -883,9 +1017,11 @@ const listContainerStyle: ViewStyle = {
 
 const listCardStyle: ViewStyle = {
   flexDirection: 'row',
-  backgroundColor: colors.white,
-  borderRadius: radii.lg,
+  backgroundColor: colors.elevated,
+  borderRadius: radius.lg,
   overflow: 'hidden',
+  borderWidth: 1,
+  borderColor: `${colors.gold}1F`,
   ...shadows.card,
 };
 
@@ -904,17 +1040,20 @@ const listCategoryBadgeStyle: ViewStyle = {
   position: 'absolute',
   top: spacing.xs,
   left: spacing.xs,
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.sm,
-  paddingHorizontal: spacing.xs,
-  paddingVertical: 2,
+  backgroundColor: 'rgba(10,9,8,0.62)',
+  borderRadius: radius.full,
+  borderWidth: 1,
+  borderColor: `${colors.gold}40`,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 3,
+  maxWidth: LIST_IMAGE_HEIGHT - 12,
 };
 
 const listCategoryBadgeTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
+  fontFamily: 'Inter_600SemiBold',
   fontSize: 10,
   lineHeight: 14,
-  color: colors.white,
+  color: colors.goldBright,
 };
 
 const listContentStyle: ViewStyle = {
@@ -923,10 +1062,10 @@ const listContentStyle: ViewStyle = {
 };
 
 const listTitleStyle: TextStyle = {
-  fontFamily: 'PlayfairDisplay-SemiBold',
+  fontFamily: 'PlayfairDisplay_600SemiBold',
   fontSize: 15,
   lineHeight: 20,
-  color: colors.onyx,
+  color: colors.text,
   letterSpacing: -0.2,
   marginBottom: spacing.xs,
 };
@@ -934,15 +1073,23 @@ const listTitleStyle: TextStyle = {
 const listInfoRowStyle: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
-  gap: spacing.xs,
+  gap: 5,
   marginBottom: 2,
 };
 
 const listInfoTextStyle: TextStyle = {
-  fontFamily: 'Inter-Regular',
+  fontFamily: 'Inter_400Regular',
   fontSize: 12,
   lineHeight: 16,
-  color: colors.stone,
+  color: colors.textMuted,
+};
+
+const listInfoDotStyle: ViewStyle = {
+  width: 3,
+  height: 3,
+  borderRadius: 1.5,
+  backgroundColor: colors.textFaint,
+  marginHorizontal: 2,
 };
 
 const listFooterStyle: ViewStyle = {
@@ -953,24 +1100,34 @@ const listFooterStyle: ViewStyle = {
 };
 
 const listPriceStyle: TextStyle = {
-  fontFamily: 'Inter-Bold',
+  fontFamily: 'Inter_700Bold',
   fontSize: 14,
   lineHeight: 20,
   color: colors.goldBright,
 };
 
 const listReserveButtonStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.sm,
+  borderRadius: radius.full,
+  overflow: 'hidden',
+  shadowColor: 'rgba(216,180,90,0.4)',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.45,
+  shadowRadius: 6,
+  elevation: 4,
+};
+
+const listReserveInnerStyle: ViewStyle = {
   paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs,
+  paddingVertical: 6,
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const listReserveTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
+  fontFamily: 'Inter_700Bold',
   fontSize: 12,
   lineHeight: 16,
-  color: colors.white,
+  color: colors.onyx,
 };
 
 // ============================================================
@@ -980,71 +1137,45 @@ const listReserveTextStyle: TextStyle = {
 const sectionHeaderStyle: ViewStyle = {
   flexDirection: 'row',
   justifyContent: 'space-between',
-  alignItems: 'center',
+  alignItems: 'flex-end',
   paddingHorizontal: spacing.lg,
   marginBottom: spacing.md,
 };
 
+const sectionOverlineStyle: TextStyle = {
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 10,
+  lineHeight: 14,
+  letterSpacing: 1.4,
+  color: colors.goldMuted,
+  marginBottom: 3,
+};
+
 const sectionTitleStyle: TextStyle = {
-  fontFamily: 'PlayfairDisplay-Bold',
-  fontSize: 20,
-  lineHeight: 26,
+  fontFamily: 'PlayfairDisplay_700Bold',
+  fontSize: 22,
+  lineHeight: 30,
   letterSpacing: -0.3,
-  color: colors.onyx,
+  color: colors.text,
+};
+
+const seeAllPressableStyle: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 2,
+  paddingVertical: spacing.xs,
 };
 
 const seeAllTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 13,
-  lineHeight: 18,
-  color: colors.terracotta,
-  letterSpacing: 0.2,
+  fontFamily: 'Inter_600SemiBold',
+  fontSize: 12,
+  lineHeight: 16,
+  color: colors.goldBright,
+  letterSpacing: 0.3,
 };
 
 const venuesScrollContainerStyle: ViewStyle = {
   marginHorizontal: spacing.lg,
   paddingBottom: spacing.xl,
-};
-
-// ============================================================
-// Styles - Etat vide
-// ============================================================
-
-const emptyStateStyle: ViewStyle = {
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingVertical: spacing.xxxl,
-  paddingHorizontal: spacing.xl,
-};
-
-const emptyStateTitleStyle: TextStyle = {
-  fontFamily: 'PlayfairDisplay-Bold',
-  fontSize: 20,
-  lineHeight: 26,
-  color: colors.onyx,
-  marginTop: spacing.md,
-  marginBottom: spacing.sm,
-};
-
-const emptyStateTextStyle: TextStyle = {
-  fontFamily: 'Inter-Regular',
-  fontSize: 14,
-  lineHeight: 20,
-  color: colors.stone,
-  textAlign: 'center',
-  marginBottom: spacing.lg,
-};
-
-const emptyStateButtonStyle: ViewStyle = {
-  backgroundColor: colors.terracotta,
-  borderRadius: radii.md,
-  paddingHorizontal: spacing.xl,
-  paddingVertical: spacing.md,
-};
-
-const emptyStateButtonTextStyle: TextStyle = {
-  fontFamily: 'Inter-SemiBold',
-  fontSize: 16,
-  lineHeight: 22,
-  color: colors.white,
+  flexGrow: 0,
 };

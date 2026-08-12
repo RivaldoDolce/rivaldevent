@@ -1,29 +1,20 @@
 /**
- * Page detail d'un lieu - Ecran client.
+ * Page detail d'un lieu, accessible depuis la liste des lieux (Explorer).
  *
- * Design premium "Minimalisme Africain Camerounais" :
- * - Image hero plein ecran avec gradient overlay
- * - Bouton retour flottant sur l'image
- * - Badge promotion tier sur l'image (si sponsorise)
- * - Titre PlayfairDisplay-Bold
- * - Adresse + ville avec MapPin
- * - Galerie d'images horizontale (si plusieurs images)
- * - Description riche
- * - Section capacite (min-max + icone Users)
- * - Section equipements (amenities en chips)
- * - Section types d'evenements supportes
- * - Carte proprietaire avec avatar + nom
- * - Prix par jour + CTA "Reserver ce lieu"
- * - Barre fixe en bas : prix + CTA
+ * Design premium « Noir & Or » :
+ * - Image hero avec dégradé sombre du bas vers le haut + filet or
+ * - Bouton retour + partage/favori en pastilles verre fumé
+ * - Badge promotion verre doré sur l'image
+ * - Titre Playfair Display, infos adresse/ville en carte verre
+ * - Carte capacité, chips équipements et types d'événements ornés
+ * - Carte propriétaire premium (Avatar verre + boutons contact)
+ * - Barre fixe en bas : verre fumé avec filet doré + bouton « Réserver » dégradé or
  *
  * Conventions :
- * - lucide-react-native pour les icones
+ * - lucide-react-native pour les icones (noms vérifiés)
  * - Design tokens depuis lib/constants.ts
- * - expo-image pour les images
- * - Animated natif (pas reanimated)
- * - Pas de type any, pas d'emojis
- * - Imports @/
- * - Commentaires en francais
+ * - expo-image pour les images, Animated natif (pas reanimated)
+ * - Pas de type any, pas d'emojis, commentaires en francais
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -34,9 +25,12 @@ import {
   Pressable,
   Linking,
   Alert,
-  ActivityIndicator,
   PanResponder,
   Share,
+  StyleSheet,
+  type ViewStyle,
+  type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, usePathname } from 'expo-router';
@@ -55,7 +49,7 @@ import {
   Share2,
   CalendarDays,
   Tag,
-  Home,
+  House,
   ShieldCheck,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
@@ -63,23 +57,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, typography, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { venueService } from '@/services/venue.service';
 import { useFavoritesStore } from '@/stores/favorites-store';
 import { formatPrice } from '@/services/event.service';
 import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { VenueWithPromotion } from '@/types';
 
 // ============================================================
 // Constantes
 // ============================================================
 
-const HERO_HEIGHT = 280;
+const HERO_HEIGHT = 300;
 const GALLERY_ITEM_WIDTH = 100;
 const GALLERY_ITEM_HEIGHT = 72;
-const BOTTOM_BAR_HEIGHT = 72;
+const BOTTOM_BAR_HEIGHT = 96;
 
 // ============================================================
 // Mapping icone amenity -> lucide icon
@@ -102,12 +99,12 @@ const AMENITY_ICONS: Record<string, React.ComponentType<{ size?: number; color?:
   'Projection HD': Projector,
   'Eclairage scene': Projector,
   'Scene modulable': Projector,
-  'Terrasse': Home,
-  'Terrasse panoramique': Home,
-  'Vue panoramique': Home,
-  'Jardin tropical': Home,
-  'Vestiaire': Home,
-  'Vestiaire securise': Home,
+  'Terrasse': House,
+  'Terrasse panoramique': House,
+  'Vue panoramique': House,
+  'Jardin tropical': House,
+  'Vestiaire': House,
+  'Vestiaire securise': House,
 };
 
 // ============================================================
@@ -332,32 +329,30 @@ export default function VenueDetail() {
 
   if (isLoading) {
     return (
-      <View style={[{ flex: 1, backgroundColor: colors.sand, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.forest} />
-        <Text style={{ fontFamily: 'Inter-Regular', fontSize: 14, color: colors.stone, marginTop: spacing.md }}>
-          Chargement...
-        </Text>
+      <View style={[styles.screen, { paddingTop: insets.top + spacing.md }]}>
+        <View style={styles.heroSkeleton}>
+          <Skeleton width="100%" height={HERO_HEIGHT} radius={0} />
+        </View>
+        <View style={styles.loadingBody}>
+          <Skeleton width={220} height={30} radius={radius.sm} />
+          <Skeleton width="100%" height={90} radius={radius.lg} />
+          <Skeleton width="100%" height={70} radius={radius.lg} />
+          <Skeleton width="70%" height={70} radius={radius.lg} />
+        </View>
       </View>
     );
   }
 
   if (!venue) {
     return (
-      <View style={[{ flex: 1, backgroundColor: colors.sand, justifyContent: 'center', alignItems: 'center', paddingTop: insets.top }]}>
-        <Text style={{ fontFamily: 'PlayfairDisplay-SemiBold', fontSize: 18, color: colors.onyx, marginBottom: spacing.sm }}>
-          Lieu introuvable
-        </Text>
-        <Text style={{ fontFamily: 'Inter-Regular', fontSize: 14, color: colors.stone, marginBottom: spacing.lg }}>
-          Ce lieu n'existe pas ou a ete supprime.
-        </Text>
-        <Pressable onPress={handleBack} style={{
-          backgroundColor: colors.forest,
-          borderRadius: radii.lg,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.md,
-        }}>
-          <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 14, color: colors.white }}>Retour</Text>
-        </Pressable>
+      <View style={[styles.errorContainer, { paddingTop: insets.top }]}>
+        <Text style={styles.errorTitle}>Lieu introuvable</Text>
+        <Text style={styles.errorText}>Ce lieu n'existe pas ou a ete supprime.</Text>
+        <View style={{ marginTop: spacing.lg, width: 200 }}>
+          <Button variant="primary" size="md" onPress={handleBack}>
+            Retour
+          </Button>
+        </View>
       </View>
     );
   }
@@ -369,156 +364,100 @@ export default function VenueDetail() {
   const locationDisplay = venue.address ?? venue.city ?? 'Adresse non precisee';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.sand }}>
+    <View style={styles.screen}>
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scrollView}
         contentContainerStyle={{
           paddingBottom: BOTTOM_BAR_HEIGHT + insets.bottom + spacing.md,
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* =============================================
-            IMAGE HERO
+            IMAGE HERO — HAUTEUR PREMIUM
             ============================================= */}
-        <View style={{ height: HERO_HEIGHT, position: 'relative', overflow: 'hidden' }}>
+        <View style={styles.heroContainer}>
           {/* Zone swipeable : uniquement l'image (les boutons restent cliquables) */}
           <View
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            style={styles.heroSwipeArea}
             {...(panResponderRef.current ? panResponderRef.current.panHandlers : {})}
           >
             {displayImages.length > 0 ? (
               <Image
                 source={{ uri: displayImages[activeGalleryIndex] ?? displayImages[0] ?? '' }}
-                style={{ width: '100%', height: HERO_HEIGHT }}
+                style={styles.heroImage}
                 contentFit="cover"
                 transition={400}
                 cachePolicy="memory-disk"
               />
             ) : (
-              <View style={{ width: '100%', height: HERO_HEIGHT, backgroundColor: colors.ivory, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'PlayfairDisplay-Bold', fontSize: 48, color: colors.stone }}>
-                  {venue.name.charAt(0)}
-                </Text>
+              <View style={[styles.heroImage, styles.heroPlaceholder]}>
+                <Text style={styles.heroPlaceholderText}>{venue.name.charAt(0)}</Text>
               </View>
             )}
           </View>
 
-          {/* Gradient overlay */}
+          {/* Dégradé sombre du bas vers le haut */}
           <LinearGradient
-            colors={['transparent', 'rgba(26,24,22,0.7)']}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}
+            colors={['rgba(10,9,8,0)', 'rgba(10,9,8,0.42)', 'rgba(10,9,8,0.85)']}
+            locations={[0, 0.5, 1]}
+            style={StyleAbsoluteFill}
             pointerEvents="none"
           />
 
-          {/* Badge promotion */}
+          {/* Filet doré haut */}
+          <View pointerEvents="none" style={styles.goldEdge} />
+
+          {/* Badge promotion — pastille verre doré */}
           {venue.promotion_tier && (
-            <View style={{
-              position: 'absolute',
-              top: insets.top + spacing.sm,
-              right: spacing.md + 48, // Espace pour les boutons droite
-              backgroundColor: venue.promotion_tier === 'vip' ? `${colors.gold}E6`
-                : venue.promotion_tier === 'premium' ? colors.terracotta
-                : colors.forest,
-              borderRadius: radii.sm,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.xs / 2,
-            }}>
-              <Text style={{
-                fontFamily: 'Inter-Bold',
-                fontSize: 10,
-                lineHeight: 14,
-                color: colors.white,
-                letterSpacing: 0.8,
-              }}>
+            <View style={[styles.promoBadge, { top: insets.top + spacing.sm }]}>
+              <Text style={styles.promoBadgeText}>
                 {venue.promotion_tier === 'vip' ? 'VIP' : venue.promotion_tier === 'premium' ? 'PREMIUM' : 'BASIQUE'}
               </Text>
             </View>
           )}
 
-          {/* Bouton retour */}
+          {/* Bouton retour — pastille verre */}
           <Pressable
             onPress={handleBack}
-            style={{
-              position: 'absolute',
-              left: spacing.md,
-              top: insets.top + spacing.sm,
-              width: 40,
-              height: 40,
-              borderRadius: radii.full,
-              backgroundColor: colors.white + 'CC',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
+            style={[styles.glassButton, { left: spacing.md, top: insets.top + spacing.sm }]}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Retour"
           >
-            <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
+            <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
           </Pressable>
 
-          {/* Boutons droite : Share + Favori */}
-          <View style={{
-            position: 'absolute',
-            right: spacing.md,
-            top: insets.top + spacing.sm,
-            flexDirection: 'row',
-            gap: spacing.sm,
-          }}>
+          {/* Boutons droite : Partage + Favori */}
+          <View style={[styles.floatingButtonsContainer, { top: insets.top + spacing.sm }]}>
             <Pressable
               onPress={handleShare}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: radii.full,
-                backgroundColor: colors.white + 'CC',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
+              style={styles.glassButton}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Partager"
             >
-              <Share2 size={20} color={colors.onyx} strokeWidth={2} />
+              <Share2 size={18} color={colors.goldBright} strokeWidth={1.75} />
             </Pressable>
             <Pressable
               onPress={handleToggleFavorite}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: radii.full,
-                backgroundColor: colors.white + 'CC',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
+              style={styles.glassButton}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             >
               <Heart
-                size={20}
-                color={isFavorited ? colors.terracotta : colors.onyx}
+                size={18}
+                color={isFavorited ? colors.terracotta : colors.goldBright}
                 fill={isFavorited ? colors.terracotta : 'none'}
-                strokeWidth={2}
+                strokeWidth={1.75}
               />
             </Pressable>
           </View>
 
           {/* Compteur d'images */}
           {displayImages.length > 1 && (
-            <View style={{
-              position: 'absolute',
-              bottom: spacing.md,
-              right: spacing.md,
-              backgroundColor: colors.onyx + 'AA',
-              borderRadius: radii.sm,
-              paddingHorizontal: spacing.sm,
-              paddingVertical: spacing.xs / 2,
-            }}>
-              <Text style={{
-                fontFamily: 'Inter-Medium',
-                fontSize: 12,
-                color: colors.white,
-              }}>
+            <View style={styles.imageCounter} pointerEvents="none">
+              <Text style={styles.imageCounterText}>
                 {activeGalleryIndex + 1} / {displayImages.length}
               </Text>
             </View>
@@ -529,7 +468,7 @@ export default function VenueDetail() {
             GALERIE MINIATURES
             ============================================= */}
         {displayImages.length > 1 && (
-          <View style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
+          <View style={styles.galleryContainer}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -542,20 +481,21 @@ export default function VenueDetail() {
                     impact('light');
                     setActiveGalleryIndex(index);
                   }}
-                  style={{
-                    borderRadius: radii.md,
-                    borderWidth: activeGalleryIndex === index ? 2 : 0,
-                    borderColor: colors.forest,
-                    overflow: 'hidden',
-                  }}
+                  style={[
+                    styles.galleryItem,
+                    activeGalleryIndex === index && styles.galleryItemActive,
+                  ]}
                 >
                   <Image
                     source={{ uri: img }}
-                    style={{ width: GALLERY_ITEM_WIDTH, height: GALLERY_ITEM_HEIGHT }}
+                    style={styles.galleryItemImage}
                     contentFit="cover"
                     transition={200}
                     cachePolicy="memory-disk"
                   />
+                  {activeGalleryIndex === index && (
+                    <View style={styles.galleryItemOverlay} />
+                  )}
                 </Pressable>
               ))}
             </ScrollView>
@@ -565,110 +505,46 @@ export default function VenueDetail() {
         {/* =============================================
             CONTENU PRINCIPAL
             ============================================= */}
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          {/* Nom du lieu */}
-          <Text style={{
-            fontFamily: 'PlayfairDisplay-Bold',
-            fontSize: 24,
-            lineHeight: 32,
-            color: colors.onyx,
-            letterSpacing: -0.3,
-            marginBottom: spacing.sm,
-          }}>
-            {venue.name}
-          </Text>
+        <View style={styles.content}>
+          {/* Nom du lieu — titre serif */}
+          <Text style={styles.title}>{venue.name}</Text>
 
-          {/* Adresse + ville */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
-            <MapPin size={16} color={colors.forest} strokeWidth={1.5} />
-            <Text style={{
-              fontFamily: 'Inter-Regular',
-              fontSize: 14,
-              lineHeight: 20,
-              color: colors.stone,
-              marginLeft: spacing.xs,
-            }}>
-              {locationDisplay}
-            </Text>
-            {venue.city && venue.city !== venue.address && (
-              <View style={{
-                backgroundColor: colors.ivory,
-                borderRadius: radii.sm,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: spacing.xs / 2,
-                marginLeft: spacing.sm,
-              }}>
-                <Text style={{
-                  fontFamily: 'Inter-SemiBold',
-                  fontSize: 12,
-                  color: colors.forest,
-                }}>
-                  {venue.city}
-                </Text>
-              </View>
-            )}
+          {/* Adresse + ville — carte verre */}
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <MapPin size={15} color={colors.goldMuted} strokeWidth={1.75} />
+              <Text style={[styles.infoText, { flex: 1 }]} numberOfLines={1}>
+                {locationDisplay}
+              </Text>
+              {venue.city && venue.city !== venue.address && (
+                <View style={styles.cityBadge}>
+                  <Text style={styles.cityBadgeText}>{venue.city}</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Rating premium */}
+          {/* Mention lieu premium */}
           {venue.is_premium && (
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: spacing.md,
-              backgroundColor: `${colors.gold}15`,
-              borderRadius: radii.md,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-            }}>
-              <Star size={16} color={colors.gold} fill={colors.gold} strokeWidth={1} />
-              <Text style={{
-                fontFamily: 'Inter-SemiBold',
-                fontSize: 14,
-                color: colors.gold,
-                marginLeft: spacing.sm,
-              }}>
-                Lieu premium
-              </Text>
+            <View style={styles.premiumPill}>
+              <Star size={14} color={colors.gold} fill={colors.gold} strokeWidth={1.5} />
+              <Text style={styles.premiumPillText}>Lieu premium</Text>
             </View>
           )}
 
-          {/* Separateur or */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: spacing.md,
-          }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: `${colors.gold}40` }} />
-            <View style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: colors.gold,
-              marginHorizontal: spacing.sm,
-            }} />
-            <View style={{ flex: 1, height: 1, backgroundColor: `${colors.gold}40` }} />
+          {/* Separateur or premium */}
+          <View style={styles.goldSeparator}>
+            <View style={styles.goldSeparatorLine} />
+            <View style={styles.goldSeparatorDiamond} />
+            <View style={styles.goldSeparatorLine} />
           </View>
 
           {/* Description */}
           {venue.description && (
-            <View style={{ marginBottom: spacing.lg }}>
-              <Text style={{
-                fontFamily: 'PlayfairDisplay-SemiBold',
-                fontSize: 18,
-                lineHeight: 24,
-                color: colors.onyx,
-                marginBottom: spacing.sm,
-              }}>
-                A propos
-              </Text>
-              <Text style={{
-                fontFamily: 'Inter-Regular',
-                fontSize: 15,
-                lineHeight: 22,
-                color: colors.text,
-              }}>
-                {venue.description}
-              </Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionOverline}>LE LIEU</Text>
+              <Text style={styles.sectionTitle}>A propos</Text>
+              <Text style={styles.descriptionText}>{venue.description}</Text>
             </View>
           )}
 
@@ -676,41 +552,15 @@ export default function VenueDetail() {
               CAPACITE
               ============================================= */}
           {(venue.capacity_min || venue.capacity_max) && (
-            <View style={{
-              backgroundColor: colors.white,
-              borderRadius: radii.lg,
-              padding: spacing.md,
-              marginBottom: spacing.lg,
-              ...shadows.card,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: radii.md,
-                  backgroundColor: `${colors.forest}15`,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Users size={22} color={colors.forest} strokeWidth={1.5} />
+            <View style={styles.section}>
+              <Text style={styles.sectionOverline}>ESPACE</Text>
+              <View style={styles.statCard}>
+                <View style={styles.statIconMedallion}>
+                  <Users size={22} color={colors.goldBright} strokeWidth={1.5} />
                 </View>
-                <View style={{ marginLeft: spacing.md, flex: 1 }}>
-                  <Text style={{
-                    fontFamily: 'PlayfairDisplay-SemiBold',
-                    fontSize: 16,
-                    lineHeight: 22,
-                    color: colors.onyx,
-                  }}>
-                    Capacite
-                  </Text>
-                  <Text style={{
-                    fontFamily: 'Inter-Regular',
-                    fontSize: 14,
-                    lineHeight: 20,
-                    color: colors.stone,
-                  }}>
-                    {capacityDisplay}
-                  </Text>
+                <View style={styles.statBody}>
+                  <Text style={styles.statLabel}>Capacite</Text>
+                  <Text style={styles.statValue}>{capacityDisplay}</Text>
                 </View>
               </View>
             </View>
@@ -720,41 +570,16 @@ export default function VenueDetail() {
               EQUIPEMENTS (amenities)
               ============================================= */}
           {venue.amenities.length > 0 && (
-            <View style={{ marginBottom: spacing.lg }}>
-              <Text style={{
-                fontFamily: 'PlayfairDisplay-SemiBold',
-                fontSize: 18,
-                lineHeight: 24,
-                color: colors.onyx,
-                marginBottom: spacing.md,
-              }}>
-                Equipements
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <View style={styles.section}>
+              <Text style={styles.sectionOverline}>PRESTATIONS</Text>
+              <Text style={styles.sectionTitle}>Equipements</Text>
+              <View style={styles.chipsWrap}>
                 {venue.amenities.map((amenity) => {
                   const IconComponent = getAmenityIcon(amenity);
                   return (
-                    <View
-                      key={amenity}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: colors.ivory,
-                        borderRadius: radii.md,
-                        paddingHorizontal: spacing.md,
-                        paddingVertical: spacing.sm,
-                      }}
-                    >
-                      <IconComponent size={14} color={colors.forest} strokeWidth={1.5} />
-                      <Text style={{
-                        fontFamily: 'Inter-Medium',
-                        fontSize: 13,
-                        lineHeight: 18,
-                        color: colors.text,
-                        marginLeft: spacing.xs,
-                      }}>
-                        {amenity}
-                      </Text>
+                    <View key={amenity} style={styles.chip}>
+                      <IconComponent size={14} color={colors.goldMuted} strokeWidth={1.5} />
+                      <Text style={styles.chipText}>{amenity}</Text>
                     </View>
                   );
                 })}
@@ -766,35 +591,13 @@ export default function VenueDetail() {
               TYPES D'EVENEMENTS SUPPORTES
               ============================================= */}
           {venue.event_types.length > 0 && (
-            <View style={{ marginBottom: spacing.lg }}>
-              <Text style={{
-                fontFamily: 'PlayfairDisplay-SemiBold',
-                fontSize: 18,
-                lineHeight: 24,
-                color: colors.onyx,
-                marginBottom: spacing.md,
-              }}>
-                Types d'evenements
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <View style={styles.section}>
+              <Text style={styles.sectionOverline}>UNIVERS</Text>
+              <Text style={styles.sectionTitle}>Types d'evenements</Text>
+              <View style={styles.chipsWrap}>
                 {venue.event_types.map((eventType) => (
-                  <View
-                    key={eventType}
-                    style={{
-                      backgroundColor: colors.forest + '15',
-                      borderRadius: radii.full,
-                      paddingHorizontal: spacing.md,
-                      paddingVertical: spacing.sm,
-                    }}
-                  >
-                    <Text style={{
-                      fontFamily: 'Inter-Medium',
-                      fontSize: 13,
-                      lineHeight: 18,
-                      color: colors.forest,
-                    }}>
-                      {eventType}
-                    </Text>
+                  <View key={eventType} style={styles.chipActive}>
+                    <Text style={styles.chipActiveText}>{eventType}</Text>
                   </View>
                 ))}
               </View>
@@ -804,50 +607,48 @@ export default function VenueDetail() {
           {/* =============================================
               PROPRIETAIRE — CARTE PREMIUM
               ============================================= */}
-          <View style={ownerStyles.card}>
+          <View style={styles.ownerCard}>
             {/* En-tete : libelle a l'interieur du carde */}
-            <View style={ownerStyles.header}>
-              <Text style={ownerStyles.title}>Proprietaire</Text>
-              <View style={ownerStyles.headerBadge}>
-                <ShieldCheck size={15} color={colors.forest} strokeWidth={2} />
+            <View style={styles.ownerHeader}>
+              <Text style={styles.ownerTitle}>Proprietaire</Text>
+              <View style={styles.ownerHeaderBadge}>
+                <ShieldCheck size={15} color={colors.goldBright} strokeWidth={2} />
               </View>
             </View>
 
             {/* Separateur subtil avec accent or */}
-            <View style={ownerStyles.divider}>
-              <View style={ownerStyles.dividerAccent} />
+            <View style={styles.ownerDivider}>
+              <View style={styles.ownerDividerAccent} />
             </View>
 
             {/* Identite : avatar + nom, bien aere */}
-            <View style={ownerStyles.body}>
-              <View style={ownerStyles.avatar}>
-                <Text style={ownerStyles.avatarText}>P</Text>
-              </View>
-              <View style={ownerStyles.identity}>
-                <Text style={ownerStyles.name}>Proprietaire du lieu</Text>
-                <Text style={ownerStyles.detail}>Contact disponible sur demande</Text>
+            <View style={styles.ownerBody}>
+              <Avatar size="md" border="highlight" fallback="P" />
+              <View style={styles.ownerIdentity}>
+                <Text style={styles.ownerName}>Proprietaire du lieu</Text>
+                <Text style={styles.ownerDetail}>Contact disponible sur demande</Text>
               </View>
             </View>
 
             {/* Boutons de contact premium */}
-            <View style={ownerStyles.actions}>
+            <View style={styles.contactButtons}>
               <Pressable
                 onPress={handleContactWhatsApp}
-                style={ownerStyles.whatsappButton}
+                style={styles.whatsappButton}
                 accessibilityRole="button"
                 accessibilityLabel="Contacter via WhatsApp"
               >
-                <WhatsAppIcon width={26} height={26} />
-                <Text style={ownerStyles.buttonText}>WhatsApp</Text>
+                <WhatsAppIcon width={20} height={20} />
+                <Text style={styles.contactButtonText}>WhatsApp</Text>
               </Pressable>
               <Pressable
                 onPress={handleCall}
-                style={ownerStyles.callButton}
+                style={styles.callButton}
                 accessibilityRole="button"
                 accessibilityLabel="Appeler"
               >
-                <Phone size={22} color={colors.white} strokeWidth={2} />
-                <Text style={ownerStyles.buttonText}>Appeler</Text>
+                <Phone size={17} color={colors.goldBright} strokeWidth={1.75} />
+                <Text style={styles.contactButtonText}>Appeler</Text>
               </Pressable>
             </View>
           </View>
@@ -856,41 +657,15 @@ export default function VenueDetail() {
               PRIX PAR JOUR
               ============================================= */}
           {venue.price_per_day && (
-            <View style={{
-              backgroundColor: colors.white,
-              borderRadius: radii.lg,
-              padding: spacing.md,
-              marginBottom: spacing.lg,
-              ...shadows.card,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: radii.md,
-                  backgroundColor: `${colors.gold}15`,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <CalendarDays size={22} color={colors.gold} strokeWidth={1.5} />
+            <View style={styles.section}>
+              <Text style={styles.sectionOverline}>TARIF</Text>
+              <View style={styles.statCard}>
+                <View style={styles.statIconMedallion}>
+                  <CalendarDays size={22} color={colors.goldBright} strokeWidth={1.5} />
                 </View>
-                <View style={{ marginLeft: spacing.md, flex: 1 }}>
-                  <Text style={{
-                    fontFamily: 'Inter-Regular',
-                    fontSize: 13,
-                    lineHeight: 18,
-                    color: colors.stone,
-                  }}>
-                    Tarif par jour
-                  </Text>
-                  <Text style={{
-                    fontFamily: 'PlayfairDisplay-Bold',
-                    fontSize: 20,
-                    lineHeight: 26,
-                    color: colors.onyx,
-                  }}>
-                    {formatPrice(venue.price_per_day)}
-                  </Text>
+                <View style={styles.statBody}>
+                  <Text style={styles.statLabel}>Tarif par jour</Text>
+                  <Text style={styles.priceValue}>{formatPrice(venue.price_per_day)}</Text>
                 </View>
               </View>
             </View>
@@ -899,62 +674,34 @@ export default function VenueDetail() {
       </ScrollView>
 
       {/* =============================================
-          BARRE FIXE EN BAS : Prix + CTA Reserver
+          BARRE FIXE EN BAS — VERRE FUME AVEC FILET DORE
           ============================================= */}
-      <View style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: colors.white,
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.md,
-        paddingBottom: insets.bottom || spacing.md,
-        ...shadows.eventCard,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{
-              fontFamily: 'Inter-Regular',
-              fontSize: 12,
-              lineHeight: 16,
-              color: colors.stone,
-            }}>
-              A partir de
-            </Text>
-            <Text style={{
-              fontFamily: 'PlayfairDisplay-Bold',
-              fontSize: 20,
-              lineHeight: 26,
-              color: colors.onyx,
-            }}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom || spacing.md, paddingHorizontal: spacing.md },
+        ]}
+      >
+        <View pointerEvents="none" style={styles.bottomBarHairline} />
+        <View style={styles.bottomBarContent}>
+          <View style={styles.bottomBarPriceContainer}>
+            <Text style={styles.bottomBarPriceLabel}>A partir de</Text>
+            <Text style={styles.bottomBarPriceValue}>
               {venue.price_per_day ? formatPrice(venue.price_per_day) : 'Tarif sur demande'}
             </Text>
           </View>
-          <Pressable
-            onPress={handleReserve}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.forest,
-              borderRadius: radii.lg,
-              paddingHorizontal: spacing.lg,
-              paddingVertical: spacing.md,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Reserver ce lieu"
-          >
-            <Home size={18} color={colors.white} strokeWidth={2} />
-            <Text style={{
-              fontFamily: 'Inter-SemiBold',
-              fontSize: 16,
-              lineHeight: 24,
-              color: colors.white,
-              marginLeft: spacing.sm,
-            }}>
+          <View style={{ flex: 1, marginLeft: spacing.md }}>
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              onPress={handleReserve}
+              icon={<House size={18} strokeWidth={1.9} />}
+              iconPosition="right"
+            >
               Reserver
-            </Text>
-          </Pressable>
+            </Button>
+          </View>
         </View>
       </View>
     </View>
@@ -962,131 +709,532 @@ export default function VenueDetail() {
 }
 
 // ============================================================
-// Styles — Carte Proprietaire premium
+// Styles
 // ============================================================
 
-const ownerStyles = {
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    overflow: 'hidden' as const,
-    marginBottom: spacing.lg,
-    ...shadows.eventCard,
-  },
-  header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
+const StyleAbsoluteFill: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
+const styles = {
+  // -- Ecran --
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  } as ViewStyle,
+  scrollView: {
+    flex: 1,
+  } as ViewStyle,
+
+  // -- Chargement --
+  heroSkeleton: {
+    overflow: 'hidden',
+  } as ViewStyle,
+  loadingBody: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-  },
+    gap: spacing.md,
+  } as ViewStyle,
+
+  // -- Erreur --
+  errorContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  } as ViewStyle,
+  errorTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.text,
+    textAlign: 'center',
+  } as TextStyle,
+  errorText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textMuted,
+    textAlign: 'center',
+  } as TextStyle,
+
+  // -- Hero premium --
+  heroContainer: {
+    height: HERO_HEIGHT,
+    position: 'relative',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroSwipeArea: {
+    ...StyleSheet.absoluteFillObject,
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: HERO_HEIGHT,
+  } as ImageStyle,
+  heroPlaceholder: {
+    backgroundColor: colors.raised,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  heroPlaceholderText: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 64,
+    lineHeight: 72,
+    color: `${colors.gold}33`,
+  } as TextStyle,
+  goldEdge: {
+    position: 'absolute',
+    top: 0,
+    left: spacing.md,
+    right: spacing.md,
+    height: 1,
+    backgroundColor: `${colors.goldBright}4D`,
+  } as ViewStyle,
+
+  // -- Pastilles verre --
+  glassButton: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.card,
+  } as ViewStyle,
+  floatingButtonsContainer: {
+    position: 'absolute',
+    right: spacing.md,
+    flexDirection: 'column',
+    gap: spacing.sm,
+  } as ViewStyle,
+
+  // -- Badge promotion --
+  promoBadge: {
+    position: 'absolute',
+    right: spacing.md + 48, // Espace pour les boutons droite
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+  } as ViewStyle,
+  promoBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.goldBright,
+    letterSpacing: 0.8,
+  } as TextStyle,
+
+  // -- Compteur images --
+  imageCounter: {
+    position: 'absolute',
+    bottom: spacing.md,
+    right: spacing.md,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 3,
+  } as ViewStyle,
+  imageCounterText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldBright,
+    letterSpacing: 0.4,
+  } as TextStyle,
+
+  // -- Galerie --
+  galleryContainer: {
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.lg,
+  } as ViewStyle,
+  galleryItem: {
+    width: GALLERY_ITEM_WIDTH,
+    height: GALLERY_ITEM_HEIGHT,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  } as ViewStyle,
+  galleryItemActive: {
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+  } as ViewStyle,
+  galleryItemImage: {
+    width: GALLERY_ITEM_WIDTH,
+    height: GALLERY_ITEM_HEIGHT,
+  } as ImageStyle,
+  galleryItemOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+  } as ViewStyle,
+
+  // -- Contenu principal --
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  } as ViewStyle,
   title: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    ...typography.h1,
+    color: colors.text,
+    marginBottom: spacing.md,
+  } as TextStyle,
+
+  // -- Infos verre --
+  infoCard: {
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  } as ViewStyle,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  } as ViewStyle,
+  infoText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    letterSpacing: 0.1,
+  } as TextStyle,
+  cityBadge: {
+    backgroundColor: 'rgba(216,180,90,0.1)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  } as ViewStyle,
+  cityBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
+  } as TextStyle,
+
+  // -- Mention premium --
+  premiumPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  } as ViewStyle,
+  premiumPillText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.goldBright,
+    letterSpacing: 0.3,
+  } as TextStyle,
+
+  // -- Separateur or premium avec losange --
+  goldSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  } as ViewStyle,
+  goldSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: `${colors.gold}30`,
+  } as ViewStyle,
+  goldSeparatorDiamond: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: colors.gold,
+    transform: [{ rotate: '45deg' }],
+  } as ViewStyle,
+
+  // -- Sections --
+  section: {
+    marginBottom: spacing.xl,
+  } as ViewStyle,
+  sectionOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    marginBottom: 3,
+  } as TextStyle,
+  sectionTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 22,
+    lineHeight: 30,
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: spacing.md,
+  } as TextStyle,
+
+  // -- Description --
+  descriptionText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 26,
+    letterSpacing: 0.1,
+  } as TextStyle,
+
+  // -- Cartes statistiques verre --
+  statCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    ...shadows.card,
+  } as ViewStyle,
+  statIconMedallion: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(216,180,90,0.1)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  statBody: {
+    marginLeft: spacing.md,
+    flex: 1,
+  } as ViewStyle,
+  statLabel: {
+    ...typography.overline,
+    color: colors.textMuted,
+    marginBottom: 2,
+  } as TextStyle,
+  statValue: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.text,
+    letterSpacing: 0.2,
+  } as TextStyle,
+
+  // -- Prix --
+  priceValue: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.goldBright,
+    letterSpacing: -0.2,
+  } as TextStyle,
+
+  // -- Chips equipements --
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  } as ViewStyle,
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  } as ViewStyle,
+  chipText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  } as TextStyle,
+
+  // -- Chips types d'evenements (pilules or) --
+  chipActive: {
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  } as ViewStyle,
+  chipActiveText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
+  } as TextStyle,
+
+  // -- Proprietaire premium --
+  ownerCard: {
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.xl,
+    ...shadows.eventCard,
+  } as ViewStyle,
+  ownerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  } as ViewStyle,
+  ownerTitle: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.3,
-  },
-  headerBadge: {
+  } as TextStyle,
+  ownerHeaderBadge: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: `${colors.forest}12`,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  divider: {
+    backgroundColor: 'rgba(216,180,90,0.1)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  ownerDivider: {
     height: 1,
-    backgroundColor: `${colors.stone}15`,
+    backgroundColor: `${colors.gold}1F`,
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
-  },
-  dividerAccent: {
-    position: 'absolute' as const,
+  } as ViewStyle,
+  ownerDividerAccent: {
+    position: 'absolute',
     left: 0,
     top: -1,
     bottom: 0,
     width: 48,
     backgroundColor: `${colors.gold}60`,
-  },
-  body: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+  } as ViewStyle,
+  ownerBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: spacing.lg,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.ivory,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    overflow: 'hidden' as const,
-    borderWidth: 3,
-    borderColor: colors.gold,
-    ...shadows.card,
-  },
-  avatarText: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 30,
-    color: colors.terracotta,
-  },
-  identity: {
+  } as ViewStyle,
+  ownerIdentity: {
     flex: 1,
     marginLeft: spacing.md,
-  },
-  name: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
-    letterSpacing: -0.2,
-  },
-  detail: {
-    fontFamily: 'Inter-Regular',
+  } as ViewStyle,
+  ownerName: {
+    ...typography.bodyMedium,
+    color: colors.text,
+    letterSpacing: -0.1,
+  } as TextStyle,
+  ownerDetail: {
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: spacing.xs,
-  },
-  actions: {
-    flexDirection: 'row' as const,
+  } as TextStyle,
+
+  // -- Boutons contact --
+  contactButtons: {
+    flexDirection: 'row',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-  },
+  } as ViewStyle,
   whatsappButton: {
     flex: 1,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: '#25D366',
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+    paddingVertical: spacing.md,
     gap: spacing.sm,
-    ...shadows.card,
-  },
-  whatsappIcon: {
-    width: 26,
-    height: 26,
-  },
+  } as ViewStyle,
   callButton: {
     flex: 1,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: colors.glass,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
-    ...shadows.card,
-  },
-  buttonText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 15,
+  } as ViewStyle,
+  contactButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
     lineHeight: 20,
-    color: colors.white,
-    letterSpacing: 0.3,
-  },
-};
+    color: colors.text,
+    letterSpacing: 0.2,
+  } as TextStyle,
+
+  // -- Barre fixe bas verre fumé --
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(19,17,16,0.94)',
+    paddingTop: spacing.sm,
+    zIndex: 100,
+    elevation: 12,
+  } as ViewStyle,
+  bottomBarHairline: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: `${colors.gold}2E`,
+  } as ViewStyle,
+  bottomBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  } as ViewStyle,
+  bottomBarPriceContainer: {
+    flexDirection: 'column',
+    minWidth: 96,
+  } as ViewStyle,
+  bottomBarPriceLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.textMuted,
+  } as TextStyle,
+  bottomBarPriceValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.goldBright,
+  } as TextStyle,
+} as const;

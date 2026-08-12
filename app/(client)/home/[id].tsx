@@ -1,27 +1,23 @@
 /**
  * Page detail d'un evenement - Ecran client.
  *
- * Design premium "Minimalisme Africain Camerounais" :
- * - Image hero plein ecran avec parallaxe et gradient overlay premium
- * - Bouton retour et favori flottants avec glassmorphism
- * - Badge categorie avec glow terracotta
- * - Titre PlayfairDisplay-Bold avec ombre douce
- * - Infos date/heure/lieu avec chips elegants et icones lucide
+ * Design premium « Noir & Or » :
+ * - Image hero 320px pleine largeur avec dégradé sombre du bas vers le haut
+ * - Bouton retour pastille verre + favori/partage pastilles verre
+ * - Badge catégorie verre doré, prix sur l'image
+ * - Titre Playfair, infos date/heure/lieu en carte verre
  * - Galerie d'images horizontale avec indicateur dots
- * - Description riche avec "Lire la suite"
- * - Section billets avec cartes gradient par tier
- * - Section organisateur premium avec avatar, verifie, WhatsApp + appel
- * - Section "Evenements similaires" en carousel horizontal
- * - Barre fixe en bas avec glassmorphism : prix + CTA "Reserver"
+ * - Description riche avec « Lire la suite »
+ * - Section billets avec cartes ornées par tier
+ * - Section organisateur premium avec Avatar + badge vérifié
+ * - Section « Evenements similaires » en carousel horizontal
+ * - Barre fixe en bas : verre fumé avec filet doré + bouton « Réserver » dégradé or
  *
  * Conventions :
  * - lucide-react-native pour les icones
  * - Design tokens depuis lib/constants.ts
- * - expo-image pour les images
- * - Animated natif (pas reanimated)
- * - Pas de type any, pas d'emojis
- * - Imports @/
- * - Commentaires en francais
+ * - expo-image pour les images, Animated natif (pas reanimated)
+ * - Pas de type any, pas d'emojis, commentaires en francais
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -32,7 +28,6 @@ import {
   Pressable,
   Linking,
   Alert,
-  ActivityIndicator,
   StyleSheet,
   PanResponder,
   Share,
@@ -50,33 +45,37 @@ import {
   Heart,
   Share2,
   Users,
-  Ticket,
   ChevronRight,
   Star,
-  ShieldCheck,
+  BadgeCheck,
   Phone,
+  Ticket,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import WhatsAppIcon from '@/assets/icons/WhatsApp.svg';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, shadows, typography, ROUTES } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
 import { eventService, formatPrice, formatDate, formatTime } from '@/services/event.service';
 import { useFavoritesStore } from '@/stores/favorites-store';
 import { logger } from '@/lib/logger';
+import { Button } from '@/components/ui/Button';
+import { Avatar } from '@/components/ui/Avatar';
+import { Badge } from '@/components/ui/Badge';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import type { EventWithAvailability, TicketTierWithAvailability } from '@/types';
 
 // ============================================================
 // Constantes
 // ============================================================
 
-const HERO_HEIGHT = 300;
+const HERO_HEIGHT = 320;
 const GALLERY_ITEM_WIDTH = 110;
 const GALLERY_ITEM_HEIGHT = 78;
-const BOTTOM_BAR_HEIGHT = 76;
+const BOTTOM_BAR_HEIGHT = 108;
 
 // ============================================================
 // Helper : ouvrir WhatsApp
@@ -113,33 +112,33 @@ function openWhatsApp(phone: string, message: string): void {
 }
 
 // ============================================================
-// Helper : couleur de tier pour les cartes billets
+// Helper : couleur de tier pour les cartes billets (palette sombre)
 // ============================================================
 
 function getTierAccent(tierName: string): { bg: string; border: string; text: string; icon: string } {
   const name = tierName.toUpperCase();
   if (name.includes('PREMIUM')) {
     return {
-      bg: `${colors.gold}12`,
+      bg: 'rgba(216,180,90,0.1)',
       border: `${colors.gold}40`,
-      text: colors.gold,
+      text: colors.goldBright,
       icon: colors.gold,
     };
   }
   if (name.includes('VIP')) {
     return {
-      bg: `${colors.forest}12`,
-      border: `${colors.forest}40`,
-      text: colors.forest,
-      icon: colors.forest,
+      bg: 'rgba(127,167,206,0.1)',
+      border: 'rgba(127,167,206,0.4)',
+      text: colors.info,
+      icon: colors.info,
     };
   }
   // Standard
   return {
-    bg: `${colors.stone}08`,
-    border: `${colors.stone}25`,
-    text: colors.stone,
-    icon: colors.stone,
+    bg: 'rgba(255,255,255,0.05)',
+    border: 'rgba(255,255,255,0.12)',
+    text: colors.textSecondary,
+    icon: colors.goldMuted,
   };
 }
 
@@ -192,9 +191,9 @@ export default function EventDetail() {
         ? [event.cover_image, ...event.images]
         : event.images ?? (event.cover_image ? [event.cover_image] : [])
       : event.images ?? [];
-    
+
     if (imgs.length <= 1) return;
-    
+
     galleryAutoScrollRef.current = setTimeout(() => {
       setActiveGalleryIndex((prev) => (prev < imgs.length - 1 ? prev + 1 : 0));
       resetAutoScroll();
@@ -212,9 +211,9 @@ export default function EventDetail() {
             ? [event.cover_image, ...event.images]
             : event.images ?? (event.cover_image ? [event.cover_image] : [])
           : event?.images ?? [];
-        
+
         if (imgs.length <= 1) return;
-        
+
         if (dx > 50) {
           setActiveGalleryIndex((prev) => (prev > 0 ? prev - 1 : imgs.length - 1));
           resetAutoScroll();
@@ -384,12 +383,7 @@ export default function EventDetail() {
   // ============================================================
 
   if (isLoading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.terracotta} />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Chargement de l'evenement..." />;
   }
 
   if (!event) {
@@ -397,9 +391,11 @@ export default function EventDetail() {
       <View style={[styles.errorContainer, { paddingTop: insets.top }]}>
         <Text style={styles.errorTitle}>Evenement introuvable</Text>
         <Text style={styles.errorText}>Cet evenement n'existe pas ou a ete supprime.</Text>
-        <Pressable onPress={handleBack} style={styles.errorButton}>
-          <Text style={styles.errorButtonText}>Retour</Text>
-        </Pressable>
+        <View style={{ marginTop: spacing.lg, width: 200 }}>
+          <Button variant="primary" size="md" onPress={handleBack}>
+            Retour
+          </Button>
+        </View>
       </View>
     );
   }
@@ -443,25 +439,25 @@ export default function EventDetail() {
             )}
           </View>
 
-          {/* Gradient overlay premium — triple couche */}
+          {/* Dégradé sombre du bas vers le haut */}
           <LinearGradient
-            colors={['transparent', 'rgba(26,24,22,0.3)', 'rgba(26,24,22,0.85)']}
-            locations={[0, 0.4, 1]}
-            style={styles.heroGradient}
+            colors={['rgba(10,9,8,0)', 'rgba(10,9,8,0.4)', 'rgba(10,9,8,0.85)']}
+            locations={[0, 0.5, 1]}
+            style={StyleAbsoluteFill}
             pointerEvents="none"
           />
 
-          {/* Badge categorie avec glow */}
+          {/* Filet doré haut */}
+          <View pointerEvents="none" style={styles.goldEdge} />
+
+          {/* Badge categorie — pastille verre doré */}
           {event.category && (
-            <View style={styles.categoryBadgeWrapper}>
-              <View style={styles.categoryBadgeGlow} />
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
-              </View>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{event.category.toUpperCase()}</Text>
             </View>
           )}
 
-          {/* Bouton retour — style page detail lieu */}
+          {/* Bouton retour — pastille verre */}
           <Pressable
             onPress={handleBack}
             style={[styles.glassButton, { left: spacing.md, top: insets.top + spacing.sm }]}
@@ -469,10 +465,10 @@ export default function EventDetail() {
             accessibilityRole="button"
             accessibilityLabel="Retour"
           >
-            <ChevronLeft size={24} color={colors.onyx} strokeWidth={2.5} />
+            <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
           </Pressable>
 
-          {/* Boutons droite glassmorphism : Partage + Favori */}
+          {/* Boutons droite : Partage + Favori */}
           <View style={[styles.floatingButtonsContainer, { top: insets.top + spacing.sm }]}>
             <Pressable
               onPress={handleShare}
@@ -481,7 +477,7 @@ export default function EventDetail() {
               accessibilityRole="button"
               accessibilityLabel="Partager"
             >
-              <Share2 size={20} color={colors.onyx} strokeWidth={2} />
+              <Share2 size={18} color={colors.goldBright} strokeWidth={1.75} />
             </Pressable>
             <Pressable
               onPress={handleToggleFavorite}
@@ -491,10 +487,10 @@ export default function EventDetail() {
               accessibilityLabel={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             >
               <Heart
-                size={20}
-                color={isFavorited ? colors.terracotta : colors.onyx}
+                size={18}
+                color={isFavorited ? colors.terracotta : colors.goldBright}
                 fill={isFavorited ? colors.terracotta : 'none'}
-                strokeWidth={2}
+                strokeWidth={1.75}
               />
             </Pressable>
           </View>
@@ -568,27 +564,26 @@ export default function EventDetail() {
           {/* Titre premium */}
           <Text style={styles.title}>{event.title}</Text>
 
-          {/* Infos rapides : date + heure dans des chips premium */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoChip}>
-              <CalendarDays size={16} color={colors.terracotta} strokeWidth={1.5} />
+          {/* Infos rapides : date + heure + lieu dans une carte verre */}
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <CalendarDays size={15} color={colors.goldMuted} strokeWidth={1.75} />
               <Text style={styles.infoText}>{formatDate(event.start_date)}</Text>
-            </View>
-            <View style={styles.infoChip}>
-              <Clock size={16} color={colors.terracotta} strokeWidth={1.5} />
+              <View style={styles.infoDot} />
+              <Clock size={15} color={colors.goldMuted} strokeWidth={1.75} />
               <Text style={styles.infoText}>{formatTime(event.start_date)}</Text>
             </View>
-          </View>
-
-          {/* Lieu avec icone MapPin */}
-          <View style={styles.locationRow}>
-            <MapPin size={16} color={colors.stone} strokeWidth={1.5} />
-            <Text style={styles.locationText}>{locationDisplay}</Text>
-            {event.city && (
-              <View style={styles.cityBadge}>
-                <Text style={styles.cityBadgeText}>{event.city}</Text>
-              </View>
-            )}
+            <View style={styles.infoRow}>
+              <MapPin size={15} color={colors.goldMuted} strokeWidth={1.75} />
+              <Text style={[styles.infoText, { flex: 1 }]} numberOfLines={1}>
+                {locationDisplay}
+              </Text>
+              {event.city && (
+                <View style={styles.cityBadge}>
+                  <Text style={styles.cityBadgeText}>{event.city}</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Separateur or premium */}
@@ -601,6 +596,7 @@ export default function EventDetail() {
           {/* Description avec "Lire la suite" */}
           {event.description ? (
             <View style={styles.section}>
+              <Text style={styles.sectionOverline}>L'EVENEMENT</Text>
               <Text style={styles.sectionTitle}>A propos</Text>
               <Text style={styles.descriptionText}>{displayDescription}</Text>
               {shouldTruncateDescription && (
@@ -617,14 +613,17 @@ export default function EventDetail() {
           ) : null}
 
           {/* =============================================
-              BILLETS DISPONIBLES — CARTES GRADIENT PREMIUM
+              BILLETS DISPONIBLES — CARTES ORNEES PREMIUM
               ============================================= */}
           {event.ticket_tiers.length > 0 ? (
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Billets</Text>
+              <View style={styles.sectionHeaderRow}>
+                <View>
+                  <Text style={styles.sectionOverline}>PLACES & TARIFS</Text>
+                  <Text style={styles.sectionTitle}>Billets</Text>
+                </View>
                 <View style={styles.availabilityChip}>
-                  <Users size={12} color={colors.forest} strokeWidth={2} />
+                  <Users size={12} color={colors.success} strokeWidth={2} />
                   <Text style={styles.availabilityText}>
                     {totalAvailable > 0
                       ? `${totalAvailable} disponible${totalAvailable > 1 ? 's' : ''}`
@@ -642,76 +641,52 @@ export default function EventDetail() {
 
               <View style={styles.reserveInlineSection}>
                 <Text style={styles.reserveInlineLabel}>Reservation rapide</Text>
-                <Pressable
-                  onPress={handleReserve}
-                  style={[
-                    styles.reserveInlineButton,
-                    totalAvailable === 0 && styles.reserveButtonDisabled,
-                  ]}
-                  disabled={totalAvailable === 0}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reserver des billets"
-                >
-                  <Text style={styles.reserveInlineButtonText}>
+                <View style={{ width: 180 }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={totalAvailable === 0}
+                    onPress={handleReserve}
+                  >
                     {totalAvailable === 0 ? 'Complet' : 'Reserver'}
-                  </Text>
-                </Pressable>
+                  </Button>
+                </View>
               </View>
             </View>
           ) : null}
 
           {/* =============================================
-              ORGANISATEUR — DESIGN PREMIUM REPUSE
+              ORGANISATEUR — CARTE PREMIUM
               ============================================= */}
           <View style={styles.section}>
+            <Text style={styles.sectionOverline}>ORGANISATEUR</Text>
             <View style={styles.organizerCard}>
-              {/* En-tete : libelle a l'interieur du carde */}
-              <View style={styles.organizerCardHeader}>
-                <Text style={styles.organizerCardTitle}>Organisateur</Text>
-                <View style={styles.organizerHeaderBadge}>
-                  <ShieldCheck size={15} color={colors.forest} strokeWidth={2} />
-                </View>
-              </View>
-
-              {/* Separateur subtil avec accent or */}
-              <View style={styles.organizerDivider}>
-                <View style={styles.organizerDividerAccent} />
-              </View>
-
-              {/* Identite : avatar + nom, bien aere */}
               <View style={styles.organizerBody}>
                 <View style={styles.organizerAvatarWrapper}>
-                  <View style={styles.organizerAvatar}>
-                    {event.organizer?.avatar_url ? (
-                      <Image
-                        source={{ uri: event.organizer.avatar_url }}
-                        style={styles.organizerAvatarImage}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                    ) : (
-                      <Text style={styles.organizerAvatarFallback}>
-                        {(event.organizer?.full_name ?? 'O').charAt(0).toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.organizerVerifiedBadge}>
-                    <ShieldCheck size={12} color={colors.white} strokeWidth={2.5} />
-                  </View>
+                  <Avatar
+                    source={event.organizer?.avatar_url ?? null}
+                    fallback={event.organizer?.full_name ?? 'O'}
+                    size="md"
+                    border="highlight"
+                  />
                 </View>
 
                 <View style={styles.organizerIdentity}>
                   <Text style={styles.organizerName}>
                     {event.organizer?.full_name ?? 'Organisateur'}
                   </Text>
-                  <View style={styles.verifiedChip}>
-                    <ShieldCheck size={12} color={colors.forest} strokeWidth={2} />
-                    <Text style={styles.verifiedText}>Organisateur verifie</Text>
+                  <View style={{ marginTop: spacing.sm }}>
+                    <Badge variant="pro">
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <BadgeCheck size={12} color={colors.goldBright} strokeWidth={2} />
+                        <Text style={styles.verifiedText}>Organisateur verifie</Text>
+                      </View>
+                    </Badge>
                   </View>
                 </View>
               </View>
 
-              {/* Boutons de contact premium (design intact) */}
+              {/* Boutons de contact */}
               <View style={styles.contactButtons}>
                 <Pressable
                   onPress={handleContactWhatsApp}
@@ -719,8 +694,8 @@ export default function EventDetail() {
                   accessibilityRole="button"
                   accessibilityLabel="Contacter via WhatsApp"
                 >
-                  <WhatsAppIcon width={26} height={26} />
-                  <Text style={styles.whatsappButtonText}>WhatsApp</Text>
+                  <WhatsAppIcon width={22} height={22} />
+                  <Text style={styles.contactButtonText}>WhatsApp</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleCall}
@@ -728,8 +703,8 @@ export default function EventDetail() {
                   accessibilityRole="button"
                   accessibilityLabel="Appeler l'organisateur"
                 >
-                  <Phone size={24} color={colors.white} strokeWidth={2} />
-                  <Text style={styles.callButtonText}>Appeler</Text>
+                  <Phone size={18} color={colors.goldBright} strokeWidth={1.75} />
+                  <Text style={styles.contactButtonText}>Appeler</Text>
                 </Pressable>
               </View>
             </View>
@@ -740,8 +715,11 @@ export default function EventDetail() {
               ============================================= */}
           {similarEvents.length > 0 && (
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Evenements similaires</Text>
+              <View style={styles.sectionHeaderRow}>
+                <View>
+                  <Text style={styles.sectionOverline}>POUR CONTINUER</Text>
+                  <Text style={styles.sectionTitle}>Evenements similaires</Text>
+                </View>
                 <Pressable
                   onPress={() => {
                     impact('light');
@@ -751,7 +729,7 @@ export default function EventDetail() {
                 >
                   <View style={styles.seeAllRow}>
                     <Text style={styles.seeAllText}>Voir tout</Text>
-                    <ChevronRight size={16} color={colors.terracotta} strokeWidth={2} />
+                    <ChevronRight size={15} color={colors.gold} strokeWidth={2} />
                   </View>
                 </Pressable>
               </View>
@@ -783,6 +761,11 @@ export default function EventDetail() {
                           </Text>
                         </View>
                       )}
+                      <LinearGradient
+                        colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.6)']}
+                        style={StyleAbsoluteFill}
+                        pointerEvents="none"
+                      />
                       {similar.category && (
                         <View style={styles.similarBadge}>
                           <Text style={styles.similarBadgeText}>{similar.category}</Text>
@@ -793,7 +776,7 @@ export default function EventDetail() {
                       {similar.title}
                     </Text>
                     <View style={styles.similarMeta}>
-                      <CalendarDays size={12} color={colors.stone} strokeWidth={1.5} />
+                      <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.5} />
                       <Text style={styles.similarDateText}>
                         {formatDate(similar.start_date)}
                       </Text>
@@ -812,12 +795,15 @@ export default function EventDetail() {
       </ScrollView>
 
       {/* =============================================
-          BARRE FIXE EN BAS — GLASSMORPHISM PREMIUM
+          BARRE FIXE EN BAS — VERRE FUME AVEC FILET DORE
           ============================================= */}
-      <LinearGradient
-        colors={[`${colors.white}F2`, `${colors.white}F8`]}
-        style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md, paddingHorizontal: spacing.md }]}
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom || spacing.md, paddingHorizontal: spacing.md },
+        ]}
       >
+        <View pointerEvents="none" style={styles.bottomBarHairline} />
         <View style={styles.bottomBarContent}>
           <View style={styles.bottomBarPriceContainer}>
             <Text style={styles.bottomBarPriceLabel}>A partir de</Text>
@@ -825,23 +811,21 @@ export default function EventDetail() {
               {minPrice !== null ? formatPrice(minPrice) : 'Gratuit'}
             </Text>
           </View>
-          <Pressable
-            onPress={handleReserve}
-            style={[
-              styles.reserveButton,
-              totalAvailable === 0 && styles.reserveButtonDisabled,
-            ]}
-            disabled={totalAvailable === 0}
-            accessibilityRole="button"
-            accessibilityLabel="Reserver des billets"
-          >
-            <Ticket size={18} color={colors.white} strokeWidth={2} />
-            <Text style={styles.reserveButtonText}>
+          <View style={{ flex: 1, marginLeft: spacing.md }}>
+            <Button
+              variant="primary"
+              size="md"
+              fullWidth
+              disabled={totalAvailable === 0}
+              onPress={handleReserve}
+              icon={<Ticket size={18} strokeWidth={1.9} />}
+              iconPosition="right"
+            >
               {totalAvailable === 0 ? 'Complet' : 'Reserver'}
-            </Text>
-          </Pressable>
+            </Button>
+          </View>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -866,7 +850,7 @@ function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }
 
       <View style={styles.tierInfo}>
         <View style={styles.tierNameRow}>
-          <Star size={14} color={accent.icon} strokeWidth={2} />
+          <Star size={13} color={accent.icon} strokeWidth={2} />
           <Text
             style={[
               styles.tierName,
@@ -903,66 +887,46 @@ function TierPreviewCard({ tier }: { readonly tier: TicketTierWithAvailability }
 // Styles
 // ============================================================
 
+const StyleAbsoluteFill: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
 const styles = {
   // -- Ecran --
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   } as ViewStyle,
   scrollView: {
     flex: 1,
   } as ViewStyle,
 
-  // -- Loading --
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.sand,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-  } as ViewStyle,
-  loadingText: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.stone,
-  } as TextStyle,
-
   // -- Erreur --
   errorContainer: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   } as ViewStyle,
   errorTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 22,
     lineHeight: 28,
-    color: colors.onyx,
+    color: colors.text,
     textAlign: 'center',
   } as TextStyle,
   errorText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 22,
-    color: colors.stone,
+    color: colors.textMuted,
     textAlign: 'center',
-  } as TextStyle,
-  errorButton: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-  } as ViewStyle,
-  errorButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.white,
   } as TextStyle,
 
   // -- Hero premium --
@@ -979,30 +943,33 @@ const styles = {
     height: HERO_HEIGHT,
   } as ImageStyle,
   heroPlaceholder: {
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.raised,
     justifyContent: 'center',
     alignItems: 'center',
   } as ViewStyle,
   heroPlaceholderText: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 72,
     lineHeight: 80,
-    color: `${colors.stone}30`,
+    color: `${colors.gold}33`,
   } as TextStyle,
-  heroGradient: {
+  goldEdge: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 200,
+    top: 0,
+    left: spacing.md,
+    right: spacing.md,
+    height: 1,
+    backgroundColor: `${colors.goldBright}4D`,
   } as ViewStyle,
 
-  // -- Glassmorphism boutons --
+  // -- Pastilles verre --
   glassButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.full,
-    backgroundColor: colors.white + 'CC',
+    width: 42,
+    height: 42,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.card,
@@ -1014,36 +981,27 @@ const styles = {
     gap: spacing.sm,
   } as ViewStyle,
 
-  // -- Badge categorie avec glow --
-  categoryBadgeWrapper: {
+  // -- Badge categorie --
+  categoryBadge: {
     position: 'absolute',
     bottom: spacing.lg,
     left: spacing.lg,
-  } as ViewStyle,
-  categoryBadgeGlow: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: radii.md + 4,
-    backgroundColor: `${colors.terracotta}30`,
-  } as ViewStyle,
-  categoryBadge: {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.sm,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 5,
   } as ViewStyle,
   categoryBadgeText: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
-    lineHeight: 14,
-    color: colors.white,
+    lineHeight: 15,
+    color: colors.goldBright,
     letterSpacing: 1,
   } as TextStyle,
 
-  // -- Indicateur dots au lieu de compteur --
+  // -- Indicateur dots --
   imageDotsContainer: {
     position: 'absolute',
     bottom: spacing.lg,
@@ -1055,53 +1013,56 @@ const styles = {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: `${colors.white}50`,
+    backgroundColor: 'rgba(255,255,255,0.35)',
   } as ViewStyle,
   imageDotActive: {
     width: 20,
     borderRadius: 3,
-    backgroundColor: colors.white,
+    backgroundColor: colors.gold,
   } as ViewStyle,
 
-  // -- Prix hero en bas a droite --
+  // -- Prix hero --
   heroPriceBadge: {
     position: 'absolute',
     bottom: spacing.lg,
     right: spacing.lg,
-    backgroundColor: `${colors.onyx}70`,
-    borderRadius: radii.md,
+    backgroundColor: 'rgba(26,22,16,0.72)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   } as ViewStyle,
   heroPriceFrom: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_400Regular',
     fontSize: 9,
     lineHeight: 12,
-    color: `${colors.white}BB`,
-    letterSpacing: 0.5,
+    color: colors.textSecondary,
+    letterSpacing: 0.9,
   } as TextStyle,
   heroPriceValue: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 14,
     lineHeight: 18,
-    color: colors.white,
+    color: colors.goldBright,
   } as TextStyle,
 
   // -- Galerie --
   galleryContainer: {
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingLeft: spacing.lg,
   } as ViewStyle,
   galleryItem: {
     width: GALLERY_ITEM_WIDTH,
     height: GALLERY_ITEM_HEIGHT,
-    borderRadius: radii.sm,
+    borderRadius: radius.md,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
   } as ViewStyle,
   galleryItemActive: {
-    borderColor: colors.terracotta,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
   } as ViewStyle,
   galleryItemImage: {
     width: GALLERY_ITEM_WIDTH,
@@ -1109,73 +1070,61 @@ const styles = {
   } as ImageStyle,
   galleryItemOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: `${colors.terracotta}15`,
-    borderRadius: radii.sm,
+    backgroundColor: 'rgba(216,180,90,0.14)',
   } as ViewStyle,
 
   // -- Contenu principal --
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
   } as ViewStyle,
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 28,
-    lineHeight: 36,
-    color: colors.onyx,
-    letterSpacing: -0.5,
+    ...typography.h1,
+    color: colors.text,
     marginBottom: spacing.md,
   } as TextStyle,
 
-  // -- Infos rapides --
+  // -- Carte infos verre --
+  infoCard: {
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  } as ViewStyle,
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.sm,
-  } as ViewStyle,
-  infoChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: `${colors.terracotta}10`,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
   } as ViewStyle,
   infoText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.onyx,
+    color: colors.textSecondary,
     letterSpacing: 0.1,
   } as TextStyle,
-
-  // -- Lieu --
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
+  infoDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.textFaint,
   } as ViewStyle,
-  locationText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
-    flex: 1,
-  } as TextStyle,
   cityBadge: {
-    backgroundColor: `${colors.gold}15`,
-    borderRadius: radii.sm,
+    backgroundColor: 'rgba(216,180,90,0.1)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   } as ViewStyle,
   cityBadgeText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
     lineHeight: 14,
-    color: colors.gold,
+    color: colors.goldBright,
     letterSpacing: 0.2,
   } as TextStyle,
 
@@ -1203,33 +1152,40 @@ const styles = {
   section: {
     marginBottom: spacing.xl,
   } as ViewStyle,
-  sectionHeader: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginBottom: spacing.md,
   } as ViewStyle,
+  sectionOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    marginBottom: 3,
+  } as TextStyle,
   sectionTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 20,
+    lineHeight: 27,
+    color: colors.text,
     letterSpacing: -0.3,
   } as TextStyle,
 
   // -- Description --
   descriptionText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 15,
-    lineHeight: 24,
-    color: `${colors.onyx}CC`,
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 26,
     letterSpacing: 0.1,
   } as TextStyle,
   readMoreText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.terracotta,
+    color: colors.goldBright,
     marginTop: spacing.sm,
     letterSpacing: 0.2,
   } as TextStyle,
@@ -1239,16 +1195,18 @@ const styles = {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: `${colors.forest}12`,
-    borderRadius: radii.full,
+    backgroundColor: 'rgba(91,196,139,0.12)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(91,196,139,0.35)',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   } as ViewStyle,
   availabilityText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.forest,
+    color: colors.success,
     letterSpacing: 0.1,
   } as TextStyle,
 
@@ -1257,7 +1215,7 @@ const styles = {
     gap: spacing.sm,
   } as ViewStyle,
   tierCard: {
-    borderRadius: radii.lg,
+    borderRadius: radius.lg,
     padding: spacing.md,
     paddingLeft: spacing.md + 4,
     flexDirection: 'row',
@@ -1287,87 +1245,69 @@ const styles = {
     gap: spacing.xs,
   } as ViewStyle,
   tierName: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 15,
     lineHeight: 20,
     letterSpacing: 0.5,
   } as TextStyle,
   tierNameSoldOut: {
     textDecorationLine: 'line-through',
-    color: colors.stone,
+    color: colors.textMuted,
   } as TextStyle,
   tierDescription: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 2,
   } as TextStyle,
   tierLowStock: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.mango,
+    color: colors.warning,
     marginTop: spacing.xs,
   } as TextStyle,
   tierPriceSection: {
     alignItems: 'flex-end',
   } as ViewStyle,
   tierPrice: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 16,
     lineHeight: 22,
   } as TextStyle,
   tierAvailability: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
     lineHeight: 14,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 2,
   } as TextStyle,
 
-  // -- Organisateur premium repense --
-  organizerCard: {
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    overflow: 'hidden',
-    ...shadows.eventCard,
-  } as ViewStyle,
-  organizerCardHeader: {
+  // -- Reservation rapide --
+  reserveInlineSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-  } as ViewStyle,
-  organizerCardTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
-    letterSpacing: -0.3,
-  } as TextStyle,
-  organizerHeaderBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: `${colors.forest}12`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  } as ViewStyle,
-  organizerDivider: {
-    height: 1,
-    backgroundColor: `${colors.stone}15`,
-    marginHorizontal: spacing.lg,
     marginTop: spacing.md,
+    gap: spacing.sm,
   } as ViewStyle,
-  organizerDividerAccent: {
-    position: 'absolute',
-    left: 0,
-    top: -1,
-    bottom: 0,
-    width: 48,
-    backgroundColor: `${colors.gold}60`,
+  reserveInlineLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  } as TextStyle,
+
+  // -- Organisateur premium --
+  organizerCard: {
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+    ...shadows.eventCard,
   } as ViewStyle,
   organizerBody: {
     flexDirection: 'row',
@@ -1377,71 +1317,23 @@ const styles = {
   organizerAvatarWrapper: {
     marginRight: spacing.md,
   } as ViewStyle,
-  organizerAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.ivory,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: colors.gold,
-    ...shadows.card,
-  } as ViewStyle,
-  organizerAvatarImage: {
-    width: 60,
-    height: 60,
-  } as ImageStyle,
-  organizerAvatarFallback: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 24,
-    lineHeight: 30,
-    color: colors.terracotta,
-  } as TextStyle,
-  organizerVerifiedBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.forest,
-    borderWidth: 2,
-    borderColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  } as ViewStyle,
   organizerIdentity: {
     flex: 1,
   } as ViewStyle,
   organizerName: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.onyx,
-    letterSpacing: -0.2,
+    ...typography.bodyMedium,
+    color: colors.text,
+    letterSpacing: -0.1,
   } as TextStyle,
-  verifiedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    backgroundColor: `${colors.forest}10`,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.sm,
-  } as ViewStyle,
   verifiedText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 14,
-    color: colors.forest,
+    color: colors.goldBright,
     letterSpacing: 0.2,
   } as TextStyle,
 
-  // -- Boutons contact premium --
+  // -- Boutons contact --
   contactButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -1453,41 +1345,32 @@ const styles = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#25D366',
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+    paddingVertical: spacing.md,
     gap: spacing.sm,
-    ...shadows.card,
   } as ViewStyle,
-  whatsappButtonText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.white,
-    letterSpacing: 0.3,
-  } as TextStyle,
   callButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: colors.glass,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
-    ...shadows.card,
   } as ViewStyle,
-  callButtonText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 15,
+  contactButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
     lineHeight: 20,
-    color: colors.white,
-    letterSpacing: 0.3,
+    color: colors.text,
+    letterSpacing: 0.2,
   } as TextStyle,
-  whatsappIcon: {
-    width: 26,
-    height: 26,
-  } as ImageStyle,
 
   // -- Voir tout --
   seeAllRow: {
@@ -1495,18 +1378,20 @@ const styles = {
     alignItems: 'center',
   } as ViewStyle,
   seeAllText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.terracotta,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.goldBright,
     letterSpacing: 0.2,
   } as TextStyle,
 
   // -- Similaires --
   similarCard: {
     width: 180,
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.card,
   } as ViewStyle,
@@ -1522,23 +1407,25 @@ const styles = {
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.sm,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   } as ViewStyle,
   similarBadgeText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    color: colors.white,
+    color: colors.goldBright,
     letterSpacing: 0.3,
   } as TextStyle,
   similarTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 14,
     lineHeight: 19,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.sm,
@@ -1551,32 +1438,38 @@ const styles = {
     marginTop: spacing.xs,
   } as ViewStyle,
   similarDateText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
   } as TextStyle,
   similarPrice: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.gold,
+    color: colors.goldBright,
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   } as TextStyle,
 
-  // -- Barre fixe bas glassmorphism --
+  // -- Barre fixe bas verre fumé --
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    borderTopColor: `${colors.stone}10`,
+    backgroundColor: 'rgba(19,17,16,0.94)',
     paddingTop: spacing.sm,
-    paddingHorizontal: spacing.lg,
     zIndex: 100,
     elevation: 12,
+  } as ViewStyle,
+  bottomBarHairline: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: `${colors.gold}2E`,
   } as ViewStyle,
   bottomBarContent: {
     flexDirection: 'row',
@@ -1585,65 +1478,18 @@ const styles = {
   } as ViewStyle,
   bottomBarPriceContainer: {
     flexDirection: 'column',
+    minWidth: 96,
   } as ViewStyle,
   bottomBarPriceLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 14,
-    color: colors.stone,
+    color: colors.textMuted,
   } as TextStyle,
   bottomBarPriceValue: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.gold,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.goldBright,
   } as TextStyle,
-  reserveInlineSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  } as ViewStyle,
-  reserveInlineLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-  } as TextStyle,
-  reserveInlineButton: {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.lg,
-    ...shadows.card,
-  } as ViewStyle,
-  reserveInlineButtonText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.white,
-  } as TextStyle,
-  reserveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-    minWidth: 160,
-    justifyContent: 'center',
-    ...shadows.card,
-  } as ViewStyle,
-  reserveButtonDisabled: {
-    backgroundColor: colors.stone,
-  } as ViewStyle,
-  reserveButtonText: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.white,
-    letterSpacing: 0.2,
-  } as TextStyle,
-};
+} as const;

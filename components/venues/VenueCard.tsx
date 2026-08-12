@@ -1,16 +1,10 @@
 /**
- * VenueCard - Carte horizontale compacte pour lieu.
+ * VenueCard — carte lieu premium « Noir & Or ».
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Largeur fixe 200px, image 120px en haut
- * - Nom du lieu (semi-bold 14px) + Rating (Star gold + nombre)
- * - Localisation (MapPin + texte)
- * - Badge optionnel (terracotta bg) en haut a droite de l'image
- * - Fond blanc, radius 16px, ombre subtile
- * - Press feedback avec Animated natif (pas reanimated)
- *
- * Utilise expo-image (pas React Native Image).
- * Utilise lucide-react-native pour les icones.
+ * - Surface ornée, filet doré subtil, coins 20px (même grammaire qu'EventCard)
+ * - Image 160px avec dégradé sombre de fond
+ * - Badge verre doré, note en étoile or champagne
+ * - Nom Playfair, localisation avec icône or tamisée
  */
 
 import React, { useCallback, useRef } from 'react';
@@ -21,11 +15,13 @@ import {
   Animated,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Star } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radius, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -47,8 +43,8 @@ interface VenueCardProps {
 // Constantes
 // ============================================================
 
-const CARD_WIDTH = 200;
-const IMAGE_HEIGHT = 120;
+const CARD_WIDTH = 216;
+const IMAGE_HEIGHT = 150;
 
 // ============================================================
 // Composant
@@ -92,82 +88,20 @@ export const VenueCard = React.memo(function VenueCard({
     onPress?.();
   }, [impact, onPress]);
 
-  // -- Styles --
-  const cardStyle: ViewStyle = {
-    width: CARD_WIDTH,
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    ...shadows.card,
-  };
-
-  const imageContainerStyle: ViewStyle = {
-    height: IMAGE_HEIGHT,
-    position: 'relative',
-  };
-
-  const badgeStyle: ViewStyle = {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: `${colors.gold}E6`,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  };
-
-  const badgeTextStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 10,
-    lineHeight: 14,
-    color: colors.onyx,
-    letterSpacing: 0.8,
-  };
-
-  const contentStyle: ViewStyle = {
-    padding: spacing.sm,
-  };
-
-  const nameStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.text,
-    letterSpacing: -0.1,
-    marginBottom: spacing.xs / 2,
-  };
-
-  const ratingRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs / 2,
-  };
-
-  const ratingTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.onyx,
-    marginLeft: spacing.xs / 2,
-  };
-
-  const locationRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-  };
-
-  const locationTextStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.stone,
-    marginLeft: spacing.xs / 2,
-    flex: 1,
-  };
-
   return (
     <Animated.View
-      style={[cardStyle, { transform: [{ scale: scaleAnim }] }]}
+      style={[
+        {
+          width: CARD_WIDTH,
+          backgroundColor: colors.elevated,
+          borderRadius: radius.lg,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: `${colors.gold}1F`,
+          ...shadows.eventCard,
+        },
+        { transform: [{ scale: scaleAnim }] },
+      ]}
     >
       <Pressable
         testID={testID}
@@ -177,44 +111,49 @@ export const VenueCard = React.memo(function VenueCard({
         accessibilityRole="button"
         accessibilityLabel={`Lieu: ${name}`}
       >
-        {/* Image */}
-        <View style={imageContainerStyle}>
+        {/* Image hero avec dégradé sombre */}
+        <View style={styles.imageContainer}>
           <Image
             source={{ uri: image }}
-            style={{ width: '100%', height: IMAGE_HEIGHT }}
+            style={styles.image}
             contentFit="cover"
             transition={300}
             cachePolicy="memory-disk"
             accessibilityLabel={`Image de ${name}`}
           />
+          <LinearGradient
+            colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.5)']}
+            style={styles.imageGradient}
+            pointerEvents="none"
+          />
 
-          {/* Badge optionnel */}
-          {badge && (
-            <View style={badgeStyle}>
-              <Text style={badgeTextStyle}>{badge}</Text>
+          {/* Badge optionnel — pastille verre doré */}
+          {badge ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText} numberOfLines={1}>
+                {badge}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Note — étoile or */}
+          {rating !== undefined && rating > 0 && (
+            <View style={styles.ratingPill}>
+              <Star size={11} color={colors.goldBright} fill={colors.gold} strokeWidth={1.5} />
+              <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
             </View>
           )}
         </View>
 
         {/* Contenu */}
-        <View style={contentStyle}>
-          {/* Nom du lieu */}
-          <Text style={nameStyle} numberOfLines={1} ellipsizeMode="tail">
+        <View style={styles.content}>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {name}
           </Text>
 
-          {/* Rating */}
-          {rating !== undefined && rating > 0 && (
-            <View style={ratingRowStyle}>
-              <Star size={12} color={colors.gold} fill={colors.gold} strokeWidth={1} />
-              <Text style={ratingTextStyle}>{rating.toFixed(1)}</Text>
-            </View>
-          )}
-
-          {/* Localisation */}
-          <View style={locationRowStyle}>
-            <MapPin size={12} color={colors.stone} strokeWidth={1.5} />
-            <Text style={locationTextStyle} numberOfLines={1} ellipsizeMode="tail">
+          <View style={styles.locationRow}>
+            <MapPin size={13} color={colors.goldMuted} strokeWidth={1.5} />
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
               {location}
             </Text>
           </View>
@@ -223,3 +162,87 @@ export const VenueCard = React.memo(function VenueCard({
     </Animated.View>
   );
 });
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = {
+  imageContainer: {
+    height: IMAGE_HEIGHT,
+    position: 'relative',
+  } as ViewStyle,
+  image: {
+    width: '100%',
+    height: IMAGE_HEIGHT,
+  } as ImageStyle,
+  imageGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  badge: {
+    position: 'absolute',
+    top: spacing.sm + 2,
+    left: spacing.sm + 2,
+    maxWidth: CARD_WIDTH - 60,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+  } as ViewStyle,
+  badgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldBright,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  ratingPill: {
+    position: 'absolute',
+    bottom: spacing.sm + 2,
+    right: spacing.sm + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  } as ViewStyle,
+  ratingText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.goldBright,
+  } as TextStyle,
+  content: {
+    padding: spacing.md,
+  } as ViewStyle,
+  name: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
+    letterSpacing: -0.2,
+    marginBottom: 5,
+  } as TextStyle,
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  } as ViewStyle,
+  locationText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textSecondary,
+  } as TextStyle,
+} as const;

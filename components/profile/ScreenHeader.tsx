@@ -1,14 +1,10 @@
 /**
- * ScreenHeader — en-tete partage des sous-ecrans du profil.
+ * ScreenHeader — en-tête partagé des sous-écrans (profil, paramètres…).
  *
- * Design :
- * - Derivee foret avec anneau decoratif or (coherence avec la page profil)
- * - Bouton retour dans une pastille verre
- * - Titre Playfair + sous-titre caption
- *
- * Conventions :
- * - Toutes les couleurs viennent de lib/constants.ts
- * - Haptics legers sur le retour
+ * Design « Noir & Or » :
+ * - Dégradé noir profond avec halo doré décoratif
+ * - Bouton retour pastille verre + chevron or
+ * - Titre Playfair Display + sous-titre caption
  */
 
 import { useRouter } from 'expo-router';
@@ -32,11 +28,12 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
 
   return (
     <LinearGradient
-      colors={[colors.forestDeep, colors.forestMid]}
+      colors={['#26211B', colors.background]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
       style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
     >
+      <View pointerEvents="none" style={styles.glowLarge} />
       <View pointerEvents="none" style={styles.ringLarge} />
       <View pointerEvents="none" style={styles.ringSmall} />
 
@@ -51,7 +48,7 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
           accessibilityRole="button"
           accessibilityLabel="Retour"
         >
-          <ChevronLeft size={22} color={colors.sand} strokeWidth={1.75} />
+          <ChevronLeft size={22} color={colors.goldBright} strokeWidth={1.75} />
         </Pressable>
 
         <View style={styles.titleBlock}>
@@ -76,6 +73,17 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
     overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.gold}26`,
+  },
+  glowLarge: {
+    position: 'absolute',
+    top: -90,
+    right: -50,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(216,180,90,0.09)',
   },
   ringLarge: {
     position: 'absolute',
@@ -83,7 +91,7 @@ const styles = StyleSheet.create({
     height: 130,
     borderRadius: 65,
     borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}30`,
+    borderColor: `${colors.gold}2E`,
     top: -70,
     right: -40,
   },
@@ -93,7 +101,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 1.5,
-    borderColor: `${colors.goldSoft}28`,
+    borderColor: `${colors.gold}26`,
     top: -24,
     right: 14,
   },
@@ -103,12 +111,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
-    backgroundColor: `${colors.sand}14`,
+    backgroundColor: colors.glass,
     borderWidth: 1,
-    borderColor: `${colors.sand}24`,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -117,17 +125,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   title: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.sand,
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 23,
+    lineHeight: 30,
+    color: colors.text,
     letterSpacing: -0.3,
   },
   subtitle: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: `${colors.sand}A8`,
+    color: colors.textMuted,
     marginTop: 1,
   },
 });

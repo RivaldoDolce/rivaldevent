@@ -1,31 +1,16 @@
 /**
- * FeaturedCarousel - Carrousel plein ecran pour evenements tendance ("A la une").
+ * FeaturedCarousel — carrousel plein écran premium « Noir & Or ».
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Image hero 220px avec gradient overlay sombre en bas
- * - Badge "Tendance" en gold en haut a gauche
- * - Badge categorie en terracotta sous le badge tendance
- * - Titre Playfair Display en blanc sur l'image
- * - Infos (date, lieu) en blanc semi-transparent
- * - Prix en gold bold
- * - Pagination dots centrees sous le carrousel
+ * - Images hero 250px avec dégradé noir profond
+ * - Badge « Tendance » or champagne avec halo
+ * - Badge catégorie verre doré
+ * - Titre Playfair Display, infos ivoire semi-transparentes
+ * - Prix or + CTA « Réserver » dégradé or
+ * - Pagination : pilule dorée extensible
  * - Auto-scroll toutes les 5 secondes
- *
- * Conventions :
- * - expo-image pour les images
- * - lucide-react-native pour les icones
- * - Animated natif uniquement (pas reanimated)
- * - Pas de Animated.event (bug RN : retourne un objet, pas une fonction)
- * - Pas de type any, pas d'emojis
- * - Design tokens depuis lib/constants.ts
  */
 
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -39,13 +24,10 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
-import {
-  CalendarDays,
-  MapPin,
-  TrendingUp,
-} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CalendarDays, MapPin, TrendingUp } from 'lucide-react-native';
 
-import { colors, spacing, radii } from '@/lib/constants';
+import { colors, spacing, radius, gradients } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -75,7 +57,7 @@ interface FeaturedCarouselProps {
 // ============================================================
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CAROUSEL_HEIGHT = 240;
+const CAROUSEL_HEIGHT = 252;
 const DOT_SIZE = 6;
 const DOT_SPACING = 8;
 const AUTO_SCROLL_INTERVAL = 5000;
@@ -97,23 +79,16 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
 
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // -- Auto-scroll --
   const startAutoScroll = useCallback(() => {
     if (events.length <= 1) return;
-
-    // Clear any existing timer first
     if (autoScrollTimer.current) {
       clearInterval(autoScrollTimer.current);
       autoScrollTimer.current = null;
     }
-
     autoScrollTimer.current = setInterval(() => {
       if (events.length === 0) return;
       const nextIndex = (currentIndexRef.current + 1) % events.length;
-      scrollViewRef.current?.scrollTo({
-        x: nextIndex * SCREEN_WIDTH,
-        animated: true,
-      });
+      scrollViewRef.current?.scrollTo({ x: nextIndex * SCREEN_WIDTH, animated: true });
       currentIndexRef.current = nextIndex;
       setActiveIndex(nextIndex);
     }, AUTO_SCROLL_INTERVAL);
@@ -122,13 +97,10 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   useEffect(() => {
     startAutoScroll();
     return () => {
-      if (autoScrollTimer.current) {
-        clearInterval(autoScrollTimer.current);
-      }
+      if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
     };
   }, [startAutoScroll]);
 
-  // -- Scroll handler (native callback, NOT Animated.event) --
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetX = event.nativeEvent.contentOffset.x;
@@ -141,7 +113,6 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
     [events.length],
   );
 
-  // -- Reset auto-scroll on manual interaction --
   const handleScrollBeginDrag = useCallback(() => {
     if (autoScrollTimer.current) {
       clearInterval(autoScrollTimer.current);
@@ -150,26 +121,26 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
   }, []);
 
   const handleScrollEndDrag = useCallback(() => {
-    // Restart auto-scroll after 3 seconds of inactivity
-    setTimeout(() => {
-      startAutoScroll();
-    }, 3000);
+    setTimeout(() => startAutoScroll(), 3000);
   }, [startAutoScroll]);
 
-  // -- Press handlers --
-  const handleCardPress = useCallback((eventId: string) => {
-    impact('light');
-    onPress?.(eventId);
-  }, [impact, onPress]);
+  const handleCardPress = useCallback(
+    (eventId: string) => {
+      impact('light');
+      onPress?.(eventId);
+    },
+    [impact, onPress],
+  );
 
-  const handleReserve = useCallback((eventId: string) => {
-    impact('medium');
-    onReserve?.(eventId);
-  }, [impact, onReserve]);
+  const handleReserve = useCallback(
+    (eventId: string) => {
+      impact('medium');
+      onReserve?.(eventId);
+    },
+    [impact, onReserve],
+  );
 
-  // -- Format price (formatage africain : 5 000 F, 15 000 F) --
-  // FCFA abrege en 'F' pour plus de lisibilite
-  const formatPrice = useCallback((price: number, _currency: string): string => {
+  const formatPrice = useCallback((price: number): string => {
     const absPrice = Math.abs(price);
     if (absPrice >= 1000) {
       const formatted = absPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
@@ -180,148 +151,8 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
 
   if (events.length === 0) return null;
 
-  // -- Styles --
-  const containerStyle: ViewStyle = {
-    height: CAROUSEL_HEIGHT + 40, // Extra space for dots
-    position: 'relative',
-  };
-
-  const slideStyle: ViewStyle = {
-    width: SCREEN_WIDTH,
-    height: CAROUSEL_HEIGHT,
-    position: 'relative',
-  };
-
-  const imageStyle: ImageStyle = {
-    width: SCREEN_WIDTH,
-    height: CAROUSEL_HEIGHT,
-  };
-
-  const gradientOverlayStyle: ViewStyle = {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CAROUSEL_HEIGHT * 0.65,
-    backgroundColor: 'rgba(26,24,22,0.55)',
-  };
-
-  const badgeContainerStyle: ViewStyle = {
-    position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
-    gap: spacing.xs,
-  };
-
-  const trendingBadgeStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.gold,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    gap: 4,
-    alignSelf: 'flex-start',
-  };
-
-  const trendingBadgeTextStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.onyx,
-    letterSpacing: 0.5,
-  };
-
-  const categoryBadgeStyle: ViewStyle = {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-start',
-  };
-
-  const categoryBadgeTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.white,
-    letterSpacing: 0.3,
-  };
-
-  const contentOverlayStyle: ViewStyle = {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.lg,
-  };
-
-  const titleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    lineHeight: 28,
-    color: colors.white,
-    letterSpacing: -0.3,
-    marginBottom: spacing.xs,
-  };
-
-  const infoRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs / 2,
-  };
-
-  const infoTextStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.85)',
-    marginLeft: spacing.xs,
-  };
-
-  const footerRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  };
-
-  const priceStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    color: colors.goldBright,
-  };
-
-  const reserveButtonStyle: ViewStyle = {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  };
-
-  const reserveTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  };
-
-  const dotsContainerStyle: ViewStyle = {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    gap: DOT_SPACING,
-  };
-
-  const dotBaseStyle: ViewStyle = {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-  };
-
   return (
-    <View style={containerStyle} testID={testID}>
+    <View style={styles.container} testID={testID}>
       <ScrollView
         ref={scrollViewRef}
         horizontal
@@ -333,89 +164,107 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
         onScrollEndDrag={handleScrollEndDrag}
         decelerationRate="fast"
       >
-        {events.map((event) => (
-          <Pressable
-            key={event.id}
-            onPress={() => handleCardPress(event.id)}
-            style={slideStyle}
-            accessibilityRole="button"
-            accessibilityLabel={`Evenement tendance: ${event.title}`}
-          >
-            {/* Image hero */}
-            <Image
-              source={{ uri: event.image }}
-              style={imageStyle}
-              contentFit="cover"
-              transition={400}
-              cachePolicy="memory-disk"
-              accessibilityLabel={`Image de ${event.title}`}
-            />
+        {events.map((event, index) => {
+          const isFirst = index === 0;
+          return (
+            <Pressable
+              key={event.id}
+              onPress={() => handleCardPress(event.id)}
+              style={styles.slide}
+              accessibilityRole="button"
+              accessibilityLabel={`Événement tendance: ${event.title}`}
+            >
+              <Image
+                source={{ uri: event.image }}
+                style={styles.image}
+                contentFit="cover"
+                transition={400}
+                cachePolicy="memory-disk"
+                accessibilityLabel={`Image de ${event.title}`}
+              />
 
-            {/* Gradient overlay */}
-            <View style={gradientOverlayStyle} pointerEvents="none" />
+              {/* Dégradé de fond */}
+              <LinearGradient
+                colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.35)', 'rgba(10,9,8,0.92)']}
+                locations={[0, 0.45, 1]}
+                style={styles.gradientOverlay}
+                pointerEvents="none"
+              />
 
-            {/* Badges superposes en haut a gauche */}
-            <View style={badgeContainerStyle} pointerEvents="none">
-              <View style={trendingBadgeStyle}>
-                <TrendingUp size={12} color={colors.onyx} strokeWidth={2} />
-                <Text style={trendingBadgeTextStyle}>Tendance</Text>
+              {/* Filet doré haut */}
+              <View pointerEvents="none" style={styles.goldEdge} />
+
+              {/* Badges */}
+              <View style={styles.badgeContainer} pointerEvents="box-none">
+                <View style={styles.trendingBadge}>
+                  <TrendingUp size={12} color={colors.onyx} strokeWidth={2.25} />
+                  <Text style={styles.trendingBadgeText}>Tendance</Text>
+                </View>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText} numberOfLines={1}>
+                    {event.category}
+                  </Text>
+                </View>
               </View>
-              <View style={categoryBadgeStyle}>
-                <Text style={categoryBadgeTextStyle}>{event.category}</Text>
-              </View>
-            </View>
 
-            {/* Contenu textuel superpose */}
-            <View style={contentOverlayStyle} pointerEvents="box-none">
-              <Text style={titleStyle} numberOfLines={2} ellipsizeMode="tail">
-                {event.title}
-              </Text>
-
-              <View style={infoRowStyle}>
-                <CalendarDays size={14} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
-                <Text style={infoTextStyle}>{event.date}</Text>
-              </View>
-
-              <View style={infoRowStyle}>
-                <MapPin size={14} color="rgba(255,255,255,0.8)" strokeWidth={1.5} />
-                <Text style={infoTextStyle} numberOfLines={1} ellipsizeMode="tail">
-                  {event.location}
+              {/* Contenu superposé */}
+              <View style={styles.contentOverlay} pointerEvents="box-none">
+                <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+                  {event.title}
                 </Text>
+
+                <View style={styles.infoRow}>
+                  <CalendarDays size={14} color={colors.goldMuted} strokeWidth={1.5} />
+                  <Text style={styles.infoText}>{event.date}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <MapPin size={14} color={colors.goldMuted} strokeWidth={1.5} />
+                  <Text style={styles.infoText} numberOfLines={1} ellipsizeMode="tail">
+                    {event.location}
+                  </Text>
+                </View>
+
+                <View style={styles.footerRow}>
+                  <Text style={styles.price}>{formatPrice(event.price)}</Text>
+                  <LinearGradient
+                    colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.reserveButton}
+                  >
+                    <Pressable
+                      onPress={() => handleReserve(event.id)}
+                      style={styles.reserveInner}
+                      hitSlop={4}
+                      accessibilityRole="button"
+                      accessibilityLabel="Réserver"
+                    >
+                      <Text style={styles.reserveText}>Réserver</Text>
+                    </Pressable>
+                  </LinearGradient>
+                </View>
               </View>
 
-              <View style={footerRowStyle}>
-                <Text style={priceStyle}>
-                  {formatPrice(event.price, event.currency)}
-                </Text>
-                <Pressable
-                  onPress={() => handleReserve(event.id)}
-                  style={reserveButtonStyle}
-                  hitSlop={4}
-                  accessibilityRole="button"
-                  accessibilityLabel="Reserver"
-                >
-                  <Text style={reserveTextStyle}>Reserver</Text>
-                </Pressable>
-              </View>
-            </View>
-          </Pressable>
-        ))}
+              {!isFirst && <View style={styles.slideDivider} pointerEvents="none" />}
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-      {/* Pagination dots */}
+      {/* Pagination */}
       {events.length > 1 && (
-        <View style={dotsContainerStyle}>
+        <View style={styles.dotsContainer}>
           {events.map((event, index) => {
             const isActive = index === activeIndex;
             return (
               <View
                 key={`dot-${event.id}`}
                 style={[
-                  dotBaseStyle,
+                  styles.dotBase,
                   {
-                    backgroundColor: isActive ? colors.terracotta : `${colors.stone}40`,
-                    width: isActive ? DOT_SIZE * 2.5 : DOT_SIZE,
-                    borderRadius: DOT_SIZE / 2,
+                    backgroundColor: isActive ? colors.gold : 'rgba(255,255,255,0.16)',
+                    width: isActive ? DOT_SIZE * 3 : DOT_SIZE,
                   },
                 ]}
               />
@@ -426,3 +275,163 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
     </View>
   );
 });
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = {
+  container: {
+    height: CAROUSEL_HEIGHT + 38,
+    position: 'relative',
+  } as ViewStyle,
+  slide: {
+    width: SCREEN_WIDTH,
+    height: CAROUSEL_HEIGHT,
+    position: 'relative',
+  } as ViewStyle,
+  image: {
+    width: SCREEN_WIDTH,
+    height: CAROUSEL_HEIGHT,
+  } as ImageStyle,
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+  } as ViewStyle,
+  goldEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    right: 16,
+    height: 1,
+    backgroundColor: `${colors.goldBright}4D`,
+  } as ViewStyle,
+  slideDivider: {
+    position: 'absolute',
+    right: 0,
+    top: spacing.lg,
+    bottom: spacing.lg,
+    width: 1,
+    backgroundColor: `${colors.gold}2E`,
+  } as ViewStyle,
+  badgeContainer: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md + 2,
+    gap: 6,
+  } as ViewStyle,
+  trendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gold,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    gap: 5,
+    alignSelf: 'flex-start',
+    shadowColor: 'rgba(216,180,90,0.5)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
+  } as ViewStyle,
+  trendingBadgeText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.onyx,
+    letterSpacing: 0.6,
+  } as TextStyle,
+  categoryBadge: {
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    maxWidth: 180,
+  } as ViewStyle,
+  categoryBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldBright,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  contentOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+  } as ViewStyle,
+  title: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 23,
+    lineHeight: 30,
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: spacing.sm,
+  } as TextStyle,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 6,
+  } as ViewStyle,
+  infoText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(245,240,230,0.82)',
+  } as TextStyle,
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  } as ViewStyle,
+  price: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
+  } as TextStyle,
+  reserveButton: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    shadowColor: 'rgba(216,180,90,0.45)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  } as ViewStyle,
+  reserveInner: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  reserveText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+    letterSpacing: 0.4,
+  } as TextStyle,
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    gap: DOT_SPACING,
+  } as ViewStyle,
+  dotBase: {
+    height: DOT_SIZE,
+    borderRadius: DOT_SIZE / 2,
+  } as ViewStyle,
+} as const;

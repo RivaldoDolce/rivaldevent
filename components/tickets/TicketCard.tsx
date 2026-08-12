@@ -1,19 +1,18 @@
 /**
  * Carte d'un billet pour la liste "Mes billets".
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Image couverture de l'evenement a gauche
- * - Titre de l'evenement, nom du tier, date
- * - Badge de statut (valide, en attente, scanne, expire)
- * - Prix total en FCFA
- * - Quantite de billets
- * - Pressable pour naviguer vers le detail
+ * Design « Noir & Or » premium :
+ * - Surface élevée avec filet doré subtil (`${colors.gold}28`)
+ * - Image événement à gauche, contenu à droite
+ * - Titre Playfair, tier + date avec icônes or tamisées
+ * - Badge statut pill (point indicateur + texte)
+ * - Indication QR miniature, prix or champagne, chevron
  *
  * Statuts visuels :
- * - valid   : badge vert, QR disponible
- * - pending : badge mango/orange, paiement en cours
- * - scanned : badge stone/gris, deja utilise
- * - expired : badge danger/rouge, date depassee
+ * - valid   : success, QR disponible
+ * - pending : warning, paiement en cours
+ * - scanned : textSecondary, déjà utilisé
+ * - expired : danger, date dépassée
  *
  * Props :
  * - ticket : donnees du billet (MockTicket)
@@ -35,17 +34,12 @@ import {
   Pressable,
   StyleSheet,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
-import {
-  CheckCircle2,
-  Clock,
-  ScanLine,
-  AlertTriangle,
-  ChevronRight,
-} from 'lucide-react-native';
+import { Calendar, QrCode, Ticket, ChevronRight } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radius, shadows } from '@/lib/constants';
 import { formatPrice, formatDate, formatTime } from '@/services/event.service';
 import type { MockTicket } from '@/data/mock';
 
@@ -79,7 +73,8 @@ function getVisualStatus(ticket: MockTicket): TicketVisualStatus {
 }
 
 /**
- * Configuration du badge de statut.
+ * Configuration du badge de statut — pastille pill avec point doré.
+ * Couleurs : Valide success, En attente warning, Scanné textSecondary, Expiré danger.
  */
 function getStatusConfig(status: TicketVisualStatus): {
   label: string;
@@ -88,31 +83,29 @@ function getStatusConfig(status: TicketVisualStatus): {
 } {
   switch (status) {
     case 'valid':
-      return { label: 'Valide', color: colors.forest, bgColor: `${colors.forest}12` };
+      return {
+        label: 'Valide',
+        color: colors.success,
+        bgColor: 'rgba(91,196,139,0.12)',
+      };
     case 'pending':
-      return { label: 'En attente', color: colors.mango, bgColor: `${colors.mango}12` };
+      return {
+        label: 'En attente',
+        color: colors.warning,
+        bgColor: 'rgba(232,182,76,0.12)',
+      };
     case 'scanned':
-      return { label: 'Scanne', color: colors.stone, bgColor: `${colors.stone}15` };
+      return {
+        label: 'Scanne',
+        color: colors.textSecondary,
+        bgColor: 'rgba(181,172,156,0.12)',
+      };
     case 'expired':
-      return { label: 'Expire', color: colors.danger, bgColor: `${colors.danger}12` };
-  }
-}
-
-/**
- * Icone du badge selon le statut.
- */
-function StatusIcon({ status, color }: { status: TicketVisualStatus; color: string }) {
-  const size = 12;
-  const strokeWidth = 2;
-  switch (status) {
-    case 'valid':
-      return <CheckCircle2 size={size} color={color} strokeWidth={strokeWidth} />;
-    case 'pending':
-      return <Clock size={size} color={color} strokeWidth={strokeWidth} />;
-    case 'scanned':
-      return <ScanLine size={size} color={color} strokeWidth={strokeWidth} />;
-    case 'expired':
-      return <AlertTriangle size={size} color={color} strokeWidth={strokeWidth} />;
+      return {
+        label: 'Expire',
+        color: colors.danger,
+        bgColor: 'rgba(255,107,94,0.12)',
+      };
   }
 }
 
@@ -140,6 +133,11 @@ export default function TicketCard({ ticket, onPress }: TicketCardProps) {
   // Opacite reduite pour les billets scannees ou expires
   const isDimmed = visualStatus === 'scanned' || visualStatus === 'expired';
 
+  // Ligne date : "12 Aout 2026 - 20:00, Yaounde"
+  const dateLine = eventDate
+    ? `${formatDate(eventDate)} - ${formatTime(eventDate)}${eventCity ? `, ${eventCity}` : ''}`
+    : null;
+
   return (
     <Pressable
       onPress={handlePress}
@@ -159,46 +157,47 @@ export default function TicketCard({ ticket, onPress }: TicketCardProps) {
           />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <ScanLine size={20} color={colors.stone} strokeWidth={1.5} />
+            <Ticket size={24} color={colors.goldMuted} strokeWidth={1.5} />
           </View>
         )}
-        {/* Badge statut sur l'image */}
-        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
-          <StatusIcon status={visualStatus} color={statusConfig.color} />
-          <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
-            {statusConfig.label}
-          </Text>
-        </View>
       </View>
 
       {/* Contenu */}
       <View style={styles.content}>
-        {/* Titre evenement */}
-        <Text style={styles.eventTitle} numberOfLines={2}>
-          {eventTitle}
-        </Text>
-
-        {/* Tier + quantite */}
-        <View style={styles.tierRow}>
-          <Text style={styles.tierName}>
-            {tierName} {ticket.quantity > 1 ? `x${ticket.quantity}` : ''}
+        {/* Titre evenement + badge statut */}
+        <View style={styles.titleRow}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {eventTitle}
           </Text>
-          <Text style={styles.price}>
-            {formatPrice(ticket.total_price)}
-          </Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusConfig.color }]} />
+            <Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
+              {statusConfig.label}
+            </Text>
+          </View>
         </View>
 
-        {/* Date + ville */}
-        {eventDate ? (
-          <Text style={styles.dateText} numberOfLines={1}>
-            {formatDate(eventDate)} - {formatTime(eventDate)}
-            {eventCity ? `, ${eventCity}` : ''}
-          </Text>
+        {/* Date avec icone or tamisee */}
+        {dateLine ? (
+          <View style={styles.dateRow}>
+            <Calendar size={13} color={colors.goldMuted} strokeWidth={1.75} />
+            <Text style={styles.dateText} numberOfLines={1}>
+              {dateLine}
+            </Text>
+          </View>
         ) : null}
 
-        {/* Indicateur fleche */}
-        <View style={styles.chevronContainer}>
-          <ChevronRight size={16} color={colors.stone} strokeWidth={2} />
+        {/* Pied : QR miniature + tier · prix · chevron */}
+        <View style={styles.footerRow}>
+          <View style={styles.qrIndication}>
+            <QrCode size={14} color={colors.goldMuted} strokeWidth={1.75} />
+          </View>
+          <Text style={styles.tierName} numberOfLines={1}>
+            {tierName}
+            {ticket.quantity > 1 ? ` x${ticket.quantity}` : ''}
+          </Text>
+          <Text style={styles.price}>{formatPrice(ticket.total_price)}</Text>
+          <ChevronRight size={16} color={colors.goldMuted} strokeWidth={1.75} />
         </View>
       </View>
     </Pressable>
@@ -212,90 +211,125 @@ export default function TicketCard({ ticket, onPress }: TicketCardProps) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}28`,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.md,
     ...shadows.card,
   } as ViewStyle,
   cardDimmed: {
-    opacity: 0.6,
+    opacity: 0.55,
   },
 
   /* Image */
   imageContainer: {
-    width: 100,
-    position: 'relative',
+    width: 84,
+    height: 84,
+    borderRadius: radius.md,
+    overflow: 'hidden',
   } as ViewStyle,
   image: {
-    width: 100,
-    height: '100%',
+    width: 84,
+    height: 84,
   },
   imagePlaceholder: {
-    width: 100,
-    height: '100%',
-    backgroundColor: colors.ivory,
+    width: 84,
+    height: 84,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  statusBadgeText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 9,
-    lineHeight: 12,
-    letterSpacing: 0.3,
-  },
+  } as ViewStyle,
 
   /* Contenu */
   content: {
     flex: 1,
-    padding: spacing.md,
     justifyContent: 'center',
-  },
-  eventTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-    marginBottom: spacing.xs,
-  },
-  tierRow: {
+  } as ViewStyle,
+
+  titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: 6,
+  } as ViewStyle,
+  eventTitle: {
+    flex: 1,
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.text,
+    letterSpacing: -0.2,
+  } as TextStyle,
+
+  /* Badge statut pill */
+  statusBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  tierName: {
-    fontFamily: 'Inter-Regular',
+    gap: 5,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+  } as ViewStyle,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  } as ViewStyle,
+  statusBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.2,
+  } as TextStyle,
+
+  /* Date */
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  } as ViewStyle,
+  dateText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
-  },
+    color: colors.textSecondary,
+  } as TextStyle,
+
+  /* Pied */
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  } as ViewStyle,
+  qrIndication: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
+    backgroundColor: colors.glassGold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.xs,
+  } as ViewStyle,
+  tierName: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  } as TextStyle,
   price: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
     lineHeight: 20,
-    color: colors.terracotta,
-  },
-  dateText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.stone,
-  },
-  chevronContainer: {
-    position: 'absolute',
-    right: spacing.sm,
-    top: '50%' as never,
-    marginTop: -8,
-  },
+    color: colors.goldBright,
+    letterSpacing: 0.2,
+  } as TextStyle,
 });

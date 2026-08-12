@@ -1,11 +1,12 @@
 /**
  * Reserver un lieu — demande de reservation de salle.
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Header partage (ScreenHeader) + carte du lieu (image, nom, localisation)
+ * Design premium « Noir & Or » :
+ * - Header partage (ScreenHeader) + carte du lieu ornée (image, nom, localisation)
  * - Selection de date (14 prochains jours en chips horizontales)
- * - Selection du type d'evenement (chips)
- * - Recapitulatif : tarif par jour + confirmation
+ * - Selection du type d'evenement (chips pill verre / pilules or)
+ * - Recapitulatif : tarif par jour + total en carte verre ornée
+ * - Ecran de confirmation avec medaillon success
  * - Contact de l'organisateur (WhatsApp)
  *
  * Donnees : venueService.fetchVenueDetail (mock, Supabase a terme).
@@ -24,7 +25,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { MapPin, CheckCircle2, CalendarDays } from 'lucide-react-native';
+import { MapPin, CircleCheck, CalendarDays } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { Button } from '@/components/ui/Button';
@@ -143,13 +144,14 @@ export default function VenueReserveScreen() {
 
   const pricePerDay = venue?.price_per_day ?? 0;
 
+  // Pastilles verre inactives / pilules or actives
   const chipStyle = (active: boolean) => ({
-    backgroundColor: active ? colors.forest : colors.white,
-    borderColor: active ? colors.forest : `${colors.border}60`,
+    backgroundColor: active ? 'rgba(216,180,90,0.12)' : colors.glass,
+    borderColor: active ? `${colors.gold}40` : colors.border,
   });
 
   const chipTextStyle = (active: boolean) => ({
-    color: active ? colors.sand : colors.stone,
+    color: active ? colors.goldBright : colors.textSecondary,
   });
 
   return (
@@ -166,13 +168,13 @@ export default function VenueReserveScreen() {
 
         {isLoading || !venue ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator color={colors.forest} size="large" />
+            <ActivityIndicator color={colors.gold} size="large" />
           </View>
         ) : isConfirmed ? (
           /* ============ CONFIRMATION ============ */
           <View style={styles.confirmCard}>
             <View style={styles.confirmIcon}>
-              <CheckCircle2 size={34} color={colors.forest} strokeWidth={1.75} />
+              <CircleCheck size={34} color={colors.success} strokeWidth={1.75} />
             </View>
             <Text style={styles.confirmTitle}>Demande envoyee</Text>
             <Text style={styles.confirmText}>
@@ -202,7 +204,7 @@ export default function VenueReserveScreen() {
           </View>
         ) : (
           <>
-            {/* ============ CARTE DU LIEU ============ */}
+            {/* ============ CARTE DU LIEU — ornee ============ */}
             <View style={styles.venueCard}>
               <Image
                 source={{ uri: venue.images[0] ?? '' }}
@@ -216,7 +218,7 @@ export default function VenueReserveScreen() {
                   {venue.name}
                 </Text>
                 <View style={styles.venueLocationRow}>
-                  <MapPin size={13} color={colors.stone} strokeWidth={1.5} />
+                  <MapPin size={13} color={colors.goldMuted} strokeWidth={1.5} />
                   <Text style={styles.venueLocation} numberOfLines={1}>
                     {venue.address ?? venue.city ?? 'Adresse non precisee'}
                   </Text>
@@ -289,7 +291,7 @@ export default function VenueReserveScreen() {
             {/* ============ RECAPITULATIF ============ */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryRow}>
-                <CalendarDays size={17} color={colors.goldDark} strokeWidth={1.75} />
+                <CalendarDays size={17} color={colors.goldMuted} strokeWidth={1.75} />
                 <Text style={styles.summaryLabel}>Tarif par jour</Text>
                 <Text style={styles.summaryValue}>
                   {pricePerDay > 0 ? formatPrice(pricePerDay) : 'Sur demande'}
@@ -297,7 +299,7 @@ export default function VenueReserveScreen() {
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryRow}>
-                <CalendarDays size={17} color={colors.goldDark} strokeWidth={1.75} />
+                <CalendarDays size={17} color={colors.goldMuted} strokeWidth={1.75} />
                 <Text style={styles.summaryLabel}>Total (1 jour)</Text>
                 <Text style={[styles.summaryValue, styles.summaryTotal]}>
                   {pricePerDay > 0 ? formatPrice(pricePerDay) : 'A definir'}
@@ -323,27 +325,27 @@ export default function VenueReserveScreen() {
 }
 
 // ============================================================
-// Styles
+// Styles — Noir & Or
 // ============================================================
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   loadingWrap: {
     paddingVertical: spacing.xxl * 2,
     alignItems: 'center',
   },
 
-  // -- Carte lieu --
+  // -- Carte lieu ornée --
   venueCard: {
-    marginTop: -spacing.md,
+    marginTop: spacing.md,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     overflow: 'hidden',
     ...shadows.card,
   },
@@ -355,24 +357,24 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   venueName: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 17,
-    lineHeight: 23,
-    color: colors.onyx,
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 19,
+    lineHeight: 26,
+    color: colors.text,
     letterSpacing: -0.2,
+    marginBottom: spacing.xs,
   },
   venueLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs / 2,
+    gap: 5,
   },
   venueLocation: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
-    marginLeft: spacing.xs / 2,
+    color: colors.textSecondary,
   },
 
   // -- Sections --
@@ -381,11 +383,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.stone,
-    letterSpacing: 1.6,
+    ...typography.overline,
+    color: colors.goldMuted,
     marginBottom: spacing.sm + 2,
     marginLeft: spacing.xs,
   },
@@ -397,18 +396,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   dateLabel: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
     lineHeight: 14,
   },
   dateDay: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 24,
     marginTop: 2,
   },
   dateMonth: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 10,
     lineHeight: 13,
   },
@@ -424,7 +423,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm - 2,
   },
   typeText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 12,
     lineHeight: 17,
   },
@@ -433,38 +432,40 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginTop: spacing.lg,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    ...shadows.card,
   },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
   summaryLabel: {
     flex: 1,
-    marginLeft: spacing.md,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.textSecondary,
   },
   summaryValue: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.text,
   },
   summaryTotal: {
-    color: colors.terracotta,
+    fontFamily: 'Inter_700Bold',
+    color: colors.goldBright,
   },
   summaryDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: `${colors.stone}18`,
+    backgroundColor: `${colors.gold}26`,
   },
   reserveButtonWrap: {
     marginTop: spacing.lg,
@@ -475,10 +476,10 @@ const styles = StyleSheet.create({
   confirmCard: {
     marginTop: spacing.lg,
     marginHorizontal: spacing.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.elevated,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: `${colors.gold}1F`,
     padding: spacing.xl,
     alignItems: 'center',
     ...shadows.card,
@@ -487,20 +488,22 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: `${colors.forest}12`,
+    backgroundColor: 'rgba(91,196,139,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.success}38`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   confirmTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 19,
     lineHeight: 26,
-    color: colors.onyx,
+    color: colors.text,
   },
   confirmText: {
     ...typography.body,
-    color: colors.stone,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
@@ -513,9 +516,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   doneLinkText: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
   },
 });

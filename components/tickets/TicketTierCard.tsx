@@ -1,12 +1,14 @@
 /**
  * Carte d'un tier de billet pour la selection.
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Nom du tier en gras avec accent visuel (barre laterale coloree)
- * - Prix en FCFA bien visible
+ * Design « Noir & Or » premium :
+ * - Surface élevée avec barre d'accent latérale (2.5px) selon la gamme :
+ *   premium/vvip → forest, vip → gold, sinon terracotta
+ * - Nom du tier en gras, prix or champagne bien visible
  * - Description et liste des benefices
- * - Badge stock (disponible / stock faible / epuise)
- * - Selecteur de quantite (+/-) avec nombre au centre
+ * - Badge stock pill (disponible / stock faible / epuise) avec point indicateur
+ * - Selecteur de quantite : pastilles verre rondes (+/- ) avec nombre au centre
+ * - Sous-total en overline dorée quand une quantite est choisie
  * - Desactive si epuise (is_sold_out = true)
  *
  * Props :
@@ -28,16 +30,12 @@ import {
   Text,
   Pressable,
   StyleSheet,
+  type ViewStyle,
+  type TextStyle,
 } from 'react-native';
-import {
-  Minus,
-  Plus,
-  Check,
-  AlertTriangle,
-  XCircle,
-} from 'lucide-react-native';
+import { Minus, Plus } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radius, shadows } from '@/lib/constants';
 import { formatPrice } from '@/services/event.service';
 import type { MockTicketTier } from '@/data/mock';
 
@@ -73,21 +71,21 @@ function getTierAccent(name: string): string {
 }
 
 /**
- * Configuration du badge stock.
+ * Configuration du badge stock — pastille pill avec point indicateur.
+ * Disponible -> success, stock faible -> warning « Plus que N », epuise -> danger.
  */
 function getStockConfig(tier: MockTicketTier): {
   label: string;
   color: string;
   bgColor: string;
-  icon: 'check' | 'warning' | 'epuise';
 } {
   if (tier.is_sold_out) {
-    return { label: 'Epuise', color: colors.danger, bgColor: `${colors.danger}12`, icon: 'epuise' };
+    return { label: 'Epuise', color: colors.danger, bgColor: 'rgba(255,107,94,0.12)' };
   }
   if (tier.is_low_stock) {
-    return { label: `Plus que ${tier.available_quantity}`, color: colors.mango, bgColor: `${colors.mango}12`, icon: 'warning' };
+    return { label: `Plus que ${tier.available_quantity}`, color: colors.warning, bgColor: 'rgba(232,182,76,0.12)' };
   }
-  return { label: `${tier.available_quantity} dispo.`, color: colors.forest, bgColor: `${colors.forest}12`, icon: 'check' };
+  return { label: `${tier.available_quantity} dispo.`, color: colors.success, bgColor: 'rgba(91,196,139,0.12)' };
 }
 
 // ============================================================
@@ -115,37 +113,29 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
   // -- Sous-total --
   const subtotal = quantity * tier.price;
 
+  const canIncrement = !isDisabled && quantity < MAX_QUANTITY && quantity < tier.available_quantity;
+
   return (
     <View style={[styles.card, isDisabled && styles.cardDisabled]}>
       {/* Barre laterale d'accent */}
       <View style={[styles.accentBar, { backgroundColor: accent }]} />
 
       <View style={styles.cardContent}>
-        {/* En-tete : nom + prix */}
+        {/* En-tete : nom + badge stock */}
         <View style={styles.headerRow}>
           <View style={styles.nameContainer}>
-            <Text style={[styles.tierName, { color: accent }]}>
+            <Text style={styles.tierName} numberOfLines={1}>
               {tier.name}
             </Text>
             {/* Badge stock */}
             <View style={[styles.stockBadge, { backgroundColor: stockConfig.bgColor }]}>
-              {stockConfig.icon === 'check' && (
-                <Check size={10} color={stockConfig.color} strokeWidth={2} />
-              )}
-              {stockConfig.icon === 'warning' && (
-                <AlertTriangle size={10} color={stockConfig.color} strokeWidth={2} />
-              )}
-              {stockConfig.icon === 'epuise' && (
-                <XCircle size={10} color={stockConfig.color} strokeWidth={2} />
-              )}
+              <View style={[styles.stockDot, { backgroundColor: stockConfig.color }]} />
               <Text style={[styles.stockBadgeText, { color: stockConfig.color }]}>
                 {stockConfig.label}
               </Text>
             </View>
           </View>
-          <Text style={styles.price}>
-            {formatPrice(tier.price)}
-          </Text>
+          <Text style={styles.price}>{formatPrice(tier.price)}</Text>
         </View>
 
         {/* Description */}
@@ -178,7 +168,7 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
               accessibilityLabel="Diminuer la quantite"
               hitSlop={8}
             >
-              <Minus size={16} color={quantity <= 0 ? colors.stone : colors.onyx} strokeWidth={2} />
+              <Minus size={18} color={quantity <= 0 ? colors.textFaint : colors.goldBright} strokeWidth={1.75} />
             </Pressable>
 
             <Text style={[styles.quantityValue, isDisabled && styles.quantityValueDisabled]}>
@@ -187,36 +177,28 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
 
             <Pressable
               onPress={handleIncrement}
-              disabled={isDisabled || quantity >= MAX_QUANTITY || quantity >= tier.available_quantity}
-              style={[
-                styles.quantityButton,
-                (isDisabled || quantity >= MAX_QUANTITY || quantity >= tier.available_quantity) && styles.quantityButtonDisabled,
-              ]}
+              disabled={!canIncrement}
+              style={[styles.quantityButton, !canIncrement && styles.quantityButtonDisabled]}
               accessibilityRole="button"
               accessibilityLabel="Augmenter la quantite"
               hitSlop={8}
             >
               <Plus
-                size={16}
-                color={
-                  isDisabled || quantity >= MAX_QUANTITY || quantity >= tier.available_quantity
-                    ? colors.stone
-                    : colors.onyx
-                }
-                strokeWidth={2}
+                size={18}
+                color={canIncrement ? colors.goldBright : colors.textFaint}
+                strokeWidth={1.75}
               />
             </Pressable>
           </View>
 
           {/* Sous-total */}
           {quantity > 0 ? (
-            <Text style={styles.subtotal}>
-              {formatPrice(subtotal)}
-            </Text>
+            <View style={styles.subtotalBlock}>
+              <Text style={styles.subtotalOverline}>SOUS-TOTAL</Text>
+              <Text style={styles.subtotal}>{formatPrice(subtotal)}</Text>
+            </View>
           ) : (
-            <Text style={styles.subtotalPlaceholder}>
-              Selectionnez
-            </Text>
+            <Text style={styles.subtotalPlaceholder}>Selectionnez</Text>
           )}
         </View>
       </View>
@@ -231,143 +213,170 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
     marginBottom: spacing.md,
     overflow: 'hidden',
     ...shadows.card,
-  },
+  } as ViewStyle,
   cardDisabled: {
     opacity: 0.5,
   },
 
   accentBar: {
-    width: 4,
+    width: 2.5,
     flex: 1,
-  },
+  } as ViewStyle,
 
   cardContent: {
     flex: 1,
     padding: spacing.md,
-  },
+  } as ViewStyle,
 
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: spacing.md,
     marginBottom: spacing.sm,
-  },
+  } as ViewStyle,
   nameContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
-  },
+  } as ViewStyle,
   tierName: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    letterSpacing: -0.3,
-  },
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    lineHeight: 23,
+    color: colors.text,
+    letterSpacing: -0.2,
+  } as TextStyle,
   stockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 5,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+  } as ViewStyle,
+  stockDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  } as ViewStyle,
   stockBadgeText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
-    letterSpacing: 0.3,
-  },
+    letterSpacing: 0.2,
+  } as TextStyle,
   price: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 18,
     lineHeight: 24,
-    color: colors.onyx,
-    letterSpacing: -0.3,
-  },
+    color: colors.goldBright,
+    letterSpacing: -0.2,
+  } as TextStyle,
 
   description: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
-  },
+  } as TextStyle,
 
   benefitsContainer: {
     marginBottom: spacing.md,
-  },
+  } as ViewStyle,
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
-  },
+  } as ViewStyle,
   benefitDot: {
     width: 5,
     height: 5,
     borderRadius: 2.5,
-  },
+  } as ViewStyle,
   benefitText: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.onyx,
-  },
+    color: colors.textSecondary,
+  } as TextStyle,
 
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
+    gap: spacing.md,
+  } as ViewStyle,
 
   quantitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.ivory,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-  },
+    gap: spacing.sm,
+  } as ViewStyle,
   quantityDisabled: {
-    opacity: 0.4,
-  },
+    opacity: 0.35,
+  } as ViewStyle,
   quantityButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
+  } as ViewStyle,
   quantityButtonDisabled: {
-    opacity: 0.3,
-  },
+    opacity: 0.35,
+  } as ViewStyle,
   quantityValue: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.onyx,
-    minWidth: 32,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.text,
+    minWidth: 36,
     textAlign: 'center',
-  },
+  } as TextStyle,
   quantityValueDisabled: {
-    color: colors.stone,
-  },
+    color: colors.textMuted,
+  } as TextStyle,
 
+  subtotalBlock: {
+    alignItems: 'flex-end',
+  } as ViewStyle,
+  subtotalOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 1.4,
+    color: colors.goldMuted,
+    textTransform: 'uppercase',
+  } as TextStyle,
   subtotal: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.terracotta,
-  },
+    color: colors.goldBright,
+    marginTop: 2,
+  } as TextStyle,
   subtotalPlaceholder: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textMuted,
     fontStyle: 'italic',
-  },
+  } as TextStyle,
 });

@@ -1,16 +1,11 @@
 /**
- * EventCard - Carte verticale full-width pour evenement.
+ * EventCard — carte événement premium « Noir & Or ».
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Image hero 180px avec badges superposes (categorie + favori)
- * - Titre semi-bold, date (CalendarDays), lieu (MapPin), heure (Clock)
- * - Organisateur (avatar + nom)
- * - Prix en gold bold + bouton "Reserver" terracotta
- * - Fond blanc, radius 16px, ombre subtile
- * - Press feedback avec Animated natif (pas reanimated)
- *
- * Utilise expo-image (pas React Native Image).
- * Utilise lucide-react-native pour les icones.
+ * - Surface ornée, filet doré subtil, coins 20px
+ * - Image hero avec dégradé sombre de fond
+ * - Badge catégorie verre doré, favori pastille verre
+ * - Titre Playfair, infos avec icônes or tamisées
+ * - Prix or champagne + CTA « Réserver » dégradé or
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,14 +18,10 @@ import {
   type TextStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
-import {
-  Heart,
-  CalendarDays,
-  MapPin,
-  Clock,
-} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Heart, CalendarDays, MapPin, Clock } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows } from '@/lib/constants';
+import { colors, spacing, radius, shadows, gradients } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -62,16 +53,14 @@ interface EventCardProps {
 // Constantes
 // ============================================================
 
-const IMAGE_HEIGHT = 180;
-const FAVORITE_BUTTON_SIZE = 32;
-//const AVATAR_ORGANIZER_SIZE = 24;
+const IMAGE_HEIGHT = 170;
+const FAVORITE_BUTTON_SIZE = 34;
 
 // ============================================================
 // Composant
 // ============================================================
 
 export const EventCard = React.memo(function EventCard({
-  //id,
   title,
   image,
   date,
@@ -80,7 +69,6 @@ export const EventCard = React.memo(function EventCard({
   organizerName,
   organizerAvatar,
   price,
-  //currency = 'FCFA',
   category,
   isFeatured = false,
   isFavorited = false,
@@ -93,12 +81,10 @@ export const EventCard = React.memo(function EventCard({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [favorited, setFavorited] = useState(isFavorited);
 
-  // -- Synchronisation avec la prop (favoris globaux) --
   useEffect(() => {
     setFavorited(isFavorited);
   }, [isFavorited]);
 
-  // -- Press animation --
   const handlePressIn = useCallback(() => {
     if (!onPress) return;
     Animated.spring(scaleAnim, {
@@ -119,11 +105,6 @@ export const EventCard = React.memo(function EventCard({
     }).start();
   }, [onPress, scaleAnim]);
 
-  const handlePress = useCallback(() => {
-    impact('light');
-    onPress?.();
-  }, [impact, onPress]);
-
   const handleFavorite = useCallback(() => {
     setFavorited((prev) => !prev);
     impact('light');
@@ -135,156 +116,33 @@ export const EventCard = React.memo(function EventCard({
     onReserve?.();
   }, [impact, onReserve]);
 
-  // -- Format price (formatage africain : 5 000 F, 15 000 F) --
-  // FCFA abrege en 'F' pour plus de lisibilite
   const formattedPrice = React.useMemo(() => {
     const absPrice = Math.abs(price);
     if (absPrice >= 1000) {
-      // Separateur de milliers style francais : espace insécable
       const formatted = absPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F');
       return `${price < 0 ? '-' : ''}${formatted} F`;
     }
     return `${price} F`;
   }, [price]);
 
-  // -- Styles --
-  const cardStyle: ViewStyle = {
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
-    ...shadows.eventCard,
-  };
-
-  const imageContainerStyle: ViewStyle = {
-    height: IMAGE_HEIGHT,
-    position: 'relative',
-  };
-
-  const imageOverlayStyle: ViewStyle = {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: 'rgba(26,24,22,0.15)',
-  };
-
-  const categoryBadgeStyle: ViewStyle = {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  };
-
-  const favoriteButtonStyle: ViewStyle = {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: FAVORITE_BUTTON_SIZE,
-    height: FAVORITE_BUTTON_SIZE,
-    borderRadius: FAVORITE_BUTTON_SIZE / 2,
-    backgroundColor: 'rgba(26,24,22,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  };
-
-  const contentStyle: ViewStyle = {
-    padding: spacing.md,
-  };
-
-  const titleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 17,
-    lineHeight: 23,
-    color: colors.text,
-    letterSpacing: -0.2,
-    marginBottom: spacing.xs,
-  };
-
-  const detailRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs / 2,
-  };
-
-  const detailTextStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-    marginLeft: spacing.xs,
-  };
-
-  const organizerRowStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  };
-
-  const organizerNameStyle: TextStyle = {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.stone,
-    marginLeft: spacing.sm,
-  };
-
-  const footerStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  };
-
-  const priceContainerStyle: ViewStyle = {
-    flexDirection: 'column',
-  };
-
-  const priceLabelStyle: TextStyle = {
-    fontFamily: 'Inter-Regular',
-    fontSize: 11,
-    lineHeight: 14,
-    color: colors.stone,
-  };
-
-  const priceValueStyle: TextStyle = {
-    fontFamily: 'Inter-Bold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.gold,
-  };
-
-  const reserveButtonStyle: ViewStyle = {
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  };
-
-  const reserveTextStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.white,
-  };
-
   return (
     <Animated.View
-      style={[cardStyle, { transform: [{ scale: scaleAnim }] }]}
+      testID={testID}
+      style={[
+        {
+          backgroundColor: colors.elevated,
+          borderRadius: radius.lg,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: `${colors.gold}1F`,
+          ...shadows.eventCard,
+        },
+        { transform: [{ scale: scaleAnim }] },
+      ]}
     >
-      {/* Image hero avec badges superposes */}
-      <Pressable
-        testID={testID}
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        accessibilityRole="button"
-        accessibilityLabel={`Evenement: ${title}`}
-      >
-        <View style={imageContainerStyle}>
+      <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} accessibilityRole="button" accessibilityLabel={`Événement: ${title}`}>
+        {/* Image hero */}
+        <View style={{ height: IMAGE_HEIGHT, position: 'relative' }}>
           <Image
             source={{ uri: image }}
             style={{ width: '100%', height: IMAGE_HEIGHT }}
@@ -293,111 +151,240 @@ export const EventCard = React.memo(function EventCard({
             cachePolicy="memory-disk"
             accessibilityLabel={`Image de ${title}`}
           />
-          {/* Gradient overlay subtil en bas de l'image */}
-          <View style={imageOverlayStyle} pointerEvents="none" />
+          {/* Dégradé de fond */}
+          <LinearGradient
+            colors={['rgba(10,9,8,0.05)', 'rgba(10,9,8,0.02)', 'rgba(10,9,8,0.5)']}
+            locations={[0, 0.55, 1]}
+            style={StyleAbsoluteFill}
+            pointerEvents="none"
+          />
 
-          {/* Badge categorie */}
-          <View style={categoryBadgeStyle}>
-            <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 12, lineHeight: 16, color: colors.white, letterSpacing: 0.3 }}>
+          {/* Badge catégorie — verre doré */}
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText} numberOfLines={1}>
               {category}
             </Text>
           </View>
 
-          {/* Badge "A la une" si featured */}
+          {/* À la une */}
           {isFeatured && (
-            <View
-              style={{
-                position: 'absolute',
-                top: spacing.sm,
-                left: categoryBadgeStyle.left,
-                marginTop: 24,
-                backgroundColor: colors.gold,
-                borderRadius: radii.sm,
-                paddingHorizontal: spacing.sm,
-                paddingVertical: spacing.xs,
-              }}
-            >
-              <Text style={{ fontFamily: 'Inter-Bold', fontSize: 12, lineHeight: 16, color: colors.onyx, letterSpacing: 0.5 }}>
-                A la une
-              </Text>
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredText}>À la une</Text>
             </View>
           )}
 
-          {/* Bouton favori */}
+          {/* Favori */}
           <Pressable
             onPress={handleFavorite}
-            style={favoriteButtonStyle}
+            style={styles.favoriteButton}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={favorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           >
             <Heart
               size={16}
-              color={favorited ? colors.terracotta : colors.white}
+              color={favorited ? colors.terracotta : colors.text}
               fill={favorited ? colors.terracotta : 'none'}
               strokeWidth={2}
             />
           </Pressable>
         </View>
 
-        {/* Contenu textuel */}
-        <View style={contentStyle}>
-          {/* Titre */}
-          <Text style={titleStyle} numberOfLines={1} ellipsizeMode="tail">
+        {/* Contenu */}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
             {title}
           </Text>
 
-          {/* Date */}
-          <View style={detailRowStyle}>
-            <CalendarDays size={14} color={colors.stone} strokeWidth={1.5} />
-            <Text style={detailTextStyle}>{date}</Text>
+          <View style={styles.detailRow}>
+            <CalendarDays size={14} color={colors.goldMuted} strokeWidth={1.5} />
+            <Text style={styles.detailText}>{date}</Text>
+            <View style={styles.detailDivider} />
+            <Clock size={14} color={colors.goldMuted} strokeWidth={1.5} />
+            <Text style={styles.detailText}>{time}</Text>
           </View>
 
-          {/* Lieu + Heure */}
-          <View style={[detailRowStyle, { justifyContent: 'space-between', flex: 1 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-              <MapPin size={14} color={colors.stone} strokeWidth={1.5} />
-              <Text style={[detailTextStyle, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">
-                {location}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: spacing.md }}>
-              <Clock size={14} color={colors.stone} strokeWidth={1.5} />
-              <Text style={detailTextStyle}>{time}</Text>
-            </View>
+          <View style={styles.detailRow}>
+            <MapPin size={14} color={colors.goldMuted} strokeWidth={1.5} />
+            <Text style={[styles.detailText, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">
+              {location}
+            </Text>
           </View>
 
-          {/* Organisateur */}
-          <View style={organizerRowStyle}>
-            <Avatar
-              source={organizerAvatar}
-              fallback={organizerName}
-              size="sm"
-            />
-            <Text style={organizerNameStyle} numberOfLines={1}>
+          <View style={styles.organizerRow}>
+            <Avatar source={organizerAvatar} fallback={organizerName} size="xs" />
+            <Text style={styles.organizerName} numberOfLines={1}>
               {organizerName}
             </Text>
           </View>
 
-          {/* Footer : Prix + Bouton Reserver */}
-          <View style={footerStyle}>
-            <View style={priceContainerStyle}>
-              <Text style={priceLabelStyle}>A partir de</Text>
-              <Text style={priceValueStyle}>{formattedPrice}</Text>
+          <View style={styles.footer}>
+            <View>
+              <Text style={styles.priceLabel}>À partir de</Text>
+              <Text style={styles.priceValue}>{formattedPrice}</Text>
             </View>
 
-            <Pressable
-              onPress={handleReserve}
-              style={reserveButtonStyle}
-              hitSlop={4}
-              accessibilityRole="button"
-              accessibilityLabel="Reserver"
+            <LinearGradient
+              colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.reserveButton}
             >
-              <Text style={reserveTextStyle}>Reserver</Text>
-            </Pressable>
+              <Pressable onPress={handleReserve} style={styles.reserveInner} hitSlop={4} accessibilityRole="button" accessibilityLabel="Réserver">
+                <Text style={styles.reserveText}>Réserver</Text>
+              </Pressable>
+            </LinearGradient>
           </View>
         </View>
       </Pressable>
     </Animated.View>
   );
 });
+
+// ============================================================
+// Styles
+// ============================================================
+
+const StyleAbsoluteFill: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
+const styles = {
+  categoryBadge: {
+    position: 'absolute',
+    top: spacing.sm + 2,
+    left: spacing.sm + 2,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+    maxWidth: 160,
+  } as ViewStyle,
+  categoryText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldBright,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  featuredBadge: {
+    position: 'absolute',
+    top: spacing.sm + 2,
+    left: spacing.sm + 2,
+    marginTop: 26,
+    backgroundColor: 'rgba(216,180,90,0.9)',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+  } as ViewStyle,
+  featuredText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.onyx,
+    letterSpacing: 0.6,
+  } as TextStyle,
+  favoriteButton: {
+    position: 'absolute',
+    top: spacing.sm + 2,
+    right: spacing.sm + 2,
+    width: FAVORITE_BUTTON_SIZE,
+    height: FAVORITE_BUTTON_SIZE,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(10,9,8,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  content: {
+    padding: spacing.md,
+  } as ViewStyle,
+  title: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.text,
+    letterSpacing: -0.2,
+    marginBottom: spacing.sm,
+  } as TextStyle,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+    gap: 5,
+  } as ViewStyle,
+  detailDivider: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.textFaint,
+    marginHorizontal: spacing.sm,
+  } as ViewStyle,
+  detailText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  } as TextStyle,
+  organizerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  } as ViewStyle,
+  organizerName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textMuted,
+    marginLeft: spacing.sm,
+  } as TextStyle,
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  } as ViewStyle,
+  priceLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.textMuted,
+    letterSpacing: 0.4,
+  } as TextStyle,
+  priceValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    lineHeight: 22,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
+  } as TextStyle,
+  reserveButton: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    shadowColor: 'rgba(216,180,90,0.45)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  } as ViewStyle,
+  reserveInner: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  reserveText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.onyx,
+    letterSpacing: 0.4,
+  } as TextStyle,
+} as const;

@@ -1,20 +1,11 @@
 /**
- * NotificationsPanel - Panneau de notifications glissant depuis le haut.
+ * NotificationsPanel — panneau de notifications « Noir & Or ».
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Fond sable avec overlay semi-transparent
- * - Entete "Notifications" en PlayfairDisplay-Bold
- * - Items avec icone, titre, description, date
- * - Badge non lu (point terracotta)
+ * - Panneau glissant sombre : surface ornée, coins arrondis bas, filet doré
+ * - Entête Playfair avec « Tout lire » ghost doré + fermeture pastille verre
+ * - Items : médaillon icône verre + titre ivoire + description tamisée + heure
+ * - Non-lu : filet latéral or + point doré
  * - Fermeture par tap sur overlay ou bouton
- * - Bouton "Tout marquer comme lu"
- *
- * Conventions :
- * - expo-image pour les images
- * - lucide-react-native pour les icones
- * - Animated natif (pas reanimated)
- * - Pas de type any, pas d'emojis
- * - Design tokens depuis lib/constants.ts
  */
 
 import React, {
@@ -47,7 +38,8 @@ import {
   CheckCheck,
 } from 'lucide-react-native';
 
-import { colors, spacing, radii, shadows, typography } from '@/lib/constants';
+import { colors, spacing, radius, shadows, typography } from '@/lib/constants';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // ============================================================
 // Types
@@ -132,15 +124,24 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
 ];
 
 // ============================================================
-// Icone par type
+// Icone par type — couleurs sémantiques sur fond sombre
 // ============================================================
 
+const TYPE_ICON_COLOR: Record<NotificationType, string> = {
+  favorite: colors.terracotta,
+  event_reminder: colors.info,
+  ticket: colors.goldBright,
+  trending: colors.goldBright,
+  price_drop: colors.warning,
+  event_update: colors.info,
+};
+
 function getNotificationIcon(type: NotificationType): React.ReactNode {
-  const iconSize = 16;
-  const iconColor = colors.white;
+  const iconSize = 15;
+  const iconColor = TYPE_ICON_COLOR[type];
   switch (type) {
     case 'favorite':
-      return <Heart size={iconSize} color={iconColor} fill={colors.terracotta} strokeWidth={2} />;
+      return <Heart size={iconSize} color={iconColor} fill={iconColor} strokeWidth={2} />;
     case 'event_reminder':
       return <CalendarDays size={iconSize} color={iconColor} strokeWidth={2} />;
     case 'ticket':
@@ -148,7 +149,7 @@ function getNotificationIcon(type: NotificationType): React.ReactNode {
     case 'trending':
       return <TrendingUp size={iconSize} color={iconColor} strokeWidth={2} />;
     case 'price_drop':
-      return <TrendingUp size={iconSize} color={colors.white} style={{ transform: [{ rotate: '180deg' }] }} strokeWidth={2} />;
+      return <TrendingUp size={iconSize} color={iconColor} style={{ transform: [{ rotate: '180deg' }] }} strokeWidth={2} />;
     case 'event_update':
       return <CalendarDays size={iconSize} color={iconColor} strokeWidth={2} />;
     default:
@@ -159,19 +160,19 @@ function getNotificationIcon(type: NotificationType): React.ReactNode {
 function getNotificationIconBg(type: NotificationType): string {
   switch (type) {
     case 'favorite':
-      return colors.terracotta;
+      return 'rgba(201,96,63,0.16)';
     case 'event_reminder':
-      return colors.forest;
+      return 'rgba(127,167,206,0.14)';
     case 'ticket':
-      return colors.indigo;
+      return 'rgba(216,180,90,0.14)';
     case 'trending':
-      return colors.gold;
+      return 'rgba(216,180,90,0.14)';
     case 'price_drop':
-      return colors.mango;
+      return 'rgba(232,182,76,0.14)';
     case 'event_update':
-      return colors.forest;
+      return 'rgba(127,167,206,0.14)';
     default:
-      return colors.stone;
+      return 'rgba(255,255,255,0.06)';
   }
 }
 
@@ -181,7 +182,7 @@ function getNotificationIconBg(type: NotificationType): string {
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const PANEL_HEIGHT = SCREEN_HEIGHT * 0.75;
-const ITEM_IMAGE_SIZE = 48;
+const ITEM_IMAGE_SIZE = 42;
 const ICON_CONTAINER_SIZE = 40;
 
 // ============================================================
@@ -228,7 +229,7 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
           useNativeDriver: true,
         }),
         Animated.timing(overlayAnim, {
-          toValue: 0.4,
+          toValue: 0.5,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -270,134 +271,6 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
     );
   }, []);
 
-  const headerTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 22,
-    color: colors.onyx,
-    letterSpacing: -0.5,
-  };
-
-  const markAllButtonStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-  };
-
-  const markAllTextStyle: TextStyle = {
-    fontFamily: 'Inter-Medium',
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.terracotta,
-    fontStyle: 'italic',
-  };
-
-  const closeButtonStyle: ViewStyle = {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.ivory,
-    justifyContent: 'center',
-    alignItems: 'center',
-  };
-
-  const scrollContentStyle: ViewStyle = {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxxl,
-  };
-
-  const emptyStateStyle: ViewStyle = {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    paddingHorizontal: spacing.xl,
-  };
-
-  const emptyTitleStyle: TextStyle = {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 18,
-    color: colors.onyx,
-    marginTop: spacing.lg,
-  };
-
-  const emptyDescStyle: TextStyle = {
-    ...typography.bodySmall,
-    color: colors.stone,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  };
-
-  const notificationItemStyle: ViewStyle = {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.card,
-  };
-
-  const unreadItemStyle: ViewStyle = {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.terracotta,
-  };
-
-  const imageStyle: ImageStyle = {
-    width: ITEM_IMAGE_SIZE,
-    height: ITEM_IMAGE_SIZE,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-  };
-
-  const iconContainerStyle = (type: NotificationType): ViewStyle => ({
-    width: ICON_CONTAINER_SIZE,
-    height: ICON_CONTAINER_SIZE,
-    borderRadius: ICON_CONTAINER_SIZE / 2,
-    backgroundColor: getNotificationIconBg(type),
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  });
-
-  const contentStyle: ViewStyle = {
-    flex: 1,
-    marginLeft: spacing.md,
-  };
-
-  const titleStyle: TextStyle = {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.onyx,
-    marginBottom: spacing.xs / 2,
-  };
-
-  const descriptionStyle: TextStyle = {
-    ...typography.caption,
-    color: colors.stone,
-    lineHeight: 18,
-    marginBottom: spacing.xs,
-  };
-
-  const dateStyle: TextStyle = {
-    ...typography.overline,
-    color: colors.muted,
-    fontSize: 10,
-  };
-
-  const unreadDotStyle: ViewStyle = {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.terracotta,
-    position: 'absolute',
-    top: 12,
-    right: 12,
-  };
-
   if (!visible) return null;
 
   return (
@@ -408,55 +281,46 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
       </Animated.View>
 
       {/* Panel */}
-      <Animated.View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: PANEL_HEIGHT,
-        backgroundColor: colors.sand,
-        borderBottomLeftRadius: radii.xxl,
-        borderBottomRightRadius: radii.xxl,
-        shadowColor: colors.onyx,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
-        elevation: 8,
-        transform: [{ translateY: slideAnim }],
-      }}>
+      <Animated.View style={[styles.panel, { transform: [{ translateY: slideAnim }] }]}>
+        <LinearGradient
+          colors={[colors.elevated, colors.surface]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.panelGradient}
+          pointerEvents="none"
+        />
+        <View pointerEvents="none" style={styles.panelGlow} />
+        <View pointerEvents="none" style={styles.panelRing} />
+
         {/* Header */}
-        <View style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingHorizontal: spacing.lg,
-          paddingTop: insets.top + spacing.md,
-          paddingBottom: spacing.md,
-          borderBottomWidth: 1,
-          borderBottomColor: `${colors.stone}15`,
-        }}>
-          <Text style={headerTitleStyle}>Notifications</Text>
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+          <View style={styles.headerTitleBlock}>
+            <Text style={styles.headerOverline}>CENTRE DE NOTIFICATIONS</Text>
+            <Text style={styles.headerTitle}>Notifications</Text>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             {/* Bouton tout marquer comme lu */}
             {unreadCount > 0 && (
               <Pressable
                 onPress={handleMarkAllRead}
-                style={markAllButtonStyle}
+                style={styles.markAllButton}
+                hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Tout marquer comme lu"
               >
-                <CheckCheck size={15} color={colors.terracotta} strokeWidth={2} />
-                <Text style={markAllTextStyle}>Tout lire</Text>
+                <CheckCheck size={14} color={colors.goldBright} strokeWidth={2} />
+                <Text style={styles.markAllText}>Tout lire</Text>
               </Pressable>
             )}
 
             <Pressable
-              style={closeButtonStyle}
+              style={styles.closeButton}
               onPress={onClose}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Fermer les notifications"
             >
-              <X size={18} color={colors.onyx} strokeWidth={1.5} />
+              <X size={18} color={colors.goldBright} strokeWidth={1.75} />
             </Pressable>
           </View>
         </View>
@@ -464,16 +328,16 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
         {/* Scroll */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={scrollContentStyle}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {notifications.length === 0 ? (
-            <View style={emptyStateStyle}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: `${colors.terracotta}10`, justifyContent: 'center', alignItems: 'center' }}>
-                <Bell size={28} color={colors.terracotta} strokeWidth={1.5} />
+            <View style={styles.emptyState}>
+              <View style={styles.emptyMedallion}>
+                <Bell size={26} color={colors.goldMuted} strokeWidth={1.5} />
               </View>
-              <Text style={emptyTitleStyle}>Aucune notification</Text>
-              <Text style={emptyDescStyle}>
+              <Text style={styles.emptyTitle}>Aucune notification</Text>
+              <Text style={styles.emptyDesc}>
                 Vos alertes pour les evenements favoris, rappels et mises a jour apparaitront ici.
               </Text>
             </View>
@@ -482,57 +346,262 @@ export const NotificationsPanel = React.memo(function NotificationsPanel({
               <Pressable
                 key={notification.id}
                 style={[
-                  notificationItemStyle,
-                  !notification.isRead ? unreadItemStyle : undefined,
+                  styles.item,
+                  !notification.isRead ? styles.itemUnread : undefined,
                 ]}
                 onPress={() => handleNotificationPress(notification)}
               >
-                {/* Image */}
-                {notification.image ? (
-                  <View style={iconContainerStyle(notification.type)}>
-                    <Image
-                      source={{ uri: notification.image }}
-                      style={imageStyle}
-                      contentFit="cover"
-                      transition={300}
-                      cachePolicy="memory-disk"
-                    />
-                    <View style={{
-                      position: 'absolute',
-                      bottom: -2,
-                      right: -2,
-                      width: 20,
-                      height: 20,
-                      borderRadius: 10,
-                      backgroundColor: getNotificationIconBg(notification.type),
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      borderWidth: 2,
-                      borderColor: colors.white,
-                    }}>
-                      {getNotificationIcon(notification.type)}
-                    </View>
-                  </View>
-                ) : (
-                  <View style={iconContainerStyle(notification.type)}>
-                    {getNotificationIcon(notification.type)}
-                  </View>
-                )}
+                {/* Médaillon icône verre */}
+                <View style={[styles.iconContainer, { backgroundColor: getNotificationIconBg(notification.type) }]}>
+                  {notification.image ? (
+                    <>
+                      <Image
+                        source={{ uri: notification.image }}
+                        style={styles.itemImage}
+                        contentFit="cover"
+                        transition={300}
+                        cachePolicy="memory-disk"
+                      />
+                      <View
+                        style={[
+                          styles.iconMini,
+                          { backgroundColor: 'rgba(14,12,10,0.92)' },
+                        ]}
+                      >
+                        {getNotificationIcon(notification.type)}
+                      </View>
+                    </>
+                  ) : (
+                    getNotificationIcon(notification.type)
+                  )}
+                </View>
 
                 {/* Contenu */}
-                <View style={contentStyle}>
-                  <Text style={titleStyle} numberOfLines={2}>{notification.title}</Text>
-                  <Text style={descriptionStyle} numberOfLines={2}>{notification.description}</Text>
-                  <Text style={dateStyle}>{notification.date}</Text>
+                <View style={styles.itemContent}>
+                  <Text style={styles.itemTitle} numberOfLines={2}>{notification.title}</Text>
+                  <Text style={styles.itemDescription} numberOfLines={2}>{notification.description}</Text>
+                  <Text style={styles.itemDate}>{notification.date}</Text>
                 </View>
 
                 {/* Point non lu */}
-                {!notification.isRead && <View style={unreadDotStyle} pointerEvents="none" />}
+                {!notification.isRead && <View style={styles.unreadDot} pointerEvents="none" />}
               </Pressable>
             ))
           )}
+
+          {/* Espace bas */}
+          <View style={{ height: insets.bottom + spacing.lg }} />
         </ScrollView>
       </Animated.View>
     </View>
   );
 });
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = {
+  panel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: PANEL_HEIGHT,
+    backgroundColor: colors.elevated,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: `${colors.gold}30`,
+    shadowColor: colors.onyx,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 12,
+    overflow: 'hidden',
+  } as ViewStyle,
+  panelGradient: {
+    ...StyleSheet.absoluteFillObject,
+  } as ViewStyle,
+  panelGlow: {
+    position: 'absolute',
+    top: -110,
+    right: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(216,180,90,0.07)',
+  } as ViewStyle,
+  panelRing: {
+    position: 'absolute',
+    top: -80,
+    right: -30,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}26`,
+  } as ViewStyle,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: `${colors.gold}1F`,
+  } as ViewStyle,
+  headerTitleBlock: {
+    flex: 1,
+  } as ViewStyle,
+  headerOverline: {
+    ...typography.overline,
+    color: colors.goldMuted,
+    marginBottom: 2,
+  } as TextStyle,
+  headerTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.text,
+    letterSpacing: -0.3,
+  } as TextStyle,
+  markAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  } as ViewStyle,
+  markAllText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.goldBright,
+  } as TextStyle,
+  closeButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as ViewStyle,
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  } as ViewStyle,
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: spacing.xl,
+  } as ViewStyle,
+  emptyMedallion: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.glassGold,
+    borderWidth: 1,
+    borderColor: colors.borderGold,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.goldGlowSoft,
+  } as ViewStyle,
+  emptyTitle: {
+    fontFamily: 'PlayfairDisplay_600SemiBold',
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.text,
+    marginTop: spacing.lg,
+  } as TextStyle,
+  emptyDesc: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  } as TextStyle,
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glass,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  } as ViewStyle,
+  itemUnread: {
+    backgroundColor: 'rgba(216,180,90,0.06)',
+    borderColor: `${colors.gold}30`,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.gold,
+  } as ViewStyle,
+  itemImage: {
+    width: ITEM_IMAGE_SIZE,
+    height: ITEM_IMAGE_SIZE,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  } as ImageStyle,
+  iconContainer: {
+    width: ICON_CONTAINER_SIZE,
+    height: ICON_CONTAINER_SIZE,
+    borderRadius: ICON_CONTAINER_SIZE / 2,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  } as ViewStyle,
+  iconMini: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
+  } as ViewStyle,
+  itemContent: {
+    flex: 1,
+    marginLeft: spacing.md,
+  } as ViewStyle,
+  itemTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+    marginBottom: 2,
+  } as TextStyle,
+  itemDescription: {
+    ...typography.caption,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginBottom: spacing.xs,
+  } as TextStyle,
+  itemDate: {
+    ...typography.overline,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.goldMuted,
+  } as TextStyle,
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gold,
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+  } as ViewStyle,
+} as const;

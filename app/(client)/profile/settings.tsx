@@ -1,11 +1,12 @@
 /**
  * Parametres — notifications, securite et informations.
  *
- * Design :
- * - Header partage via components/profile/ScreenHeader
- * - Interrupteurs personnalises (motif or/foret) avec haptics
+ * Design « Noir & Or » :
+ * - Header partage via components/profile/ScreenHeader (degrade noir + halo)
+ * - Sections avec titres overline dorés + cartes verre fumé
+ * - Interrupteurs personnalises : piste or champagne quand actif
  * - Reset de mot de passe fonctionnel (email envoye via authService)
- * - Carte A propos avec version de l'application
+ * - Modal sombre premium, Carte A propos avec version de l'application
  *
  * Conventions :
  * - Toutes les couleurs viennent de lib/constants.ts
@@ -35,7 +36,8 @@ import {
 } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
+import { colors, typography, spacing, radius, shadows } from '@/lib/constants';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthService } from '@/services/auth.service';
@@ -48,7 +50,6 @@ interface SettingToggle {
   readonly label: string;
   readonly helper: string;
   readonly icon: ReactNode;
-  readonly accent: string;
   readonly defaultValue: boolean;
 }
 
@@ -58,7 +59,6 @@ const NOTIFICATION_SETTINGS: readonly SettingToggle[] = [
     label: 'Notifications push',
     helper: 'Alertes importantes de l\'application',
     icon: <Bell size={19} color={colors.terracotta} strokeWidth={1.75} />,
-    accent: `${colors.terracotta}12`,
     defaultValue: true,
   },
   {
@@ -66,15 +66,13 @@ const NOTIFICATION_SETTINGS: readonly SettingToggle[] = [
     label: 'Rappels evenements',
     helper: 'Avant vos evenements reserves',
     icon: <CalendarClock size={19} color={colors.forest} strokeWidth={1.75} />,
-    accent: `${colors.forest}12`,
     defaultValue: true,
   },
   {
     id: 'offers',
     label: 'Offres et nouveautes',
     helper: 'Recommandations et avant-premieres',
-    icon: <Sparkles size={19} color={colors.goldDark} strokeWidth={1.75} />,
-    accent: `${colors.goldDark}12`,
+    icon: <Sparkles size={19} color={colors.gold} strokeWidth={1.75} />,
     defaultValue: false,
   },
 ];
@@ -83,15 +81,9 @@ const NOTIFICATION_SETTINGS: readonly SettingToggle[] = [
 // Sous-composants
 // ============================================================
 
-function RowIcon({
-  icon,
-  accent,
-}: {
-  readonly icon: ReactNode;
-  readonly accent: string;
-}) {
+function RowIcon({ icon }: { readonly icon: ReactNode }) {
   return (
-    <View style={[styles.rowIcon, { backgroundColor: accent }]}>
+    <View style={styles.rowIcon}>
       {icon}
     </View>
   );
@@ -117,15 +109,22 @@ function Toggle({
       <View
         style={[
           styles.toggleTrack,
-          { backgroundColor: value ? colors.forest : `${colors.stone}2E` },
+          value
+            ? { backgroundColor: colors.gold, borderColor: `${colors.goldBright}66` }
+            : { backgroundColor: 'rgba(255,255,255,0.14)', borderColor: colors.borderStrong },
         ]}
       >
         {value ? (
           <View style={styles.toggleOnMark}>
-            <Check size={12} color={colors.sand} strokeWidth={3} />
+            <Check size={12} color={colors.onyx} strokeWidth={3} />
           </View>
         ) : null}
-        <View style={[styles.toggleThumb, value ? { right: 2 } : { left: 2 }]} />
+        <View
+          style={[
+            styles.toggleThumb,
+            value ? { right: 2, backgroundColor: colors.onyx } : { left: 2, backgroundColor: colors.textSecondary },
+          ]}
+        />
       </View>
     </Pressable>
   );
@@ -194,7 +193,7 @@ export default function ProfileSettingsScreen() {
 
         {resetMessage ? (
           <View style={styles.successBanner}>
-            <ShieldCheck size={16} color={colors.forest} strokeWidth={1.75} />
+            <ShieldCheck size={16} color={colors.success} strokeWidth={1.75} />
             <Text style={styles.successText}>{resetMessage}</Text>
           </View>
         ) : null}
@@ -213,7 +212,7 @@ export default function ProfileSettingsScreen() {
                   index < NOTIFICATION_SETTINGS.length - 1 ? styles.rowBorder : null,
                 ]}
               >
-                <RowIcon icon={setting.icon} accent={setting.accent} />
+                <RowIcon icon={setting.icon} />
                 <View style={styles.rowTextBlock}>
                   <Text style={styles.rowLabel}>{setting.label}</Text>
                   <Text style={styles.rowHelper}>{setting.helper}</Text>
@@ -245,19 +244,17 @@ export default function ProfileSettingsScreen() {
             >
               <RowIcon
                 icon={<KeyRound size={19} color={colors.terracotta} strokeWidth={1.75} />}
-                accent={`${colors.terracotta}12`}
               />
               <View style={styles.rowTextBlock}>
                 <Text style={styles.rowLabel}>Reinitialiser le mot de passe</Text>
                 <Text style={styles.rowHelper}>Recevez un email de reinitialisation</Text>
               </View>
-              <ChevronRight size={18} color={`${colors.stone}70`} strokeWidth={1.5} />
+              <ChevronRight size={18} color={colors.goldMuted} strokeWidth={1.5} />
             </Pressable>
 
             <View style={styles.row}>
               <RowIcon
-                icon={<ShieldCheck size={19} color={colors.forest} strokeWidth={1.75} />}
-                accent={`${colors.forest}12`}
+                icon={<ShieldCheck size={19} color={colors.success} strokeWidth={1.75} />}
               />
               <View style={styles.rowTextBlock}>
                 <Text style={styles.rowLabel}>Compte protege</Text>
@@ -280,8 +277,7 @@ export default function ProfileSettingsScreen() {
           <View style={styles.menuCard}>
             <View style={[styles.row, styles.rowBorder]}>
               <RowIcon
-                icon={<Info size={19} color={colors.goldDark} strokeWidth={1.75} />}
-                accent={`${colors.goldDark}12`}
+                icon={<Info size={19} color={colors.gold} strokeWidth={1.75} />}
               />
               <View style={styles.rowTextBlock}>
                 <Text style={styles.rowLabel}>Version de l'application</Text>
@@ -320,17 +316,17 @@ export default function ProfileSettingsScreen() {
               verifier votre boite de reception.
             </Text>
 
-            <Pressable
-              style={styles.modalConfirmButton}
-              onPress={handleResetPassword}
-              disabled={isResettingPassword}
-              accessibilityRole="button"
-              accessibilityLabel="Envoyer le lien"
-            >
-              <Text style={styles.modalConfirmText}>
+            <View style={styles.modalConfirmWrap}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isResettingPassword}
+                onPress={handleResetPassword}
+              >
                 {isResettingPassword ? 'Envoi en cours...' : 'Envoyer le lien'}
-              </Text>
-            </Pressable>
+              </Button>
+            </View>
 
             <Pressable
               style={styles.modalCancel}
@@ -354,42 +350,43 @@ export default function ProfileSettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.sand,
+    backgroundColor: colors.background,
   },
   section: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.stone,
-    letterSpacing: 1.6,
+    ...typography.overline,
+    color: colors.goldMuted,
     marginBottom: spacing.sm + 2,
     marginLeft: spacing.xs,
   },
   menuCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.glass,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: `${colors.border}60`,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.card,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 2,
+    paddingVertical: spacing.sm + 2,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: `${colors.stone}18`,
+    borderBottomColor: colors.divider,
   },
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -399,36 +396,38 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   rowLabel: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 15,
     lineHeight: 21,
-    color: colors.onyx,
+    color: colors.text,
   },
   rowHelper: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 17,
-    color: colors.stone,
+    color: colors.textMuted,
     marginTop: 1,
   },
   securityBadge: {
-    backgroundColor: `${colors.forest}12`,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 4,
   },
   securityBadgeText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 9,
     lineHeight: 12,
-    color: colors.forest,
+    color: colors.goldBright,
     letterSpacing: 1.2,
   },
   versionText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
 
   // Toggle
@@ -436,6 +435,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 26,
     borderRadius: 13,
+    borderWidth: 1,
     justifyContent: 'center',
   },
   toggleThumb: {
@@ -443,10 +443,10 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.white,
+    backgroundColor: colors.onyx,
     shadowColor: colors.onyx,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -463,32 +463,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.lg,
     marginHorizontal: spacing.lg,
-    backgroundColor: `${colors.forest}10`,
+    backgroundColor: 'rgba(91,196,139,0.10)',
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: `${colors.forest}25`,
+    borderColor: 'rgba(91,196,139,0.35)',
   },
   successText: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 13,
     lineHeight: 19,
-    color: colors.forest,
+    color: colors.success,
     marginLeft: spacing.sm,
   },
 
   // Modal
   modalBackdrop: {
     flex: 1,
-    backgroundColor: `${colors.onyx}66`,
+    backgroundColor: `${colors.onyx}8A`,
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: colors.sand,
+    backgroundColor: colors.elevated,
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
     paddingBottom: spacing.xl,
   },
   modalGrabber: {
@@ -496,7 +499,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: `${colors.stone}30`,
+    backgroundColor: `${colors.goldMuted}55`,
     marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -505,43 +508,37 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radius.lg,
-    backgroundColor: `${colors.terracotta}12`,
+    backgroundColor: 'rgba(201,96,63,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(201,96,63,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
   modalTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 20,
     lineHeight: 26,
-    color: colors.onyx,
+    color: colors.text,
     marginBottom: spacing.sm,
     textAlign: 'center',
     letterSpacing: -0.3,
   },
   modalDescription: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 22,
-    color: colors.stone,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
     letterSpacing: 0.2,
   },
   modalEmail: {
-    fontFamily: 'Inter-SemiBold',
-    color: colors.onyx,
+    fontFamily: 'Inter_600SemiBold',
+    color: colors.goldBright,
   },
-  modalConfirmButton: {
-    backgroundColor: colors.terracotta,
-    borderRadius: radius.lg,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalConfirmText: {
-    ...typography.button,
-    color: colors.sand,
+  modalConfirmWrap: {
+    alignSelf: 'stretch',
   },
   modalCancel: {
     alignItems: 'center',
@@ -549,7 +546,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   modalCancelText: {
-    ...typography.body,
-    color: colors.stone,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
   },
 });

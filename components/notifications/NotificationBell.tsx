@@ -1,17 +1,10 @@
 /**
- * NotificationBell - Icone de notification avec badge compteur.
+ * NotificationBell — cloche de notifications « Noir & Or ».
  *
- * Design "Minimalisme Africain Camerounais" :
- * - Cloche (Bell) lucide avec contour fin
- * - Badge rouge (danger) avec compteur si > 0
- * - Animation de rebond quand le compteur change
- * - Press feedback haptique
- *
- * Conventions :
- * - lucide-react-native pour les icones
- * - Animated natif (pas reanimated)
- * - Pas de type any, pas d'emojis
- * - Design tokens depuis lib/constants.ts
+ * - Pastille verre fumé avec filet hairline
+ * - Cloche or : passive goldMuted, active goldBright
+ * - Badge compteur : pilule dégradé or avec texte onyx
+ * - Animation de rebond quand le compteur augmente (Animated natif)
  */
 
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -25,7 +18,7 @@ import {
 } from 'react-native';
 import { Bell } from 'lucide-react-native';
 
-import { colors, typography } from '@/lib/constants';
+import { colors, radius, typography } from '@/lib/constants';
 
 // ============================================================
 // Types
@@ -41,7 +34,7 @@ interface NotificationBellProps {
 // Constantes
 // ============================================================
 
-const BELL_SIZE = 22;
+const BELL_SIZE = 20;
 const BADGE_SIZE = 18;
 const MAX_DISPLAY_COUNT = 99;
 
@@ -87,27 +80,38 @@ export const NotificationBell = React.memo(function NotificationBell({
   const containerStyle: ViewStyle = {
     width: 44,
     height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   };
 
   const badgeContainerStyle: ViewStyle = {
     position: 'absolute',
-    top: 6,
-    right: 4,
+    top: -3,
+    right: -3,
     minWidth: BADGE_SIZE,
     height: BADGE_SIZE,
     borderRadius: BADGE_SIZE / 2,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.gold,
+    borderWidth: 1.5,
+    borderColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    shadowColor: 'rgba(216,180,90,0.6)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 4,
   };
 
   const badgeTextStyle: TextStyle = {
     ...typography.overline,
-    color: colors.white,
-    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    color: colors.onyx,
     fontSize: 9,
     lineHeight: BADGE_SIZE - 2,
   };
@@ -125,8 +129,8 @@ export const NotificationBell = React.memo(function NotificationBell({
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <Bell
           size={BELL_SIZE}
-          color={count > 0 ? colors.onyx : colors.stone}
-          strokeWidth={1.5}
+          color={count > 0 ? colors.goldBright : colors.goldMuted}
+          strokeWidth={1.75}
         />
       </Animated.View>
 

@@ -1,16 +1,15 @@
 /**
  * Page "Mes billets" - Espace client.
  *
- * Design ultra-premium inspire de Apple Wallet :
- * - Header premium avec titre elegant + compteur actif
- * - Onglets filtre : Tous / Valides / Utilises / Expires
- * - Barre de contexte dediee : compteur d'evenements + bascule
- *   LISTE / GRILLE (segmentee, distincte du bouton unique de l'explore)
+ * Design « Noir & Or » premium :
+ * - En-tête sur fond noir profond, titre Playfair, compteur actif doré
+ * - Onglets filtre segmés pastille verre : actif dégradé or + texte noir
+ * - Barre de contexte : compteur + bascule LISTE / GRILLE (dégradé or)
  * - Billets REGROUPES PAR EVENEMENT : une seule carte par evenement
- * - Mode LISTE (defaut) : carte compacte "ticket" avec liseret de
- *   statut colore, vignette cercelee d'or, chips gammes, total or
+ * - Mode LISTE : carte ticket élevée avec liseret de statut, vignette
+ *   cercelee d'or, chips gammes, liseret perfore avec losange or
  * - Mode GRILLE : cartes 2 colonnes avec cover + pied de statut colore
- * - Etat vide elegant avec illustration et CTA
+ * - Etat vide premium (médaille verre doré + halo), skeleton au chargement
  *
  * Navigation :
  * - Tap sur une carte → billets de l'evenement (tickets/event/[eventId])
@@ -24,7 +23,7 @@
  * - StyleSheet pour les styles
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -52,7 +51,9 @@ import QualityPremiumIcon from '@/assets/icons/quality-premium.svg';
 import QualityVipIcon from '@/assets/icons/quality-VIP.svg';
 import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 
-import { colors, spacing, radii, shadows, ROUTES } from '@/lib/constants';
+import { colors, spacing, radius, gradients, shadows, ROUTES } from '@/lib/constants';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice, formatDate } from '@/services/event.service';
 import { useTicketsStore } from '@/stores/tickets-store';
@@ -69,7 +70,7 @@ type ViewMode = 'list' | 'grid';
 interface FilterTab {
   readonly key: TicketFilter;
   readonly label: string;
-  readonly icon: React.ReactNode;
+  readonly icon: (color: string) => React.ReactNode;
 }
 
 /** Groupe de billets pour un meme evenement */
@@ -115,45 +116,21 @@ function getGroupStatus(tickets: readonly PurchasedTicket[]): TicketStatus {
 }
 
 /**
- * Configuration du badge statut.
+ * Configuration du badge statut — pastille pill avec point indicateur.
+ * Valide success, Utilisé textSecondary, Expiré danger, En attente warning.
  */
-function getStatusConfig(status: string): { color: string; bg: string; label: string; icon: React.ReactNode } {
+function getStatusConfig(status: string): { color: string; bg: string; label: string } {
   switch (status) {
     case 'valid':
-      return {
-        color: colors.forest,
-        bg: `${colors.forest}15`,
-        label: 'Valide',
-        icon: <CircleCheck size={11} color={colors.forest} strokeWidth={2.5} />,
-      };
+      return { color: colors.success, bg: 'rgba(91,196,139,0.12)', label: 'Valide' };
     case 'used':
-      return {
-        color: colors.stone,
-        bg: `${colors.stone}15`,
-        label: 'Utilise',
-        icon: <CircleX size={11} color={colors.stone} strokeWidth={2.5} />,
-      };
+      return { color: colors.textSecondary, bg: 'rgba(181,172,156,0.12)', label: 'Utilise' };
     case 'expired':
-      return {
-        color: colors.danger,
-        bg: `${colors.danger}15`,
-        label: 'Expire',
-        icon: <CircleX size={11} color={colors.danger} strokeWidth={2.5} />,
-      };
+      return { color: colors.danger, bg: 'rgba(255,107,94,0.12)', label: 'Expire' };
     case 'pending':
-      return {
-        color: colors.mango,
-        bg: `${colors.mango}15`,
-        label: 'En attente',
-        icon: <Clock size={11} color={colors.mango} strokeWidth={2.5} />,
-      };
+      return { color: colors.warning, bg: 'rgba(232,182,76,0.12)', label: 'En attente' };
     default:
-      return {
-        color: colors.stone,
-        bg: `${colors.stone}15`,
-        label: status,
-        icon: <CircleCheck size={11} color={colors.stone} strokeWidth={2.5} />,
-      };
+      return { color: colors.textSecondary, bg: 'rgba(181,172,156,0.12)', label: status };
   }
 }
 
@@ -196,11 +173,13 @@ function StatusPill({ status, floating = false }: { status: TicketStatus; floati
       style={[
         styles.statusPill,
         floating && styles.statusPillFloating,
-        { backgroundColor: floating ? 'rgba(255,255,255,0.94)' : config.bg },
-        floating && { borderColor: `${config.color}33` },
+        {
+          backgroundColor: floating ? 'rgba(10,9,8,0.68)' : config.bg,
+          borderColor: floating ? `${config.color}45` : `${colors.gold}26`,
+        },
       ]}
     >
-      {config.icon}
+      <View style={[styles.statusDot, { backgroundColor: config.color }]} />
       <Text style={[styles.statusPillText, { color: config.color }]}>{config.label}</Text>
     </View>
   );
@@ -238,14 +217,14 @@ function TierChips({ tickets }: { tickets: readonly PurchasedTicket[] }) {
  */
 function EventThumb({
   cover,
-  size = 68,
+  size = 64,
   outerStyle,
 }: {
   cover: string | null;
   size?: number;
   outerStyle?: { marginLeft?: number; marginVertical?: number };
 }) {
-  const style = { width: size, height: size, borderRadius: size / 3 };
+  const style = { width: size, height: size, borderRadius: radius.md };
   if (cover) {
     return (
       <Image
@@ -259,7 +238,7 @@ function EventThumb({
   }
   return (
     <View style={[style, styles.thumbPlaceholder, styles.thumbRing, outerStyle]}>
-      <Ticket size={size * 0.34} color={colors.stone} strokeWidth={1.2} />
+      <Ticket size={size * 0.34} color={colors.goldMuted} strokeWidth={1.5} />
     </View>
   );
 }
@@ -305,7 +284,7 @@ function ListGroupCard({
 
             {meta && (
               <View style={styles.listMetaRow}>
-                <CalendarDays size={11} color={colors.terracotta} strokeWidth={1.5} />
+                <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.5} />
                 <Text style={styles.listMetaText} numberOfLines={1}>
                   {meta}
                 </Text>
@@ -330,7 +309,7 @@ function ListGroupCard({
           </Text>
           <Text style={styles.listTotal}>{formatPrice(group.totalAmount)}</Text>
           <View style={styles.listChevron}>
-            <ChevronRight size={15} color={colors.stone} strokeWidth={2} />
+            <ChevronRight size={15} color={colors.goldMuted} strokeWidth={1.75} />
           </View>
         </View>
       </View>
@@ -372,14 +351,14 @@ function GridGroupCard({
               cachePolicy="memory-disk"
             />
             <LinearGradient
-              colors={['rgba(26,24,22,0)', 'rgba(26,24,22,0.45)']}
+              colors={['rgba(10,9,8,0)', 'rgba(10,9,8,0.55)']}
               style={styles.gridCoverOverlay}
               pointerEvents="none"
             />
           </>
         ) : (
           <View style={styles.gridCoverPlaceholder}>
-            <Ticket size={24} color={colors.stone} strokeWidth={1.2} />
+            <Ticket size={24} color={colors.goldMuted} strokeWidth={1.5} />
           </View>
         )}
         <StatusPill status={group.status} floating />
@@ -420,12 +399,32 @@ function GridGroupCard({
   );
 }
 
+/**
+ * Squelette de carte pendant le chargement initial.
+ */
+function TicketListSkeleton() {
+  return (
+    <View>
+      {[0, 1, 2].map((key) => (
+        <View key={key} style={styles.skeletonCard}>
+          <Skeleton width={84} height={84} radius={radius.md} />
+          <View style={styles.skeletonBody}>
+            <Skeleton width="72%" height={18} radius={8} />
+            <Skeleton width="92%" height={12} radius={6} style={{ marginTop: spacing.sm }} />
+            <Skeleton width="55%" height={12} radius={6} style={{ marginTop: spacing.sm }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ============================================================
 // Styles
 // ============================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.sand },
+  root: { flex: 1, backgroundColor: colors.background },
 
   /* Header premium */
   header: {
@@ -440,17 +439,34 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   headerTitle: {
-    fontFamily: 'PlayfairDisplay-Bold',
+    fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 28,
     lineHeight: 36,
-    color: colors.onyx,
-    letterSpacing: -0.3,
+    color: colors.text,
+    letterSpacing: -0.4,
   },
   headerSubtitle: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: colors.stone,
+    color: colors.textMuted,
+  },
+  headerCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+  },
+  headerCountText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.goldBright,
   },
 
   /* Onglets filtre */
@@ -464,40 +480,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.sm + 2,
-    borderRadius: radii.full,
-    backgroundColor: colors.white,
+    borderRadius: radius.full,
+    backgroundColor: colors.glass,
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.xs,
   },
   tabActive: {
-    backgroundColor: colors.terracotta,
-    borderColor: colors.terracotta,
+    borderWidth: 0,
+    overflow: 'hidden',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  tabGradientFill: {
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.full,
   },
   tabText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   tabTextActive: {
-    color: colors.white,
+    color: colors.onyx,
   },
   tabCount: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
-    backgroundColor: colors.ivory,
-    borderRadius: radii.sm,
+    color: colors.textMuted,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.xs + 1,
     paddingVertical: 1,
     minWidth: 18,
     textAlign: 'center',
   },
   tabCountActive: {
-    color: colors.terracotta,
-    backgroundColor: `${colors.white}30`,
+    color: colors.onyx,
+    backgroundColor: 'rgba(10,9,8,0.25)',
   },
 
   /* Barre de contexte : compteur + toggle LISTE / GRILLE */
@@ -509,32 +535,40 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   contextCount: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
     lineHeight: 18,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   contextHairline: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: colors.divider,
   },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.ivory,
-    borderRadius: radii.full,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
     padding: 3,
   },
   viewToggleBtn: {
     width: 36,
     height: 32,
-    borderRadius: radii.full,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
   viewToggleBtnActive: {
-    backgroundColor: colors.white,
-    ...shadows.card,
+    overflow: 'hidden',
+  },
+  viewToggleFill: {
+    width: 36,
+    height: 32,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   /* Contenu */
@@ -542,16 +576,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
 
+  /* --- Skeleton --- */
+  skeletonCard: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    ...shadows.card,
+  },
+  skeletonBody: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+
   /* --- Carte LISTE (compacte, type ticket) --- */
   listCard: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}40`,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    ...shadows.eventCard,
+    ...shadows.card,
   },
   cardPressed: {
     opacity: 0.88,
@@ -559,7 +610,7 @@ const styles = StyleSheet.create({
   },
   listAccent: {
     alignSelf: 'stretch',
-    width: 4,
+    width: 3,
   },
   listColumn: {
     flex: 1,
@@ -573,11 +624,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   thumbRing: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: `${colors.gold}45`,
   },
   thumbPlaceholder: {
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -592,10 +643,10 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     flex: 1,
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
   },
   listMetaRow: {
@@ -606,10 +657,10 @@ const styles = StyleSheet.create({
   },
   listMetaText: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   listFooterRow: {
     flexDirection: 'row',
@@ -619,22 +670,25 @@ const styles = StyleSheet.create({
   },
   listQuantity: {
     flex: 1,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   listTotal: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.gold,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.goldBright,
+    letterSpacing: 0.2,
   },
   listChevron: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.ivory,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -643,24 +697,29 @@ const styles = StyleSheet.create({
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.full,
+    borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    gap: 3,
+    paddingVertical: 3,
+    gap: 5,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusPillFloating: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    borderWidth: 1,
-    shadowColor: colors.onyx,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
   },
   statusPillText: {
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
     letterSpacing: 0.2,
@@ -675,21 +734,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   chip: {
-    borderRadius: radii.md,
+    borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
   },
   chipText: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 10,
     lineHeight: 14,
     flexShrink: 1,
   },
   chipMore: {
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.glass,
   },
   chipMoreText: {
-    color: colors.stone,
+    color: colors.textSecondary,
   },
 
   /* --- Liseret perfore partage (liste + grille) --- */
@@ -703,7 +762,7 @@ const styles = StyleSheet.create({
     height: 1,
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: `${colors.onyx}22`,
+    borderColor: `${colors.gold}35`,
   },
   perfDiamond: {
     width: 6,
@@ -721,18 +780,18 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     width: '48.5%',
-    backgroundColor: colors.white,
-    borderRadius: radii.xl,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}40`,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    ...shadows.eventCard,
+    ...shadows.card,
   },
   gridCover: {
     height: 100,
     position: 'relative',
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.surfaceAlt,
   },
   gridCoverImage: {
     width: '100%',
@@ -748,7 +807,7 @@ const styles = StyleSheet.create({
   gridCoverPlaceholder: {
     width: '100%',
     height: 100,
-    backgroundColor: colors.ivory,
+    backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -757,18 +816,18 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   gridTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
+    fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 15,
     lineHeight: 20,
-    color: colors.onyx,
+    color: colors.text,
     letterSpacing: -0.2,
     marginBottom: 2,
   },
   gridMeta: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 12,
     lineHeight: 16,
-    color: colors.stone,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
   gridFooterRow: {
@@ -779,68 +838,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   gridQuantity: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 11,
     lineHeight: 15,
-    color: colors.stone,
+    color: colors.textSecondary,
   },
   gridTotal: {
-    fontFamily: 'PlayfairDisplay-Bold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.gold,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.goldBright,
   },
   gridAccent: {
     height: 3,
-  },
-
-  /* Etat vide premium */
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl * 2,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyIconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: `${colors.terracotta}12`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontFamily: 'PlayfairDisplay-SemiBold',
-    fontSize: 20,
-    lineHeight: 26,
-    color: colors.onyx,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.stone,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  emptyCtaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.terracotta,
-    borderRadius: radii.xl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md + 2,
-    gap: spacing.sm,
-    ...shadows.card,
-  },
-  emptyCtaText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.white,
   },
 });
 
@@ -856,6 +866,13 @@ export default function TicketsList() {
 
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  // -- Skeleton au chargement initial (purement visuel) --
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   // -- Regroupement des billets par evenement --
   const groups = useMemo<TicketGroup[]>(() => {
@@ -968,10 +985,10 @@ export default function TicketsList() {
 
   // -- Onglets avec compteurs --
   const filterTabs: readonly FilterTab[] = useMemo(() => [
-    { key: 'all', label: 'Tous', icon: <Ticket size={14} color={colors.stone} strokeWidth={1.5} /> },
-    { key: 'valid', label: 'Valides', icon: <CircleCheck size={14} color={colors.stone} strokeWidth={1.5} /> },
-    { key: 'used', label: 'Utilises', icon: <CircleX size={14} color={colors.stone} strokeWidth={1.5} /> },
-    { key: 'expired', label: 'Expires', icon: <Clock size={14} color={colors.stone} strokeWidth={1.5} /> },
+    { key: 'all', label: 'Tous', icon: (c: string) => <Ticket size={14} color={c} strokeWidth={1.75} /> },
+    { key: 'valid', label: 'Valides', icon: (c: string) => <CircleCheck size={14} color={c} strokeWidth={1.75} /> },
+    { key: 'used', label: 'Utilises', icon: (c: string) => <CircleX size={14} color={c} strokeWidth={1.75} /> },
+    { key: 'expired', label: 'Expires', icon: (c: string) => <Clock size={14} color={c} strokeWidth={1.75} /> },
   ], []);
 
   const getCountForFilter = useCallback((key: TicketFilter): number => {
@@ -1002,9 +1019,9 @@ export default function TicketsList() {
           <View style={styles.headerTopRow}>
             <Text style={styles.headerTitle}>Mes billets</Text>
             {tickets.length > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Sparkles size={16} color={colors.gold} strokeWidth={1.5} />
-                <Text style={{ fontFamily: 'Inter-SemiBold', fontSize: 13, lineHeight: 18, color: colors.gold }}>
+              <View style={styles.headerCountPill}>
+                <Sparkles size={14} color={colors.gold} strokeWidth={1.75} />
+                <Text style={styles.headerCountText}>
                   {activeTicketCount} actif{activeTicketCount > 1 ? 's' : ''}
                 </Text>
               </View>
@@ -1034,12 +1051,30 @@ export default function TicketsList() {
                 accessibilityRole="button"
                 accessibilityLabel={tab.label}
               >
-                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                  {tab.label}
-                </Text>
-                <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>
-                  {count}
-                </Text>
+                {isActive ? (
+                  <LinearGradient
+                    colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.tabGradientFill}
+                  >
+                    <View style={styles.tabRow}>
+                      {tab.icon(colors.onyx)}
+                      <Text style={[styles.tabText, styles.tabTextActive]}>
+                        {tab.label}
+                      </Text>
+                      <Text style={[styles.tabCount, styles.tabCountActive]}>
+                        {count}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.tabRow}>
+                    {tab.icon(colors.textSecondary)}
+                    <Text style={styles.tabText}>{tab.label}</Text>
+                    <Text style={styles.tabCount}>{count}</Text>
+                  </View>
+                )}
               </Pressable>
             );
           })}
@@ -1060,11 +1095,18 @@ export default function TicketsList() {
               accessibilityState={{ selected: viewMode === 'list' }}
               hitSlop={4}
             >
-              <Rows3
-                size={16}
-                color={viewMode === 'list' ? colors.onyx : colors.stone}
-                strokeWidth={2}
-              />
+              {viewMode === 'list' ? (
+                <LinearGradient
+                  colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.viewToggleFill}
+                >
+                  <Rows3 size={16} color={colors.onyx} strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <Rows3 size={16} color={colors.textSecondary} strokeWidth={2} />
+              )}
             </Pressable>
             <Pressable
               onPress={() => handleToggleMode('grid')}
@@ -1074,45 +1116,43 @@ export default function TicketsList() {
               accessibilityState={{ selected: viewMode === 'grid' }}
               hitSlop={4}
             >
-              <LayoutGrid
-                size={16}
-                color={viewMode === 'grid' ? colors.onyx : colors.stone}
-                strokeWidth={2}
-              />
+              {viewMode === 'grid' ? (
+                <LinearGradient
+                  colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.viewToggleFill}
+                >
+                  <LayoutGrid size={16} color={colors.onyx} strokeWidth={2} />
+                </LinearGradient>
+              ) : (
+                <LayoutGrid size={16} color={colors.textSecondary} strokeWidth={2} />
+              )}
             </Pressable>
           </View>
         </View>
 
         {/* Liste des groupes (evenements) */}
         <View style={styles.content}>
-          {filteredGroups.length === 0 ? (
+          {isLoading ? (
+            <TicketListSkeleton />
+          ) : filteredGroups.length === 0 ? (
             /* Etat vide premium */
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconWrap}>
-                <Ticket size={40} color={colors.terracotta} strokeWidth={1.5} />
-              </View>
-              <Text style={styles.emptyTitle}>
-                {groups.length === 0
+            <EmptyState
+              icon={<Ticket size={36} color={colors.gold} strokeWidth={1.5} />}
+              title={
+                groups.length === 0
                   ? 'Aucun billet pour le moment'
-                  : 'Aucun billet dans cette categorie'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {groups.length === 0
+                  : 'Aucun billet dans cette categorie'
+              }
+              description={
+                groups.length === 0
                   ? 'Reservez des billets lors de vos prochains evenements et retrouvez-les ici.'
-                  : 'Changez de filtre pour voir vos autres billets.'}
-              </Text>
-              {groups.length === 0 && (
-                <Pressable
-                  onPress={handleExplore}
-                  style={styles.emptyCtaButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Explorer les evenements"
-                >
-                  <Text style={styles.emptyCtaText}>Explorer les evenements</Text>
-                  <ChevronRight size={18} color={colors.white} strokeWidth={2} />
-                </Pressable>
-              )}
-            </View>
+                  : 'Changez de filtre pour voir vos autres billets.'
+              }
+              actionLabel={groups.length === 0 ? 'Explorer les evenements' : undefined}
+              onAction={groups.length === 0 ? handleExplore : undefined}
+            />
           ) : (
             <View style={viewMode === 'grid' ? styles.gridContainer : undefined}>
               {filteredGroups.map((group) =>
