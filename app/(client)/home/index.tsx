@@ -307,8 +307,7 @@ export default function HomeScreen() {
   };
 
   const venuesScrollContainerStyle: ViewStyle = {
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.xl,
+    marginHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   };
 
@@ -499,7 +498,7 @@ export default function HomeScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={venuesScrollContainerStyle}
-          contentContainerStyle={{ paddingRight: spacing.xl, gap: spacing.md }}
+          contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.md }}
         >
           {MOCK_VENUES.map((venue) => (
             <VenueCard
