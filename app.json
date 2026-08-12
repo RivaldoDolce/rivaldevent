@@ -6,25 +6,25 @@
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "scheme": "rivaldevent",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#F7F4ED"
+      "backgroundColor": "#0A0908"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rivaldevent.app",
-      "backgroundColor": "#F7F4ED"
+      "backgroundColor": "#0A0908"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.png",
-        "backgroundColor": "#F7F4ED"
+        "backgroundColor": "#0A0908"
       },
       "package": "com.rivaldevent.app",
-      "backgroundColor": "#F7F4ED"
+      "backgroundColor": "#0A0908"
     },
     "web": {
       "bundler": "metro",
