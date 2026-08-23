@@ -32,6 +32,7 @@ import {
   ScrollView,
   Pressable,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
   StyleSheet,
 } from 'react-native';
@@ -59,6 +60,7 @@ import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { Button } from '@/components/ui/Button';
 
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { getTierQualityInfo } from '@/lib/tier-quality';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useOffline } from '@/hooks/useOffline';
@@ -158,6 +160,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
 
   /* Contenu */
@@ -674,11 +682,23 @@ export default function PaymentIndex() {
   // ============================================================
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={clientBackgrounds.payment}
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={insets.top}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
     >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top}
+      >
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -692,6 +712,7 @@ export default function PaymentIndex() {
         <ScreenHeader
           title="Paiement"
           subtitle="Choisissez votre operateur Mobile Money"
+          background={clientBackgrounds.payment}
         />
 
         <View style={styles.content}>
@@ -953,5 +974,6 @@ export default function PaymentIndex() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }

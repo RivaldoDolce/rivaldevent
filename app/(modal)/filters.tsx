@@ -27,8 +27,11 @@ import {
   Text,
   ScrollView,
   Pressable,
+  ImageBackground,
+  StyleSheet,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -43,6 +46,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 
 import { colors, spacing, radius, gradients, shadows } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -161,7 +165,18 @@ export default function FiltersScreen() {
   );
 
   return (
-    <View style={screenStyle}>
+    <ImageBackground
+      source={clientBackgrounds.modalFilters}
+      style={screenStyle}
+      imageStyle={bgImageStyle}
+      accessibilityIgnoresInvertColors
+    >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+        style={bgScrimStyle}
+        pointerEvents="none"
+      />
       {/* Halo dore haut */}
       <LinearGradient
         pointerEvents="none"
@@ -207,7 +222,7 @@ export default function FiltersScreen() {
       </View>
 
       <ScrollView
-        style={screenStyle}
+        style={scrollBodyStyle}
         contentContainerStyle={scrollContentStyle}
         showsVerticalScrollIndicator={false}
       >
@@ -311,7 +326,7 @@ export default function FiltersScreen() {
           Appliquer les filtres
         </Button>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -322,6 +337,18 @@ export default function FiltersScreen() {
 const screenStyle: ViewStyle = {
   flex: 1,
   backgroundColor: colors.background,
+};
+
+const bgImageStyle: ImageStyle = {
+  ...StyleSheet.absoluteFillObject,
+};
+
+const bgScrimStyle: ViewStyle = {
+  ...StyleSheet.absoluteFillObject,
+};
+
+const scrollBodyStyle: ViewStyle = {
+  flex: 1,
 };
 
 const haloStyle: ViewStyle = {

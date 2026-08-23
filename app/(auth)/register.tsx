@@ -20,8 +20,10 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -37,6 +39,7 @@ import { DateInput } from '@/components/ui/DateInput';
 import { Logo } from '@/components/icons/Logo';
 import { SocialButtons, type SocialProvider } from '@/components/auth/SocialButtons';
 import { colors, typography, spacing, radius, shadows, ROUTES } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
@@ -152,11 +155,23 @@ export default function RegisterScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <ImageBackground
+      source={authBackgrounds.register}
+      style={styles.bgScreen}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
     >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { flexGrow: 1, paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
@@ -394,13 +409,24 @@ export default function RegisterScreen() {
 
       </ScrollView>
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  bgScreen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   content: {
     paddingHorizontal: spacing.lg,

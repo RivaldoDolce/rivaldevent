@@ -44,6 +44,7 @@ import { DateInput } from '@/components/ui/DateInput';
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { CATEGORIES } from '@/data/mock';
 import { colors, typography, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { sellerBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSellerStore, type NewSellerEventInput } from '@/stores/seller-store';
 
@@ -184,6 +185,7 @@ export default function SellerSellScreen() {
         <ScreenHeader
           title="Creer un evenement"
           subtitle="Mettez votre billetterie en ligne"
+          background={sellerBackgrounds.sellHeader}
         />
 
         {/* ============================================

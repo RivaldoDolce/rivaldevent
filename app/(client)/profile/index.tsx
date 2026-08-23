@@ -22,6 +22,7 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
+  ImageBackground,
   type ViewStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -52,6 +53,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { colors, gradients, spacing, radius, typography, shadows, ROUTES } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Types & données statiques
@@ -206,11 +208,22 @@ export default function ClientProfileScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <ImageBackground
+      source={clientBackgrounds.profil}
+      style={styles.screen}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
+    >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
       <StatusBar style="light" backgroundColor={colors.background} />
 
       <ScrollView
-        style={styles.screen}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -449,7 +462,7 @@ export default function ClientProfileScreen() {
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -461,6 +474,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  scroll: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: 120,

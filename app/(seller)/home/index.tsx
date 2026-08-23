@@ -20,6 +20,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  ImageBackground,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -39,6 +40,7 @@ import {
 
 import { Avatar } from '@/components/ui/Avatar';
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { sellerBackgrounds } from '@/lib/images';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -154,6 +156,18 @@ export default function SellerHomeScreen() {
           end={{ x: 0.9, y: 1 }}
           style={styles.walletCard}
         >
+          {/* Fond hero + voile */}
+          <ImageBackground
+            source={sellerBackgrounds.accueilHero}
+            style={styles.heroBg}
+            imageStyle={styles.heroBgImage}
+            accessibilityIgnoresInvertColors
+          />
+          <LinearGradient
+            colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+            style={styles.heroScrim}
+            pointerEvents="none"
+          />
           <View pointerEvents="none" style={styles.walletGlow} />
           <View pointerEvents="none" style={styles.walletRingLarge} />
           <View pointerEvents="none" style={styles.walletRingSmall} />
@@ -350,6 +364,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.gold}2E`,
     ...shadows.eventCard,
+  },
+  heroBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   walletGlow: {
     position: 'absolute',

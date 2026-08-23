@@ -26,6 +26,8 @@ import {
   Pressable,
   TextInput,
   Dimensions,
+  ImageBackground,
+  StyleSheet,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -48,6 +50,7 @@ import {
 } from 'lucide-react-native';
 
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
@@ -442,6 +445,20 @@ export default function ExploreScreen() {
           (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
           ============================================= */}
       <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+        {/* Image de fond banniere explore */}
+        <ImageBackground
+          source={clientBackgrounds.exploreHero}
+          style={headerBgStyle}
+          imageStyle={headerBgImageStyle}
+          accessibilityIgnoresInvertColors
+        />
+        {/* Voile dégradé pour la lisibilité */}
+        <LinearGradient
+          colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+          style={headerScrimStyle}
+          pointerEvents="none"
+        />
+
         {/* Titre serif + sous-titre */}
         <View style={titleBlockStyle}>
           <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
@@ -680,12 +697,27 @@ const styles: { divider: ViewStyle } = {
 };
 
 const stickyHeaderStyle: ViewStyle = {
-  backgroundColor: colors.background,
+  backgroundColor: 'transparent',
   paddingHorizontal: spacing.lg,
   paddingBottom: spacing.sm,
   borderBottomWidth: 1,
   borderBottomColor: `${colors.gold}1F`,
+  borderBottomLeftRadius: radius.xxl,
+  borderBottomRightRadius: radius.xxl,
+  overflow: 'hidden',
   // Pas de zIndex probleme car hors du ScrollView
+};
+
+const headerBgStyle: ViewStyle = {
+  ...StyleSheet.absoluteFillObject,
+};
+
+const headerBgImageStyle: ImageStyle = {
+  ...StyleSheet.absoluteFillObject,
+};
+
+const headerScrimStyle: ViewStyle = {
+  ...StyleSheet.absoluteFillObject,
 };
 
 const titleBlockStyle: ViewStyle = {

@@ -21,8 +21,10 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -33,6 +35,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/icons/Logo';
 import { colors, typography, spacing, radius, shadows } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import {
@@ -178,13 +181,25 @@ export default function ForgotPasswordScreen() {
   const { title, subtitle } = renderStepTitle();
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={authBackgrounds.forgot}
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
     >
-      <ScrollView
-        style={styles.screen}
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+<KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.body}
         contentContainerStyle={{
           flexGrow: 1,
           paddingTop: insets.top + spacing.md,
@@ -383,6 +398,7 @@ export default function ForgotPasswordScreen() {
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
@@ -390,6 +406,15 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  body: {
+    flex: 1,
   },
   glowTop: {
     position: 'absolute',

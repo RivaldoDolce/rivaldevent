@@ -27,6 +27,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
+  ImageBackground,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -35,6 +36,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, ShieldCheck } from 'lucide-react-native';
 
 import { colors, spacing, radius, shadows } from '@/lib/constants';
+import { sellerBackgrounds } from '@/lib/images';
 import { Logo } from '@/components/icons/Logo';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice } from '@/services/event.service';
@@ -91,7 +93,18 @@ export default function QRFullscreen() {
   // -- Si billet non trouve ou pas de QR --
   if (!ticket || !ticket.qr_code) {
     return (
-      <View style={styles.root}>
+      <ImageBackground
+        source={sellerBackgrounds.qrFullscreen}
+        style={styles.root}
+        imageStyle={styles.bgImage}
+        accessibilityIgnoresInvertColors
+      >
+        {/* Voile plein ecran */}
+        <LinearGradient
+          colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+          style={styles.bgScrim}
+          pointerEvents="none"
+        />
         <LinearGradient
           pointerEvents="none"
           colors={['rgba(216,180,90,0.10)', 'rgba(216,180,90,0.02)', 'transparent']}
@@ -114,7 +127,7 @@ export default function QRFullscreen() {
           </View>
           <Text style={styles.errorText}>QR code non disponible</Text>
         </View>
-      </View>
+      </ImageBackground>
     );
   }
 
@@ -122,7 +135,19 @@ export default function QRFullscreen() {
   const tierName = ticket.tier?.name ?? 'Billet';
 
   return (
-    <View style={styles.root}>
+    <ImageBackground
+      source={sellerBackgrounds.qrFullscreen}
+      style={styles.root}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
+    >
+      {/* Voile plein ecran */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+
       {/* Halo dore subtil */}
       <LinearGradient
         pointerEvents="none"
@@ -194,7 +219,7 @@ export default function QRFullscreen() {
           </Text>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -206,6 +231,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
 
   halo: {

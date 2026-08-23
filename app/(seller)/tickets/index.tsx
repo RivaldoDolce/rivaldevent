@@ -19,6 +19,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  ImageBackground,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -36,6 +37,7 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { sellerBackgrounds } from '@/lib/images';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -110,6 +112,9 @@ export default function SellerTicketsScreen() {
     paddingHorizontal: spacing.lg,
     paddingTop: insets.top + spacing.md,
     paddingBottom: spacing.sm,
+    overflow: 'hidden',
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   };
 
   const headerTitleStyle: TextStyle = {
@@ -131,6 +136,18 @@ export default function SellerTicketsScreen() {
             1. HEADER
             ============================================ */}
         <View style={headerStyle}>
+          {/* Fond hero header + voile */}
+          <ImageBackground
+            source={sellerBackgrounds.headerGeneric}
+            style={styles.headerBg}
+            imageStyle={styles.headerBgImage}
+            accessibilityIgnoresInvertColors
+          />
+          <LinearGradient
+            colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+            style={styles.headerScrim}
+            pointerEvents="none"
+          />
           <View>
             <Text style={headerTitleStyle}>Mes ventes</Text>
             <Text style={styles.headerCount}>
@@ -220,11 +237,25 @@ export default function SellerTicketsScreen() {
             4. LISTE DES VENTES
             ============================================ */}
         {filteredSales.length === 0 ? (
-          <EmptyState
-            icon={<ScanLine size={34} color={colors.gold} strokeWidth={1.25} />}
-            title="Aucune vente ici"
-            description="Les billets vendus apparaitront ici des le premier paiement."
-          />
+          <View style={styles.emptyStateWrap}>
+            {/* Fond etat vide + voile */}
+            <ImageBackground
+              source={sellerBackgrounds.emptyState}
+              style={styles.emptyStateBg}
+              imageStyle={styles.emptyStateBgImage}
+              accessibilityIgnoresInvertColors
+            />
+            <LinearGradient
+              colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+              style={styles.emptyStateScrim}
+              pointerEvents="none"
+            />
+            <EmptyState
+              icon={<ScanLine size={34} color={colors.gold} strokeWidth={1.25} />}
+              title="Aucune vente ici"
+              description="Les billets vendus apparaitront ici des le premier paiement."
+            />
+          </View>
         ) : (
           <View style={styles.list}>
             {filteredSales.map((sale) => (
@@ -324,6 +355,29 @@ function SaleRow({ sale }: { readonly sale: MockSellerSale }) {
 // ============================================================
 
 const styles = StyleSheet.create({
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateWrap: {
+    position: 'relative',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  emptyStateBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
   headerCount: {
     fontFamily: 'Inter_400Regular',
     fontSize: 13,

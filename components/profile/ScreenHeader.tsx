@@ -10,7 +10,7 @@
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ImageBackground, type ImageSourcePropType } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { useHaptics } from '@/hooks/useHaptics';
@@ -19,9 +19,11 @@ import { colors, spacing, radius } from '@/lib/constants';
 interface ScreenHeaderProps {
   readonly title: string;
   readonly subtitle?: string;
+  /** Image de fond hero (RECETTE B) : inseree en premier enfant du degrade avec voile. */
+  readonly background?: ImageSourcePropType;
 }
 
-export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, background }: ScreenHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { impact } = useHaptics();
@@ -33,6 +35,22 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
       end={{ x: 0.9, y: 1 }}
       style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
     >
+      {background ? (
+        <>
+          {/* Fond hero + voile */}
+          <ImageBackground
+            source={background}
+            style={styles.headerBg}
+            imageStyle={styles.headerBgImage}
+            accessibilityIgnoresInvertColors
+          />
+          <LinearGradient
+            colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+            style={styles.headerScrim}
+            pointerEvents="none"
+          />
+        </>
+      ) : null}
       <View pointerEvents="none" style={styles.glowLarge} />
       <View pointerEvents="none" style={styles.ringLarge} />
       <View pointerEvents="none" style={styles.ringSmall} />
@@ -75,6 +93,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderBottomWidth: 1,
     borderBottomColor: `${colors.gold}26`,
+  },
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   glowLarge: {
     position: 'absolute',

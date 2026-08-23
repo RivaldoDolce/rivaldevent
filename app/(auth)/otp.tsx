@@ -24,10 +24,12 @@ import {
   StyleSheet,
   TextInput,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
   useWindowDimensions,
   type TextInputKeyPressEvent,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowRight, ChevronLeft } from 'lucide-react-native';
@@ -35,6 +37,7 @@ import { ArrowRight, ChevronLeft } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
 import { colors, radius, spacing, typography, APP_CONFIG } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 
@@ -166,7 +169,19 @@ export default function OtpScreen() {
       : 'envoye a votre numero';
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={authBackgrounds.otp}
+      style={styles.container}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
+    >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+
       {/* Halo doré discret en haut */}
       <View pointerEvents="none" style={styles.glowTop} />
       <View pointerEvents="none" style={styles.ringDeco} />
@@ -299,7 +314,7 @@ export default function OtpScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -308,6 +323,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     overflow: 'hidden',
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   glowTop: {
     position: 'absolute',

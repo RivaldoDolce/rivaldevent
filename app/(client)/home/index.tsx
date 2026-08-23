@@ -24,6 +24,8 @@ import {
   Text,
   ScrollView,
   Pressable,
+  ImageBackground,
+  StyleSheet,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -39,6 +41,7 @@ import SportIcon from '@/assets/icons/sport.svg';
 import TheatreIcon from '@/assets/icons/theatre.svg';
 
 import { colors, spacing, radius, shadows, gradients, typography, ROUTES } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl';
@@ -209,6 +212,20 @@ export default function HomeScreen() {
           end={{ x: 0, y: 1 }}
           style={styles.hero}
         >
+          {/* Image de fond hero */}
+          <ImageBackground
+            source={clientBackgrounds.homeHero}
+            style={styles.heroBg}
+            imageStyle={styles.heroBgImage}
+            accessibilityIgnoresInvertColors
+          />
+          {/* Voile dégradé pour la lisibilité */}
+          <LinearGradient
+            colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+            style={styles.heroScrim}
+            pointerEvents="none"
+          />
+
           {/* Halo doré + anneaux décoratifs */}
           <View pointerEvents="none" style={styles.heroGlow} />
           <View pointerEvents="none" style={styles.heroRingLarge} />
@@ -472,6 +489,15 @@ export default function HomeScreen() {
 
 const styles = {
   // -- Hero --
+  heroBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
   hero: {
     overflow: 'hidden',
     borderBottomLeftRadius: radius.xxl,

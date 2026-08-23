@@ -20,6 +20,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  ImageBackground,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -40,6 +41,7 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
+import { sellerBackgrounds } from '@/lib/images';
 import { formatFCFA, formatShortDate } from '@/lib/format';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -103,6 +105,9 @@ export default function SellerExploreScreen() {
     paddingHorizontal: spacing.lg,
     paddingTop: insets.top + spacing.md,
     paddingBottom: spacing.sm,
+    overflow: 'hidden',
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
   };
 
   const headerTitleStyle: TextStyle = {
@@ -124,6 +129,18 @@ export default function SellerExploreScreen() {
             1. HEADER
             ============================================ */}
         <View style={headerStyle}>
+          {/* Fond hero header + voile */}
+          <ImageBackground
+            source={sellerBackgrounds.headerGeneric}
+            style={styles.headerBg}
+            imageStyle={styles.headerBgImage}
+            accessibilityIgnoresInvertColors
+          />
+          <LinearGradient
+            colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
+            style={styles.headerScrim}
+            pointerEvents="none"
+          />
           <View style={styles.headerTitleBlock}>
             <Text style={headerTitleStyle} numberOfLines={1}>
               Mes evenements
@@ -247,13 +264,27 @@ export default function SellerExploreScreen() {
             4. CONTENU (grille ou liste)
             ============================================ */}
         {filteredEvents.length === 0 ? (
-          <EmptyState
-            icon={<CalendarDays size={34} color={colors.gold} strokeWidth={1.25} />}
-            title="Aucun evenement ici"
-            description="Creez votre premier evenement pour lancer votre billetterie."
-            actionLabel="Creer un evenement"
-            onAction={handleCreate}
-          />
+          <View style={styles.emptyStateWrap}>
+            {/* Fond etat vide + voile */}
+            <ImageBackground
+              source={sellerBackgrounds.emptyState}
+              style={styles.emptyStateBg}
+              imageStyle={styles.emptyStateBgImage}
+              accessibilityIgnoresInvertColors
+            />
+            <LinearGradient
+              colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+              style={styles.emptyStateScrim}
+              pointerEvents="none"
+            />
+            <EmptyState
+              icon={<CalendarDays size={34} color={colors.gold} strokeWidth={1.25} />}
+              title="Aucun evenement ici"
+              description="Creez votre premier evenement pour lancer votre billetterie."
+              actionLabel="Creer un evenement"
+              onAction={handleCreate}
+            />
+          </View>
         ) : viewMode === 'grid' ? (
           <View style={styles.grid}>
             {filteredEvents.map((event) => (
@@ -449,6 +480,29 @@ function EventGridCard({ event }: { readonly event: MockSellerEvent }) {
 // ============================================================
 
 const styles = StyleSheet.create({
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateWrap: {
+    position: 'relative',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  emptyStateBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateBgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  emptyStateScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
   headerTitleBlock: {
     flex: 1,
     marginRight: spacing.md,

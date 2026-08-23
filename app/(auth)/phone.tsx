@@ -19,8 +19,10 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
@@ -31,6 +33,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/icons/Logo';
 import { colors, radius, spacing, typography, shadows, ROUTES } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import { phoneLoginSchema, type PhoneLoginInput } from '@/lib/validation';
@@ -86,11 +89,23 @@ export default function PhoneLoginScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={authBackgrounds.phone}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
     >
+      {/* Voile dégradé pour la lisibilité */}
+      <LinearGradient
+        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
       {/* Halo doré discret en haut */}
       <View pointerEvents="none" style={styles.glowTop} />
       <View pointerEvents="none" style={styles.ringDeco} />
@@ -174,6 +189,7 @@ export default function PhoneLoginScreen() {
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
@@ -182,6 +198,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     overflow: 'hidden',
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
   },
   glowTop: {
     position: 'absolute',
