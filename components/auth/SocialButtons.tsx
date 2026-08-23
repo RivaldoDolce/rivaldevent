@@ -73,11 +73,11 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.16)',
     borderRadius: radius.lg,
     minHeight: 52,
     height: 52,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(30,26,22,0.88)',
     alignItems: 'center',
     position: 'relative',
   },

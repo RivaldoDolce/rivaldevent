@@ -202,11 +202,12 @@ export default function LoginScreen() {
       source={authBackgrounds.login}
       style={styles.bgScreen}
       imageStyle={styles.bgImage}
+      blurRadius={18}
       accessibilityIgnoresInvertColors
     >
       {/* Voile dégradé pour la lisibilité */}
       <LinearGradient
-        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        colors={['rgba(10,9,8,0.62)', 'rgba(10,9,8,0.90)']}
         style={styles.bgScrim}
         pointerEvents="none"
       />
@@ -499,10 +500,10 @@ const styles = StyleSheet.create({
   alternativeButton: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.16)',
     borderRadius: radius.lg,
     minHeight: 52,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(30,26,22,0.88)',
     marginTop: spacing.sm,
     alignItems: 'center',
     position: 'relative',

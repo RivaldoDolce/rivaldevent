@@ -204,11 +204,12 @@ export default function SellerProfileScreen() {
       source={sellerBackgrounds.profil}
       style={styles.screen}
       imageStyle={styles.bgImage}
+      blurRadius={14}
       accessibilityIgnoresInvertColors
     >
       {/* Voile plein ecran */}
       <LinearGradient
-        colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
+        colors={['rgba(10,9,8,0.62)', 'rgba(10,9,8,0.90)']}
         style={styles.bgScrim}
         pointerEvents="none"
       />
@@ -675,10 +676,10 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   menuCard: {
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(30,26,22,0.88)',
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.16)',
     overflow: 'hidden',
     ...shadows.card,
   },
@@ -701,9 +702,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
