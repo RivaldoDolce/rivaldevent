@@ -100,7 +100,7 @@ export const Input = React.memo(function Input({
     borderColor,
     borderWidth: 1,
     borderRadius: radius.md,
-    backgroundColor: colors.glass,
+    backgroundColor: editable ? 'rgba(30,26,22,0.92)' : 'rgba(30,26,22,0.55)',
     paddingHorizontal: spacing.md,
     minHeight: 56,
     flexDirection: 'row',

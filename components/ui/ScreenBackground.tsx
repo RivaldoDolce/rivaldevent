@@ -11,9 +11,9 @@ interface ScreenBackgroundProps {
 }
 
 const SCRIM: Record<string, readonly [string, string]> = {
-  light: ['rgba(10,9,8,0.32)', 'rgba(10,9,8,0.68)'],
-  medium: ['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)'],
-  strong: ['rgba(10,9,8,0.72)', 'rgba(10,9,8,0.94)'],
+  light: ['rgba(10,9,8,0.48)', 'rgba(10,9,8,0.78)'],
+  medium: ['rgba(10,9,8,0.62)', 'rgba(10,9,8,0.90)'],
+  strong: ['rgba(10,9,8,0.76)', 'rgba(10,9,8,0.96)'],
 };
 
 export function ScreenBackground({ children, scrimOpacity = 'medium' }: ScreenBackgroundProps) {
