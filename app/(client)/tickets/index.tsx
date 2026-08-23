@@ -58,6 +58,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice, formatDate } from '@/services/event.service';
 import { useTicketsStore } from '@/stores/tickets-store';
 import type { PurchasedTicket, TicketEventSummary } from '@/stores/tickets-store';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Types
@@ -427,7 +428,7 @@ function TicketListSkeleton() {
 // ============================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: 'transparent' },
 
   /* Header premium */
   header: {
@@ -1020,7 +1021,7 @@ export default function TicketsList() {
   // ============================================================
 
   return (
-    <View style={styles.root}>
+    <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -1181,6 +1182,6 @@ export default function TicketsList() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </View></ScreenBackground>
   );
 }

@@ -35,6 +35,7 @@ import { venueService } from '@/services/venue.service';
 import type { VenueWithPromotion } from '@/types';
 import { useHaptics } from '@/hooks/useHaptics';
 import { logger } from '@/lib/logger';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Helpers
@@ -155,7 +156,7 @@ export default function VenueReserveScreen() {
   });
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground><View style={[styles.screen, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -320,7 +321,7 @@ export default function VenueReserveScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -331,7 +332,7 @@ export default function VenueReserveScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   loadingWrap: {
     paddingVertical: spacing.xxl * 2,

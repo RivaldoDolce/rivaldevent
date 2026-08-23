@@ -24,7 +24,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
 
 import { Logo } from '@/components/icons/Logo';
-import { colors, gradients, spacing, typography } from '@/lib/constants';
+import { colors, spacing, typography } from '@/lib/constants';
 import { authBackgrounds } from '@/lib/images';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
@@ -226,16 +226,11 @@ export default function SplashScreen() {
         cachePolicy="memory-disk"
       />
       <LinearGradient
-        colors={['rgba(10,9,8,0.72)', 'rgba(10,9,8,0.94)']}
+        colors={['rgba(10,9,8,0.42)', 'rgba(10,9,8,0.82)']}
         style={StyleSheet.absoluteFillObject}
         pointerEvents="none"
       />
-      <LinearGradient
-        colors={[...gradients.noir] as unknown as readonly [string, string, ...string[]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <StatusBar style="light" />
 
         {/* Halos dorés pulsés */}
@@ -284,7 +279,7 @@ export default function SplashScreen() {
           </Text>
         </View>
       ) : null}
-      </LinearGradient>
+      </View>
     </View>
   );
 }

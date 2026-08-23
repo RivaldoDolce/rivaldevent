@@ -71,6 +71,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { VenueWithPromotion } from '@/types';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Constantes
@@ -332,7 +333,7 @@ export default function VenueDetail() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + spacing.md }]}>
+      <ScreenBackground><View style={[styles.screen, { paddingTop: insets.top + spacing.md }]}>
         <View style={styles.heroSkeleton}>
           <Skeleton width="100%" height={HERO_HEIGHT} radius={0} />
         </View>
@@ -342,13 +343,13 @@ export default function VenueDetail() {
           <Skeleton width="100%" height={70} radius={radius.lg} />
           <Skeleton width="70%" height={70} radius={radius.lg} />
         </View>
-      </View>
+      </View></ScreenBackground>
     );
   }
 
   if (!venue) {
     return (
-      <View style={[styles.errorContainer, { paddingTop: insets.top }]}>
+      <ScreenBackground><View style={[styles.errorContainer, { paddingTop: insets.top }, { backgroundColor: 'transparent' }]}>
         <Text style={styles.errorTitle}>Lieu introuvable</Text>
         <Text style={styles.errorText}>Ce lieu n'existe pas ou a ete supprime.</Text>
         <View style={{ marginTop: spacing.lg, width: 200 }}>
@@ -356,7 +357,7 @@ export default function VenueDetail() {
             Retour
           </Button>
         </View>
-      </View>
+      </View></ScreenBackground>
     );
   }
 
@@ -367,7 +368,7 @@ export default function VenueDetail() {
   const locationDisplay = venue.address ?? venue.city ?? 'Adresse non precisee';
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground><View style={[styles.screen, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={{
@@ -707,7 +708,7 @@ export default function VenueDetail() {
           </View>
         </View>
       </View>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -727,7 +728,7 @@ const styles = {
   // -- Ecran --
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   } as ViewStyle,
   scrollView: {
     flex: 1,
@@ -746,7 +747,7 @@ const styles = {
   // -- Erreur --
   errorContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,

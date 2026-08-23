@@ -47,6 +47,7 @@ import { colors, typography, spacing, radius, shadows, gradients, ROUTES } from 
 import { sellerBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSellerStore, type NewSellerEventInput } from '@/stores/seller-store';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Types
@@ -171,8 +172,8 @@ export default function SellerSellScreen() {
   }, [impact, router]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
+    <ScreenBackground><KeyboardAvoidingView
+      style={[styles.screen, { backgroundColor: 'transparent' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
@@ -536,7 +537,7 @@ export default function SellerSellScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView></ScreenBackground>
   );
 }
 
@@ -547,7 +548,7 @@ export default function SellerSellScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
 
   // -- Stepper --

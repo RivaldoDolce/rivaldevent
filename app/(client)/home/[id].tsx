@@ -67,6 +67,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import type { EventWithAvailability, TicketTierWithAvailability } from '@/types';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Constantes
@@ -388,7 +389,7 @@ export default function EventDetail() {
 
   if (!event) {
     return (
-      <View style={[styles.errorContainer, { paddingTop: insets.top }]}>
+      <ScreenBackground><View style={[styles.errorContainer, { paddingTop: insets.top }, { backgroundColor: 'transparent' }]}>
         <Text style={styles.errorTitle}>Evenement introuvable</Text>
         <Text style={styles.errorText}>Cet evenement n'existe pas ou a ete supprime.</Text>
         <View style={{ marginTop: spacing.lg, width: 200 }}>
@@ -396,7 +397,7 @@ export default function EventDetail() {
             Retour
           </Button>
         </View>
-      </View>
+      </View></ScreenBackground>
     );
   }
 
@@ -407,7 +408,7 @@ export default function EventDetail() {
   const locationDisplay = event.address ?? event.venue?.name ?? event.city ?? 'Lieu non precise';
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground><View style={[styles.screen, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={{
@@ -826,7 +827,7 @@ export default function EventDetail() {
           </View>
         </View>
       </View>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -905,7 +906,7 @@ const styles = {
   // -- Ecran --
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   } as ViewStyle,
   scrollView: {
     flex: 1,
@@ -914,7 +915,7 @@ const styles = {
   // -- Erreur --
   errorContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,

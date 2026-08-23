@@ -188,7 +188,7 @@ export default function HomeScreen() {
   // -- Styles --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   };
 
   const scrollContentStyle: ViewStyle = {
@@ -197,12 +197,19 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={screenStyle}>
-      <ScrollView
-        style={screenStyle}
-        contentContainerStyle={scrollContentStyle}
-        showsVerticalScrollIndicator={false}
-      >
+    <ImageBackground
+      source={clientBackgrounds.accueil}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      imageStyle={StyleSheet.absoluteFillObject}
+      accessibilityIgnoresInvertColors
+    >
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10,9,8,0.55)' }]} pointerEvents="none" />
+      <View style={screenStyle}>
+        <ScrollView
+          style={screenStyle}
+          contentContainerStyle={scrollContentStyle}
+          showsVerticalScrollIndicator={false}
+        >
         {/* ============================================
             1. EN-TETE HERO — dégradé noir & or
             ============================================ */}
@@ -479,7 +486,8 @@ export default function HomeScreen() {
         onReadCountChange={handleReadCountChange}
         testID="notifications-panel"
       />
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 

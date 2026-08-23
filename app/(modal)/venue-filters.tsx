@@ -44,6 +44,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useExploreStore } from '@/stores/explore-store';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Options de filtres dedies aux lieux
@@ -181,7 +182,7 @@ export default function VenueFiltersScreen() {
   );
 
   return (
-    <View style={screenStyle}>
+    <ScreenBackground><View style={[screenStyle, { backgroundColor: 'transparent' }]}>
       {/* Halo dore haut */}
       <LinearGradient
         pointerEvents="none"
@@ -345,7 +346,7 @@ export default function VenueFiltersScreen() {
           Appliquer les filtres
         </Button>
       </View>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -355,7 +356,7 @@ export default function VenueFiltersScreen() {
 
 const screenStyle: ViewStyle = {
   flex: 1,
-  backgroundColor: colors.background,
+  backgroundColor: 'transparent',
 };
 
 const haloStyle: ViewStyle = {
@@ -569,7 +570,7 @@ const radioLabelActiveStyle: TextStyle = {
 const bottomBarStyle: ViewStyle = {
   paddingHorizontal: spacing.lg,
   paddingTop: spacing.md,
-  backgroundColor: colors.background,
+  backgroundColor: 'transparent',
   borderTopWidth: 1,
   borderTopColor: `${colors.gold}1F`,
 };

@@ -55,6 +55,7 @@ import { getMockEventDetailWithFallback } from '@/data/mock';
 import { logger } from '@/lib/logger';
 import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
 import type { MockEventDetail } from '@/data/mock';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Constantes
@@ -223,7 +224,7 @@ export default function SelectTickets() {
   // ============================================================
 
   return (
-    <View style={styles.root}>
+    <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -346,7 +347,7 @@ export default function SelectTickets() {
           Continuer
         </Button>
       </View>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -358,11 +359,11 @@ const styles = StyleSheet.create({
   /* -- Racine -- */
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   errorWrap: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
 
   /* -- Carte evenement ornee -- */

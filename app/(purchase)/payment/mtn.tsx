@@ -49,6 +49,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { confirmPaymentAndCreateTickets } from '@/lib/payment-helper';
 import { formatPrice } from '@/services/event.service';
 import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Constantes MTN
@@ -83,7 +84,7 @@ function formatPhoneDisplay(phone: string): string {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
 
   /* =============================================
@@ -480,7 +481,7 @@ export default function MTNPayment() {
   const payLabel = `Payer ${formatPrice(displayAmount)}`;
 
   return (
-    <View style={styles.root}>
+    <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -622,6 +623,6 @@ export default function MTNPayment() {
           </Pressable>
         </View>
       </ScrollView>
-    </View>
+    </View></ScreenBackground>
   );
 }

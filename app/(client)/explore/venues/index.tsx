@@ -58,6 +58,7 @@ import { MOCK_VENUES, VENUE_CATEGORIES } from '@/data/mock';
 
 // Store global pour filtres
 import { useExploreStore } from '@/stores/explore-store';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Plages de capacite (max personnes) - doit correspondre au modal
@@ -290,7 +291,7 @@ export default function VenuesScreen() {
   }, [activeCategory, venueFilters, searchQuery]);
 
   return (
-    <View style={screenStyle}>
+    <ScreenBackground><View style={[screenStyle, { backgroundColor: 'transparent' }]}>
       <ScrollView
         style={screenStyle}
         contentContainerStyle={{
@@ -455,7 +456,7 @@ export default function VenuesScreen() {
         {/* Espacement final */}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
-    </View>
+    </View></ScreenBackground>
   );
 }
 
@@ -465,7 +466,7 @@ export default function VenuesScreen() {
 
 const screenStyle: ViewStyle = {
   flex: 1,
-  backgroundColor: colors.background,
+  backgroundColor: 'transparent',
 };
 
 const headerStyle: ViewStyle = {

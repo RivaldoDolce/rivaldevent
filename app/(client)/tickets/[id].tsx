@@ -59,6 +59,7 @@ import { useTicketsStore } from '@/stores/tickets-store';
 import { getMockTicketById } from '@/data/mock';
 import type { PurchasedTicket } from '@/stores/tickets-store';
 import type { MockTicket } from '@/data/mock';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
 // ============================================================
 // Types
@@ -148,7 +149,7 @@ function getTierQualityInfo(name: string | null): TierQualityInfo {
 // ============================================================
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1, backgroundColor: 'transparent' },
 
   /* Bandeau héros dégradé avec filet or */
   hero: {
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     zIndex: 2,
   } as ViewStyle,
   perforationLeftTop: {
@@ -694,7 +695,7 @@ export default function TicketDetail() {
   // ============================================================
 
   return (
-    <View style={styles.root}>
+    <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
       {/* Bandeau héros dégradé avec filet or */}
       <LinearGradient
         colors={[...gradients.heroGold] as unknown as readonly [string, string, ...string[]]}
@@ -952,6 +953,6 @@ export default function TicketDetail() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </View></ScreenBackground>
   );
 }
