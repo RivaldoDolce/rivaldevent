@@ -31,9 +31,9 @@ export const colors = {
   raised: '#26211B',
 
   // -- Verre fumé --
-  glass: 'rgba(255,255,255,0.045)',
-  glassStrong: 'rgba(255,255,255,0.08)',
-  glassGold: 'rgba(216,180,90,0.10)',
+  glass: 'rgba(255,255,255,0.085)',
+  glassStrong: 'rgba(255,255,255,0.13)',
+  glassGold: 'rgba(216,180,90,0.16)',
 
   // -- Or champagne --
   gold: '#D8B45A',
@@ -61,10 +61,10 @@ export const colors = {
   info: '#7FA7CE',
 
   // -- Filets / surfaces neutres --
-  border: 'rgba(255,255,255,0.09)',
-  borderStrong: 'rgba(255,255,255,0.16)',
-  borderGold: 'rgba(216,180,90,0.35)',
-  divider: 'rgba(255,255,255,0.06)',
+  border: 'rgba(255,255,255,0.13)',
+  borderStrong: 'rgba(255,255,255,0.20)',
+  borderGold: 'rgba(216,180,90,0.42)',
+  divider: 'rgba(255,255,255,0.08)',
 
   // -- Aliases hérités (compatibilité) --
   sand: '#F5F0E6',
