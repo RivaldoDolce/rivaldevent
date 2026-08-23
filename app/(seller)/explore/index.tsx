@@ -95,7 +95,7 @@ export default function SellerExploreScreen() {
   // -- Styles dynamiques --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   };
 
   const headerStyle: ViewStyle = {
@@ -119,12 +119,19 @@ export default function SellerExploreScreen() {
   };
 
   return (
-    <View style={screenStyle}>
-      <ScrollView
-        style={screenStyle}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-      >
+    <ImageBackground
+      source={sellerBackgrounds.headerGeneric}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      imageStyle={StyleSheet.absoluteFillObject}
+      accessibilityIgnoresInvertColors
+    >
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10,9,8,0.65)' }]} pointerEvents="none" />
+      <View style={screenStyle}>
+        <ScrollView
+          style={screenStyle}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
         {/* ============================================
             1. HEADER
             ============================================ */}
@@ -299,7 +306,8 @@ export default function SellerExploreScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 

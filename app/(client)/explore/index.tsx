@@ -357,11 +357,6 @@ export default function ExploreScreen() {
     setActiveCategory(categoryId);
   }, [impact, setActiveCategory]);
 
-  const handleViewModeToggle = useCallback(() => {
-    impact('light');
-    setViewMode((prev) => prev === 'grid' ? 'list' : 'grid');
-  }, [impact]);
-
   const handleOpenFilters = useCallback(() => {
     impact('light');
     router.push('/(modal)/filters');
@@ -435,11 +430,18 @@ export default function ExploreScreen() {
   // -- Styles --
   const screenStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   };
 
   return (
-    <View style={screenStyle}>
+    <ImageBackground
+      source={clientBackgrounds.fallback}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      imageStyle={StyleSheet.absoluteFillObject}
+      accessibilityIgnoresInvertColors
+    >
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10,9,8,0.55)' }]} pointerEvents="none" />
+      <View style={screenStyle}>
       {/* =============================================
           HEADER STICKY : Recherche + Toggle vue + Filtres categories
           (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
@@ -513,16 +515,32 @@ export default function ExploreScreen() {
 
         {/* Toggle Vue Grille / Liste + Compteur */}
         <View style={viewToggleRowStyle}>
-          <Pressable onPress={handleViewModeToggle} style={viewToggleButtonStyle}>
-            {viewMode === 'grid' ? (
-              <List size={17} color={colors.goldBright} strokeWidth={1.75} />
-            ) : (
-              <LayoutGrid size={17} color={colors.goldBright} strokeWidth={1.75} />
-            )}
-            <Text style={viewToggleTextStyle}>
-              {viewMode === 'grid' ? 'Vue liste' : 'Vue grille'}
-            </Text>
-          </Pressable>
+          <View style={viewToggleGroupStyle}>
+            <Pressable
+              onPress={() => {
+                impact('light');
+                setViewMode('grid');
+              }}
+              style={[viewToggleButtonStyle, viewMode === 'grid' ? viewToggleActiveStyle : null]}
+              accessibilityRole="button"
+              accessibilityLabel="Vue grille"
+              accessibilityState={{ selected: viewMode === 'grid' }}
+            >
+              <LayoutGrid size={17} color={viewMode === 'grid' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                impact('light');
+                setViewMode('list');
+              }}
+              style={[viewToggleButtonStyle, viewMode === 'list' ? viewToggleActiveStyle : null]}
+              accessibilityRole="button"
+              accessibilityLabel="Vue liste"
+              accessibilityState={{ selected: viewMode === 'list' }}
+            >
+              <List size={17} color={viewMode === 'list' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
+            </Pressable>
+          </View>
           <Text style={resultCountStyle}>
             {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
           </Text>
@@ -666,7 +684,8 @@ export default function ExploreScreen() {
         {/* Espacement final aeré */}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
@@ -780,24 +799,30 @@ const viewToggleRowStyle: ViewStyle = {
   marginBottom: spacing.xs,
 };
 
-const viewToggleButtonStyle: ViewStyle = {
+const viewToggleGroupStyle: ViewStyle = {
   flexDirection: 'row',
-  alignItems: 'center',
-  gap: spacing.xs,
-  backgroundColor: colors.glass,
+  backgroundColor: colors.surfaceAlt,
   borderRadius: radius.full,
+  padding: 3,
   borderWidth: 1,
   borderColor: `${colors.gold}26`,
-  paddingHorizontal: spacing.md,
-  paddingVertical: spacing.xs + 1,
 };
 
-const viewToggleTextStyle: TextStyle = {
-  fontFamily: 'Inter_600SemiBold',
-  fontSize: 12,
-  lineHeight: 17,
-  color: colors.textSecondary,
-  letterSpacing: 0.2,
+const viewToggleButtonStyle: ViewStyle = {
+  width: 40,
+  height: 32,
+  borderRadius: radius.full,
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const viewToggleActiveStyle: ViewStyle = {
+  backgroundColor: colors.gold,
+  shadowColor: 'rgba(216,180,90,0.45)',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.5,
+  shadowRadius: 6,
+  elevation: 4,
 };
 
 const resultCountStyle: TextStyle = {

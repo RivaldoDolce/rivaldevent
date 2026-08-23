@@ -182,22 +182,22 @@ export default function ClientProfileScreen() {
     },
     {
       label: 'Parametres',
-      icon: <Settings size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <Settings size={19} color="#7BA7C9" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.PROFILE_SETTINGS),
     },
     {
       label: 'Modifier mon profil',
-      icon: <PenLine size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <PenLine size={19} color="#8DB38B" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.PROFILE_EDIT),
     },
     {
       label: 'Aide et support',
-      icon: <MessageCircle size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <MessageCircle size={19} color="#C9A86A" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.HELP),
     },
     {
       label: 'Confidentialite',
-      icon: <ShieldCheck size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <ShieldCheck size={19} color="#7EC8A0" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.PRIVACY),
     },
   ];
@@ -318,7 +318,7 @@ export default function ClientProfileScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statColumn}>
             <Text style={styles.statValue}>{completion}%</Text>
-            <Text style={styles.statLabel}>PROFIL</Text>
+            <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>PROFIL</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statColumn}>
@@ -659,6 +659,7 @@ const styles = StyleSheet.create({
     ...typography.overline,
     color: colors.textMuted,
     marginTop: 2,
+    textAlign: 'center',
   },
   statDivider: {
     width: StyleSheet.hairlineWidth,

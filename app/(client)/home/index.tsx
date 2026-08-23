@@ -623,7 +623,7 @@ const styles = {
     borderWidth: 1,
     borderColor: colors.border,
     marginHorizontal: spacing.lg,
-    marginTop: -spacing.lg,
+    marginTop: spacing.md,
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,

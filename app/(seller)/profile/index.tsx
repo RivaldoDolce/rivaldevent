@@ -174,22 +174,22 @@ export default function SellerProfileScreen() {
     },
     {
       label: 'Mon portefeuille',
-      icon: <Wallet size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <Wallet size={19} color="#7BA7C9" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.SELLER_WALLET),
     },
     {
       label: 'Modifier mon profil',
-      icon: <UserPen size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <UserPen size={19} color="#8DB38B" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.PROFILE_EDIT),
     },
     {
       label: 'Aide et support',
-      icon: <MessageCircle size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <MessageCircle size={19} color="#C9A86A" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.HELP),
     },
     {
       label: 'Confidentialite',
-      icon: <ShieldCheck size={19} color={colors.gold} strokeWidth={1.75} />,
+      icon: <ShieldCheck size={19} color="#7EC8A0" strokeWidth={1.75} />,
       onPress: () => router.push(ROUTES.PRIVACY),
     },
   ];

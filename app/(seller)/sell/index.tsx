@@ -38,6 +38,9 @@ import {
   ImagePlus,
 } from 'lucide-react-native';
 
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { DateInput } from '@/components/ui/DateInput';
@@ -82,6 +85,7 @@ export default function SellerSellScreen() {
   const [eventType, setEventType] = useState('physique');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
+  const [pickedImage, setPickedImage] = useState<string | null>(null);
 
   // Etape 2 — date et lieu
   const [date, setDate] = useState('');
@@ -135,6 +139,22 @@ export default function SellerSellScreen() {
     setStep((prev) => Math.max(prev - 1, 1));
   }, [impact]);
 
+  const pickImage = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    impact('light');
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (!res.canceled && res.assets[0]?.uri) {
+      setPickedImage(res.assets[0].uri);
+      setImage('');
+    }
+  }, [impact]);
+
   const handlePublish = useCallback(() => {
     if (!step3Valid) return;
     setIsPublishing(true);
@@ -145,7 +165,7 @@ export default function SellerSellScreen() {
       category,
       event_type: eventType,
       description,
-      image,
+      image: pickedImage ?? image,
       start_date: date,
       city,
       venue,
@@ -163,7 +183,7 @@ export default function SellerSellScreen() {
       setShowSuccess(true);
       notification('success');
     }, 700);
-  }, [step3Valid, title, category, eventType, description, image, date, city, venue, tiers, addEvent, impact, notification]);
+  }, [step3Valid, title, category, eventType, description, image, pickedImage, date, city, venue, tiers, addEvent, impact, notification]);
 
   const handleGoToEvents = useCallback(() => {
     impact('light');
@@ -319,15 +339,35 @@ export default function SellerSellScreen() {
               maxLength={220}
             />
 
+            {pickedImage ? (
+              <View style={styles.pickedImageWrap}>
+                <Image source={{ uri: pickedImage }} style={styles.pickedImage} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                <Pressable onPress={() => setPickedImage(null)} style={styles.pickedImageRemove} hitSlop={8}>
+                  <Trash2 size={16} color={colors.onyx} strokeWidth={2} />
+                </Pressable>
+              </View>
+            ) : null}
+
+            <Pressable onPress={pickImage} style={styles.uploadBtn} accessibilityRole="button" accessibilityLabel="Choisir une photo">
+              <ImagePlus size={18} color={colors.goldBright} strokeWidth={1.75} />
+              <Text style={styles.uploadBtnText}>{pickedImage ? 'Changer la photo' : "Choisir depuis l'appareil"}</Text>
+            </Pressable>
+
+            <View style={styles.orDivider}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>OU</Text>
+              <View style={styles.orLine} />
+            </View>
+
             <Input
               label="Image (URL optionnelle)"
               placeholder="https://..."
               value={image}
-              onChangeText={setImage}
+              onChangeText={(v) => { setImage(v); if (v) setPickedImage(null); }}
               autoCapitalize="none"
               autoCorrect={false}
               iconLeft={<ImagePlus color={colors.goldMuted} size={20} strokeWidth={1.5} />}
-              helperText="Laissez vide pour utiliser une image par defaut"
+              helperText="URL ou photo de l'appareil — laissez vide pour image par defaut"
             />
 
             <Button
@@ -700,6 +740,67 @@ const styles = StyleSheet.create({
   typeTextSelected: {
     color: colors.goldBright,
     fontFamily: 'Inter_600SemiBold',
+  },
+
+  pickedImageWrap: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: `${colors.gold}30`,
+    marginBottom: spacing.md,
+    position: 'relative',
+  },
+  pickedImage: {
+    width: '100%',
+    height: 180,
+  },
+  pickedImageRemove: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: `${colors.gold}55`,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(216,180,90,0.06)',
+    marginBottom: spacing.sm,
+  },
+  uploadBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.goldBright,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.sm,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: `${colors.gold}20`,
+  },
+  orText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.goldMuted,
+    letterSpacing: 1,
   },
 
   // -- Tiers --
