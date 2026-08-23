@@ -47,7 +47,9 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { colors, typography, spacing, radius } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { profileSchema, type ProfileInput } from '@/lib/validation';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
@@ -155,23 +157,25 @@ export default function EditProfileScreen() {
   ].filter(Boolean).length;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView
+    <ScreenBackground>
+      <KeyboardAvoidingView
         style={styles.screen}
-        contentContainerStyle={{
-          paddingBottom: 120,
-        }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScreenHeader
-          title="Modifier mon profil"
-          subtitle="Gardez vos informations a jour"
-        />
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <ScreenHeader
+            title="Modifier mon profil"
+            subtitle="Gardez vos informations a jour"
+            background={clientBackgrounds.fallback}
+          />
 
         {/* ============================================
             Carte identite
@@ -294,14 +298,15 @@ export default function EditProfileScreen() {
           </Button>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   identityCard: {
     marginTop: spacing.md,

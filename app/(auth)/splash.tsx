@@ -21,8 +21,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { Image } from 'expo-image';
+
 import { Logo } from '@/components/icons/Logo';
 import { colors, gradients, spacing, typography } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { logger } from '@/lib/logger';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -215,17 +218,29 @@ export default function SplashScreen() {
   const haloBottomOpacity = haloPulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 0.3] });
 
   return (
-    <LinearGradient
-      colors={[...gradients.noir] as unknown as readonly [string, string, ...string[]]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}
-    >
-      <StatusBar style="light" />
+    <View style={styles.bgScreen}>
+      <Image
+        source={authBackgrounds.splash}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+      <LinearGradient
+        colors={['rgba(10,9,8,0.72)', 'rgba(10,9,8,0.94)']}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={[...gradients.noir] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.container}
+      >
+        <StatusBar style="light" />
 
-      {/* Halos dorés pulsés */}
-      <Animated.View pointerEvents="none" style={[styles.glowTop, { opacity: haloTopOpacity }]} />
-      <Animated.View pointerEvents="none" style={[styles.glowBottom, { opacity: haloBottomOpacity }]} />
+        {/* Halos dorés pulsés */}
+        <Animated.View pointerEvents="none" style={[styles.glowTop, { opacity: haloTopOpacity }]} />
+        <Animated.View pointerEvents="none" style={[styles.glowBottom, { opacity: haloBottomOpacity }]} />
 
       {/* Anneaux décoratifs fins */}
       <View pointerEvents="none" style={styles.ringLarge} />
@@ -269,16 +284,22 @@ export default function SplashScreen() {
           </Text>
         </View>
       ) : null}
-    </LinearGradient>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  bgScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+    backgroundColor: 'transparent',
   },
   glowTop: {
     position: 'absolute',

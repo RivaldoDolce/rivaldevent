@@ -36,8 +36,10 @@ import {
 } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { Button } from '@/components/ui/Button';
 import { colors, typography, spacing, radius, shadows } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthService } from '@/services/auth.service';
@@ -180,7 +182,7 @@ export default function ProfileSettingsScreen() {
   }, [user, notification, impact, authService]);
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -189,6 +191,7 @@ export default function ProfileSettingsScreen() {
         <ScreenHeader
           title="Parametres"
           subtitle="Notifications, securite et informations"
+          background={clientBackgrounds.fallback}
         />
 
         {resetMessage ? (
@@ -339,7 +342,7 @@ export default function ProfileSettingsScreen() {
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -350,7 +353,7 @@ export default function ProfileSettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   section: {
     marginTop: spacing.xl,

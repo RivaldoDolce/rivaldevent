@@ -30,8 +30,10 @@ import {
 } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { Card } from '@/components/ui/Card';
 import { colors, spacing, radius } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Donnees statiques
@@ -80,7 +82,7 @@ const SECTIONS: readonly {
 
 export default function PrivacyScreen() {
   return (
-    <View style={styles.screen}>
+    <ScreenBackground>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -89,6 +91,7 @@ export default function PrivacyScreen() {
         <ScreenHeader
           title="Confidentialite"
           subtitle="Vos donnees sont protegees"
+          background={clientBackgrounds.fallback}
         />
 
         {/* Intro */}
@@ -132,7 +135,7 @@ export default function PrivacyScreen() {
           <Text style={styles.footerNote}>Derniere mise a jour : aout 2026</Text>
         </View>
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -143,7 +146,7 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   introWrapper: {
     marginTop: -spacing.sm,

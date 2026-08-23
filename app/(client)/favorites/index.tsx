@@ -30,6 +30,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, gradients, spacing, radius, shadows, ROUTES } from '@/lib/constants';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useFavoritesStore } from '@/stores/favorites-store';
 import { EventCard } from '@/components/events/EventCard';
@@ -188,7 +189,8 @@ export default function FavoritesScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScreenBackground>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       {/* ============================================
           EN-TETE HERO — degradef noir + halo doré
           ============================================ */}
@@ -350,7 +352,8 @@ export default function FavoritesScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+      </View>
+    </ScreenBackground>
   );
 }
 

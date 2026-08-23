@@ -27,8 +27,10 @@ import {
 import { ChevronDown, ChevronUp, MessageCircle, Phone, Mail } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { Card } from '@/components/ui/Card';
 import { colors, spacing, radius } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 
 // ============================================================
@@ -118,7 +120,7 @@ export default function HelpScreen() {
   );
 
   return (
-    <View style={styles.screen}>
+    <ScreenBackground>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -127,6 +129,7 @@ export default function HelpScreen() {
         <ScreenHeader
           title="Aide et support"
           subtitle="Nous sommes la pour vous aider"
+          background={clientBackgrounds.fallback}
         />
 
         {/* ============================================
@@ -213,7 +216,7 @@ export default function HelpScreen() {
           <Text style={styles.versionText}>Rivald'event — Version 1.0.0</Text>
         </View>
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -224,7 +227,7 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   section: {
     marginTop: spacing.lg,

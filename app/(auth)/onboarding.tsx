@@ -12,7 +12,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,7 @@ import { ArrowRight } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
 import { colors, radius, spacing, typography } from '@/lib/constants';
+import { clientBackgrounds, images } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -38,21 +39,21 @@ const SLIDES: readonly Slide[] = [
     title: 'Trouvez des\nevenements',
     description:
       'Decouvrez des experiences culturelles et des lieux exclusifs a travers le Cameroun.',
-    illustration: require('@/assets/images/onboarding/slide1.png'),
+    illustration: images.onboarding.slide1,
     ctaLabel: 'Continuer',
   },
   {
     title: 'Accedez avec\nvotre QR Code',
     description:
       'Recevez votre billet numerique instantanement. Presentez-le a l\'entree, c\'est tout simple.',
-    illustration: require('@/assets/images/onboarding/slide2.png'),
+    illustration: images.onboarding.slide2,
     ctaLabel: 'Continuer',
   },
   {
     title: 'Payez par\nMobile Money',
     description:
       'Choisissez votre operateur local (MTN, Orange, Moov) pour un paiement simple et securise.',
-    illustration: require('@/assets/images/onboarding/slide3.png'),
+    illustration: images.onboarding.slide3,
     ctaLabel: 'Commencer',
   },
 ];
@@ -85,10 +86,21 @@ export default function OnboardingScreen() {
   const currentSlide = SLIDES[currentIndex];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-      {/* Halo doré décoratif */}
-      <View pointerEvents="none" style={styles.glowTop} />
-      <View pointerEvents="none" style={styles.ringDeco} />
+    <ImageBackground
+      source={clientBackgrounds.accueil}
+      style={styles.bgScreen}
+      imageStyle={styles.bgImage}
+      accessibilityIgnoresInvertColors
+    >
+      <LinearGradient
+        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        style={styles.bgScrim}
+        pointerEvents="none"
+      />
+      <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+        {/* Halo doré décoratif */}
+        <View pointerEvents="none" style={styles.glowTop} />
+        <View pointerEvents="none" style={styles.ringDeco} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -171,15 +183,26 @@ export default function OnboardingScreen() {
         >
           {currentSlide.ctaLabel}
         </Button>
+        </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  bgScreen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bgImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  bgScrim: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
   glowTop: {
