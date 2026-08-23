@@ -48,6 +48,7 @@ export const sellerBackgrounds = {
   qrFullscreen: require('@/assets/images/background/seller/bg_qr_fullscreen.jpg'),
   sellHeader: require('@/assets/images/background/seller/bg_sell_header.jpg'),
   walletHero: require('@/assets/images/background/seller/bg_wallet_hero.jpg'),
+  fallback: require('@/assets/images/background/seller/bg_fallback.jpg'),
 } satisfies Record<string, ImageSourcePropType>;
 
 // ============================================================

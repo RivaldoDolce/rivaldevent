@@ -127,7 +127,7 @@ export default function SellerTicketsScreen() {
 
   return (
     <ImageBackground
-      source={sellerBackgrounds.headerGeneric}
+      source={sellerBackgrounds.fallback}
       style={{ flex: 1, backgroundColor: colors.background }}
       imageStyle={StyleSheet.absoluteFillObject}
       accessibilityIgnoresInvertColors

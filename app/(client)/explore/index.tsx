@@ -28,6 +28,7 @@ import {
   Dimensions,
   ImageBackground,
   StyleSheet,
+  Animated,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -296,6 +297,9 @@ export default function ExploreScreen() {
   // -- State local --
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const titleOpacity = scrollY.interpolate({ inputRange: [0, 60], outputRange: [1, 0], extrapolate: 'clamp' });
+  const titleHeight = scrollY.interpolate({ inputRange: [0, 60], outputRange: [72, 0], extrapolate: 'clamp' });
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
   useEffect(() => {
@@ -461,14 +465,14 @@ export default function ExploreScreen() {
           pointerEvents="none"
         />
 
-        {/* Titre serif + sous-titre */}
-        <View style={titleBlockStyle}>
+        {/* Titre serif + sous-titre — se replie au scroll */}
+        <Animated.View style={[titleBlockStyle, { height: titleHeight, opacity: titleOpacity, overflow: 'hidden' }]}>
           <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
           <Text style={titleStyle}>Explorer</Text>
           <Text style={subtitleStyle}>
             Decouvrez tous les evenements disponibles pres de chez vous
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Barre de recherche active — pastille verre */}
         <View style={searchContainerStyle}>
@@ -575,12 +579,14 @@ export default function ExploreScreen() {
       {/* =============================================
           CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
           ============================================= */}
-      <ScrollView
+      <Animated.ScrollView
         style={screenStyle}
         contentContainerStyle={{
           paddingBottom: 120, // Espace aeré pour la TabBar
         }}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        scrollEventThrottle={16}
       >
         {/* =============================================
             RESULTATS (Grille ou Liste)
@@ -683,7 +689,7 @@ export default function ExploreScreen() {
 
         {/* Espacement final aeré */}
         <View style={{ height: spacing.xxl }} />
-      </ScrollView>
+      </Animated.ScrollView>
       </View>
     </ImageBackground>
   );
