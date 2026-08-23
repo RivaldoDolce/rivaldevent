@@ -75,19 +75,26 @@ export default function SellerWalletScreen() {
   };
 
   return (
-    <View style={styles.screen}>
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={contentStyle}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ============================================
-            1. HEADER (retour vers le profil vendeur)
-            ============================================ */}
-        <ScreenHeader
-          title="Mon portefeuille"
-          subtitle="Vos revenus et votre activite"
-        />
+    <ImageBackground
+      source={sellerBackgrounds.headerGeneric}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      imageStyle={StyleSheet.absoluteFillObject}
+      accessibilityIgnoresInvertColors
+    >
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10,9,8,0.60)' }]} pointerEvents="none" />
+      <View style={[styles.screen, { backgroundColor: 'transparent' }]}>
+        <ScrollView
+          style={[styles.screen, { backgroundColor: 'transparent' }]}
+          contentContainerStyle={contentStyle}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ============================================
+              1. HEADER (retour vers le profil vendeur)
+              ============================================ */}
+          <ScreenHeader
+            title="Mon portefeuille"
+            subtitle="Vos revenus et votre activite"
+          />
 
         {/* ============================================
             2. HERO — solde du portefeuille
@@ -223,9 +230,10 @@ export default function SellerWalletScreen() {
               })
             )}
           </View>
-        </View>
-      </ScrollView>
-    </View>
+          </View>
+        </ScrollView>
+      </View>
+    </ImageBackground>
   );
 }
 

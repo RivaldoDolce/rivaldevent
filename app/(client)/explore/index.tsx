@@ -795,8 +795,8 @@ const viewToggleRowStyle: ViewStyle = {
   flexDirection: 'row',
   justifyContent: 'space-between',
   alignItems: 'center',
-  marginTop: spacing.sm,
-  marginBottom: spacing.xs,
+  marginTop: spacing.md,
+  marginBottom: spacing.md,
 };
 
 const viewToggleGroupStyle: ViewStyle = {
@@ -859,7 +859,8 @@ const filtersBadgeTextStyle: TextStyle = {
 // ============================================================
 
 const filterChipsContainerStyle: ViewStyle = {
-  paddingBottom: spacing.sm,
+  paddingBottom: spacing.md,
+  marginTop: spacing.xs,
   flexGrow: 0,
 };
 
