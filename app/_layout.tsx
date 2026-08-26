@@ -27,6 +27,7 @@ import { Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, I
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
 import { colors } from '@/lib/constants';
+import { RouteTransitionLoader } from '@/components/ui/RouteTransitionLoader';
 
 // ============================================================
 // Configuration & Initialisation
@@ -128,6 +129,7 @@ export default function RootLayout() {
             <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
             <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
           </Stack>
+          <RouteTransitionLoader />
         </SafeAreaProvider>
       </QueryClientProvider>
     </ClerkProvider>

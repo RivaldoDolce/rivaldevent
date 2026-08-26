@@ -299,7 +299,8 @@ export default function ExploreScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const scrollY = useRef(new Animated.Value(0)).current;
   const clampedScrollY = Animated.diffClamp(scrollY, 0, 110);
-  const collapsibleTranslateY = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [0, -90], extrapolate: 'clamp' });
+  const collapsibleHeight = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [72, 0], extrapolate: 'clamp' });
+  const toggleHeight = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [36, 0], extrapolate: 'clamp' });
   const collapsibleOpacity = clampedScrollY.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' });
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
@@ -467,8 +468,8 @@ export default function ExploreScreen() {
           pointerEvents="none"
         />
 
-        {/* Titre — se replie au scroll */}
-        <Animated.View style={{ transform: [{ translateY: collapsibleTranslateY }], opacity: collapsibleOpacity, overflow: 'hidden' }}>
+        {/* Titre — se replie au scroll avec hauteur adaptative */}
+        <Animated.View style={{ height: collapsibleHeight, opacity: collapsibleOpacity, overflow: 'hidden' }}>
           <View style={titleBlockStyle}>
             <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
             <Text style={titleStyle}>Explorer</Text>
@@ -522,7 +523,7 @@ export default function ExploreScreen() {
         </View>
 
         {/* Toggle Vue Grille / Liste + Compteur — se replie aussi */}
-        <Animated.View style={{ transform: [{ translateY: collapsibleTranslateY }], opacity: collapsibleOpacity, overflow: 'hidden' }}>
+        <Animated.View style={{ height: toggleHeight, opacity: collapsibleOpacity, overflow: 'hidden' }}>
           <View style={viewToggleRowStyle}>
           <View style={viewToggleGroupStyle}>
             <Pressable
@@ -592,7 +593,7 @@ export default function ExploreScreen() {
           paddingTop: spacing.md,
         }}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
       >
         {/* =============================================
