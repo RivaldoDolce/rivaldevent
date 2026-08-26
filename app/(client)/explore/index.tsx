@@ -298,8 +298,9 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const scrollY = useRef(new Animated.Value(0)).current;
-  const titleOpacity = scrollY.interpolate({ inputRange: [0, 60], outputRange: [1, 0], extrapolate: 'clamp' });
-  const titleHeight = scrollY.interpolate({ inputRange: [0, 60], outputRange: [72, 0], extrapolate: 'clamp' });
+  const clampedScrollY = Animated.diffClamp(scrollY, 0, 180);
+  const headerTranslateY = clampedScrollY.interpolate({ inputRange: [0, 180], outputRange: [0, -220], extrapolate: 'clamp' });
+  const headerOpacity = clampedScrollY.interpolate({ inputRange: [0, 120, 180], outputRange: [1, 1, 0], extrapolate: 'clamp' });
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
   useEffect(() => {
@@ -448,9 +449,10 @@ export default function ExploreScreen() {
       <View style={screenStyle}>
       {/* =============================================
           HEADER STICKY : Recherche + Toggle vue + Filtres categories
-          (Hors ScrollView pour eviter le bug de scroll qui bloque les touches)
+          Réduction TOTALE au scroll (translateY) — évite la danse
+          au maintien grâce à diffClamp
           ============================================= */}
-      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+      <Animated.View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md, transform: [{ translateY: headerTranslateY }], opacity: headerOpacity }]}>
         {/* Image de fond banniere explore */}
         <ImageBackground
           source={clientBackgrounds.exploreHero}
@@ -465,14 +467,14 @@ export default function ExploreScreen() {
           pointerEvents="none"
         />
 
-        {/* Titre serif + sous-titre — se replie au scroll */}
-        <Animated.View style={[titleBlockStyle, { height: titleHeight, opacity: titleOpacity, overflow: 'hidden' }]}>
+        {/* Titre serif + sous-titre */}
+        <View style={titleBlockStyle}>
           <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
           <Text style={titleStyle}>Explorer</Text>
           <Text style={subtitleStyle}>
             Decouvrez tous les evenements disponibles pres de chez vous
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Barre de recherche active — pastille verre */}
         <View style={searchContainerStyle}>
@@ -574,7 +576,7 @@ export default function ExploreScreen() {
             );
           })}
         </ScrollView>
-      </View>
+      </Animated.View>
 
       {/* =============================================
           CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
@@ -583,9 +585,10 @@ export default function ExploreScreen() {
         style={screenStyle}
         contentContainerStyle={{
           paddingBottom: 120, // Espace aeré pour la TabBar
+          paddingTop: spacing.md,
         }}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
       >
         {/* =============================================
