@@ -298,9 +298,9 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const scrollY = useRef(new Animated.Value(0)).current;
-  const clampedScrollY = Animated.diffClamp(scrollY, 0, 180);
-  const headerTranslateY = clampedScrollY.interpolate({ inputRange: [0, 180], outputRange: [0, -220], extrapolate: 'clamp' });
-  const headerOpacity = clampedScrollY.interpolate({ inputRange: [0, 120, 180], outputRange: [1, 1, 0], extrapolate: 'clamp' });
+  const clampedScrollY = Animated.diffClamp(scrollY, 0, 110);
+  const collapsibleTranslateY = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [0, -90], extrapolate: 'clamp' });
+  const collapsibleOpacity = clampedScrollY.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' });
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
   useEffect(() => {
@@ -449,10 +449,10 @@ export default function ExploreScreen() {
       <View style={screenStyle}>
       {/* =============================================
           HEADER STICKY : Recherche + Toggle vue + Filtres categories
-          Réduction TOTALE au scroll (translateY) — évite la danse
-          au maintien grâce à diffClamp
+          Minimisation partielle : seul titre + toggle se replient,
+          search + categories restent visibles
           ============================================= */}
-      <Animated.View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md, transform: [{ translateY: headerTranslateY }], opacity: headerOpacity }]}>
+      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
         {/* Image de fond banniere explore */}
         <ImageBackground
           source={clientBackgrounds.exploreHero}
@@ -467,16 +467,18 @@ export default function ExploreScreen() {
           pointerEvents="none"
         />
 
-        {/* Titre serif + sous-titre */}
-        <View style={titleBlockStyle}>
-          <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
-          <Text style={titleStyle}>Explorer</Text>
-          <Text style={subtitleStyle}>
-            Decouvrez tous les evenements disponibles pres de chez vous
-          </Text>
-        </View>
+        {/* Titre — se replie au scroll */}
+        <Animated.View style={{ transform: [{ translateY: collapsibleTranslateY }], opacity: collapsibleOpacity, overflow: 'hidden' }}>
+          <View style={titleBlockStyle}>
+            <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
+            <Text style={titleStyle}>Explorer</Text>
+            <Text style={subtitleStyle}>
+              Decouvrez tous les evenements disponibles pres de chez vous
+            </Text>
+          </View>
+        </Animated.View>
 
-        {/* Barre de recherche active — pastille verre */}
+        {/* Barre de recherche active — reste visible */}
         <View style={searchContainerStyle}>
           <Search size={20} color={colors.goldMuted} strokeWidth={1.75} />
           <TextInput
@@ -519,8 +521,9 @@ export default function ExploreScreen() {
           </Pressable>
         </View>
 
-        {/* Toggle Vue Grille / Liste + Compteur */}
-        <View style={viewToggleRowStyle}>
+        {/* Toggle Vue Grille / Liste + Compteur — se replie aussi */}
+        <Animated.View style={{ transform: [{ translateY: collapsibleTranslateY }], opacity: collapsibleOpacity, overflow: 'hidden' }}>
+          <View style={viewToggleRowStyle}>
           <View style={viewToggleGroupStyle}>
             <Pressable
               onPress={() => {
@@ -550,9 +553,10 @@ export default function ExploreScreen() {
           <Text style={resultCountStyle}>
             {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
           </Text>
-        </View>
+          </View>
+        </Animated.View>
 
-        {/* Chips filtres categorie (superieurs uniquement) */}
+        {/* Chips filtres categorie — restent visibles */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -576,7 +580,7 @@ export default function ExploreScreen() {
             );
           })}
         </ScrollView>
-      </Animated.View>
+      </View>
 
       {/* =============================================
           CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
