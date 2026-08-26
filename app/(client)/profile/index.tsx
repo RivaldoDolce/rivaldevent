@@ -212,12 +212,12 @@ export default function ClientProfileScreen() {
       source={clientBackgrounds.profil}
       style={styles.screen}
       imageStyle={styles.bgImage}
-      blurRadius={14}
+      blurRadius={6}
       accessibilityIgnoresInvertColors
     >
       {/* Voile dégradé pour la lisibilité */}
       <LinearGradient
-        colors={['rgba(10,9,8,0.62)', 'rgba(10,9,8,0.90)']}
+        colors={['rgba(10,9,8,0.42)', 'rgba(10,9,8,0.72)']}
         style={styles.bgScrim}
         pointerEvents="none"
       />

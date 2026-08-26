@@ -159,12 +159,12 @@ export default function RegisterScreen() {
       source={authBackgrounds.register}
       style={styles.bgScreen}
       imageStyle={styles.bgImage}
-      blurRadius={18}
+      blurRadius={8}
       accessibilityIgnoresInvertColors
     >
       {/* Voile dégradé pour la lisibilité */}
       <LinearGradient
-        colors={['rgba(10,9,8,0.62)', 'rgba(10,9,8,0.90)']}
+        colors={['rgba(10,9,8,0.48)', 'rgba(10,9,8,0.78)']}
         style={styles.bgScrim}
         pointerEvents="none"
       />
