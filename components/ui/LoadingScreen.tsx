@@ -9,11 +9,13 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Easing, type ViewStyle } from 'react-native';
+import { View, Text, Animated, Easing, StyleSheet, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 
 import { Logo } from '@/components/icons/Logo';
 import { colors, spacing } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Types
@@ -82,39 +84,32 @@ export const LoadingScreen = React.memo(function LoadingScreen({
   const logoScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] });
   const logoGlow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] });
 
+  const dot1 = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+  const dot2 = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
+
   return (
-    <LinearGradient
-      testID={testID}
-      colors={[colors.surface, colors.background]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}
-    >
-      {/* Halos décoratifs */}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.glowTop, { opacity: logoGlow }]}
-      />
-      <View pointerEvents="none" style={styles.glowBottom} />
-
-      <Animated.View style={{ opacity: fade, alignItems: 'center' }}>
-        <View style={styles.logoWrap}>
-          <Animated.View
-            style={[
-              styles.ring,
-              { transform: [{ rotate: ringRotation }] },
-            ]}
-          />
-          <Animated.View style={{ transform: [{ scale: logoScale }] }}>
-            <Logo size="lg" />
-          </Animated.View>
-        </View>
-
-        {message && (
-          <Text style={styles.message}>{message}</Text>
-        )}
-      </Animated.View>
-    </LinearGradient>
+    <View style={styles.bgScreen}>
+      <Image source={clientBackgrounds.fallback} style={StyleSheet.absoluteFillObject} contentFit="cover" blurRadius={10} cachePolicy="memory-disk" />
+      <LinearGradient colors={['rgba(10,9,8,0.58)', 'rgba(10,9,8,0.88)']} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+      <View style={styles.container} testID={testID}>
+        <Animated.View pointerEvents="none" style={[styles.glowTop, { opacity: logoGlow }]} />
+        <View pointerEvents="none" style={styles.glowBottom} />
+        <Animated.View style={{ opacity: fade, alignItems: 'center' }}>
+          <View style={styles.logoWrap}>
+            <Animated.View style={[styles.ring, { transform: [{ rotate: ringRotation }] }]} />
+            <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+              <Logo size="lg" withBackground />
+            </Animated.View>
+          </View>
+          {message ? <Text style={styles.message}>{message}</Text> : null}
+          <View style={styles.dotsRow}>
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot2 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+          </View>
+        </Animated.View>
+      </View>
+    </View>
   );
 });
 
@@ -123,6 +118,7 @@ export const LoadingScreen = React.memo(function LoadingScreen({
 // ============================================================
 
 const styles = {
+  bgScreen: { flex: 1, backgroundColor: colors.background } as ViewStyle,
   container: {
     flex: 1,
     alignItems: 'center',
@@ -160,7 +156,7 @@ const styles = {
     borderRadius: 42,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    borderTopColor: colors.goldMuted,
+    borderTopColor: colors.goldBright,
     borderRightColor: colors.goldMuted,
   } as ViewStyle,
   message: {
@@ -168,8 +164,10 @@ const styles = {
     fontSize: 14,
     lineHeight: 20,
     fontFamily: 'Inter_500Medium',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
+  dotsRow: { flexDirection: 'row', gap: 8, marginTop: spacing.lg, alignItems: 'center' } as ViewStyle,
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.goldBright } as ViewStyle,
 } as const;

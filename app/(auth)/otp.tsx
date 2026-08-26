@@ -58,10 +58,10 @@ export default function OtpScreen() {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   const { width: windowWidth } = useWindowDimensions();
-  const otpSpacing = 16;
+  const otpSpacing = 10;
   const otpInputSize = Math.min(
-    72,
-    Math.max(56, Math.floor((windowWidth - spacing.lg * 2 - otpSpacing * (OTP_LENGTH - 1)) / OTP_LENGTH)),
+    56,
+    Math.floor((windowWidth - spacing.lg * 2 - otpSpacing * (OTP_LENGTH - 1)) / OTP_LENGTH),
   );
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -173,11 +173,12 @@ export default function OtpScreen() {
       source={authBackgrounds.otp}
       style={styles.container}
       imageStyle={styles.bgImage}
+      blurRadius={8}
       accessibilityIgnoresInvertColors
     >
       {/* Voile dégradé pour la lisibilité */}
       <LinearGradient
-        colors={['rgba(10,9,8,0.55)', 'rgba(10,9,8,0.86)']}
+        colors={['rgba(10,9,8,0.52)', 'rgba(10,9,8,0.84)']}
         style={styles.bgScrim}
         pointerEvents="none"
       />
@@ -251,7 +252,7 @@ export default function OtpScreen() {
                 }}
                 style={[
                   styles.otpInput,
-                  { width: otpInputSize, height: otpInputSize, marginRight: index < OTP_LENGTH - 1 ? otpSpacing : 0 },
+                  { width: otpInputSize, height: otpInputSize },
                   code[index] ? styles.otpInputFilled : null,
                   error ? styles.otpInputError : null,
                 ]}
@@ -449,27 +450,32 @@ const styles = StyleSheet.create({
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.xl,
+    gap: 10,
+    paddingHorizontal: spacing.xs,
   },
   otpInput: {
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceAlt,
+    borderRadius: 14,
+    backgroundColor: 'rgba(30,26,22,0.92)',
     textAlign: 'center',
     fontFamily: 'PlayfairDisplay_600SemiBold',
-    fontSize: 26,
-    lineHeight: 30,
-    color: colors.textSecondary,
+    fontSize: 22,
+    lineHeight: 26,
+    color: colors.text,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 3,
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
   otpInputFilled: {
-    borderColor: colors.borderGold,
-    backgroundColor: colors.glass,
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(216,180,90,0.14)',
     color: colors.goldBright,
     textShadowColor: 'rgba(216,180,90,0.30)',
     textShadowOffset: { width: 0, height: 0 },

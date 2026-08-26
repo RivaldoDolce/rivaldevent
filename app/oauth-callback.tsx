@@ -12,19 +12,21 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useClerk, useSignUp } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
-import { CircleAlert } from 'lucide-react-native';
+import { CircleAlert, WifiOff } from 'lucide-react-native';
+import { Image } from 'expo-image';
 
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/icons/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppMode } from '@/stores/app-mode';
-import { colors, gradients, spacing, typography, shadows } from '@/lib/constants';
+import { colors, spacing, typography } from '@/lib/constants';
+import { authBackgrounds } from '@/lib/images';
 import { logger } from '@/lib/logger';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -138,6 +140,29 @@ export default function OAuthCallbackScreen() {
     router.replace('/(auth)/login');
   }, [router]);
 
+  const logoPulse = useRef(new Animated.Value(0)).current;
+  const ringSpin = useRef(new Animated.Value(0)).current;
+  const dotAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoPulse, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(logoPulse, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    const spin = Animated.loop(Animated.timing(ringSpin, { toValue: 1, duration: 1400, easing: Easing.linear, useNativeDriver: true }));
+    const dots = Animated.loop(Animated.timing(dotAnim, { toValue: 1, duration: 1200, easing: Easing.linear, useNativeDriver: true }));
+    if (busy && !offline && !error) { pulse.start(); spin.start(); dots.start(); }
+    return () => { pulse.stop(); spin.stop(); dots.stop(); };
+  }, [busy, offline, error, logoPulse, ringSpin, dotAnim]);
+
+  const ringRotation = ringSpin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const logoScale = logoPulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] });
+  const dot1 = dotAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0.3, 1, 0.3, 0.3] });
+  const dot2 = dotAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0.3, 0.3, 1, 0.3] });
+  const dot3 = dotAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0.3, 0.3, 0.3, 1] });
+
   const retry = useCallback(() => {
     hasAttempted.current = false;
     setSlow(false);
@@ -145,76 +170,76 @@ export default function OAuthCallbackScreen() {
   }, [completeSso]);
 
   return (
-    <LinearGradient
-      colors={[...gradients.noir] as unknown as readonly [string, string, ...string[]]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}
-    >
-      {/* Halos dorés décoratifs */}
-      <View pointerEvents="none" style={styles.glowTop} />
-      <View pointerEvents="none" style={styles.ringDeco} />
+    <View style={styles.bgScreen}>
+      <Image source={authBackgrounds.login} style={StyleSheet.absoluteFillObject} contentFit="cover" blurRadius={8} cachePolicy="memory-disk" />
+      <LinearGradient colors={['rgba(10,9,8,0.52)', 'rgba(10,9,8,0.88)']} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+      <View style={styles.centerWrap}>
+        <View pointerEvents="none" style={styles.glowTop} />
+        <View pointerEvents="none" style={styles.ringDeco} />
 
-      <View style={styles.iconCircle}>
-        {busy && !offline ? (
-          <ActivityIndicator size="small" color={colors.goldBright} />
-        ) : error ? (
-          <CircleAlert size={28} color={colors.goldBright} strokeWidth={1.5} />
+        {error ? (
+          <View style={styles.errorBadge}>
+            <CircleAlert size={26} color={colors.terracotta} strokeWidth={1.75} />
+          </View>
+        ) : offline ? (
+          <View style={styles.errorBadge}>
+            <WifiOff size={26} color={colors.warning} strokeWidth={1.75} />
+          </View>
         ) : (
-          <Logo size="sm" withBackground />
+          <View style={styles.logoWrap}>
+            <Animated.View style={[styles.ring, { transform: [{ rotate: ringRotation }] }]} />
+            <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+              <Logo size="lg" withBackground />
+            </Animated.View>
+          </View>
+        )}
+
+        <Text style={styles.title}>{error ? 'Oups' : offline ? 'Hors ligne' : 'Connexion en cours'}</Text>
+        <Text style={styles.subtitle}>
+          {error ? error : offline ? OFFLINE_MESSAGE : weakNetwork ? WEAK_NETWORK_MESSAGE : 'Finalisation de l’authentification…'}
+        </Text>
+
+        {!error && !offline && busy && (
+          <View style={styles.dotsRow}>
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot2 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot3 }]} />
+          </View>
+        )}
+
+        {slow && !error && !offline ? <Text style={styles.slowText}>{SLOW_MESSAGE}</Text> : null}
+
+        {error ? (
+          <>
+            <View style={styles.actionWrap}>
+              <Button variant="primary" size="lg" fullWidth onPress={retry}>Réessayer</Button>
+            </View>
+            <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
+              <Text style={styles.backLinkText}>Retour à la connexion</Text>
+            </Pressable>
+          </>
+        ) : offline ? (
+          <>
+            <View style={styles.actionWrap}>
+              <Button variant="primary" size="lg" fullWidth onPress={retry}>Réessayer</Button>
+            </View>
+            <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
+              <Text style={styles.backLinkText}>Retour à la connexion</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLinkMuted}>
+            <Text style={styles.backLinkMutedText}>Annuler</Text>
+          </Pressable>
         )}
       </View>
-
-      <Text style={styles.title}>Connexion</Text>
-
-      {error ? (
-        <>
-          <Text style={styles.subtitle}>{error}</Text>
-          <View style={styles.actionWrap}>
-            <Button variant="primary" size="md" onPress={retry}>
-              Réessayer
-            </Button>
-          </View>
-          <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Retour à la connexion</Text>
-          </Pressable>
-        </>
-      ) : (
-        <>
-          <Text style={styles.subtitle}>
-            {busy
-              ? offline
-                ? OFFLINE_MESSAGE
-                : weakNetwork
-                  ? WEAK_NETWORK_MESSAGE
-                  : 'Finalisation de l\u2019authentification...'
-              : 'En attente de l\u2019authentification...'}
-          </Text>
-          {slow ? <Text style={styles.slowText}>{SLOW_MESSAGE}</Text> : null}
-          {offline ? (
-            <View style={styles.actionWrap}>
-              <Button variant="primary" size="md" onPress={retry}>
-                Réessayer
-              </Button>
-            </View>
-          ) : null}
-          <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
-            <Text style={styles.backLinkText}>Retour à la connexion</Text>
-          </Pressable>
-        </>
-      )}
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-    overflow: 'hidden',
-  },
+  bgScreen: { flex: 1, backgroundColor: colors.background },
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, overflow: 'hidden' },
   glowTop: {
     position: 'absolute',
     top: -140,
@@ -234,45 +259,36 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(216,180,90,0.15)',
   },
-  iconCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: colors.glass,
+  logoWrap: { width: 110, height: 110, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  ring: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    borderTopColor: colors.goldBright,
+    borderRightColor: colors.goldMuted,
+  },
+  errorBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(30,26,22,0.88)',
     borderWidth: 1,
-    borderColor: colors.borderGold,
+    borderColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.goldGlowSoft,
+    marginBottom: spacing.lg,
   },
-  title: {
-    ...typography.h2,
-    color: colors.text,
-    marginTop: spacing.xl,
-  },
-  subtitle: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    maxWidth: 300,
-  },
-  slowText: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  actionWrap: {
-    marginTop: spacing.xl,
-  },
-  backLink: {
-    marginTop: spacing.xl,
-  },
-  backLinkText: {
-    ...typography.bodySmallMedium,
-    color: colors.goldBright,
-    textDecorationLine: 'underline',
-  },
+  title: { ...typography.h2, color: colors.text, textAlign: 'center', marginBottom: spacing.sm },
+  subtitle: { ...typography.bodySmall, color: colors.textMuted, textAlign: 'center', maxWidth: 300, lineHeight: 20 },
+  slowText: { ...typography.bodySmall, color: colors.textMuted, marginTop: spacing.md, textAlign: 'center', fontStyle: 'italic' },
+  dotsRow: { flexDirection: 'row', gap: 10, marginTop: spacing.lg, alignItems: 'center' },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.goldBright },
+  actionWrap: { marginTop: spacing.xl, width: '100%', maxWidth: 320 },
+  backLink: { marginTop: spacing.lg },
+  backLinkText: { ...typography.bodySmallMedium, color: colors.goldBright, textDecorationLine: 'underline' },
+  backLinkMuted: { marginTop: spacing.xl, paddingVertical: spacing.sm },
+  backLinkMutedText: { ...typography.bodySmall, color: colors.textMuted },
 });
