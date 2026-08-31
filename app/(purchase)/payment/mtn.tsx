@@ -1,26 +1,4 @@
-/**
- * Page paiement MTN Mobile Money - Tunnel d'achat.
- *
- * Design system « Noir & Or » premium :
- * - En-tete degrade sombre : retour pastille verre + logo operateur +
- *   titre Playfair + sous-titre
- * - Carte recapitulative (billet + montant or champagne)
- * - Numero de debit affiche en champ style Input (prefixe +237 pastille)
- * - Panneau USSD focal + timeline d'etapes numerotees
- * - Note de securite (shield-check) + CTA "Payer {montant}" or pleine
- *   largeur avec etat de traitement (spinner + message elegant)
- * - Bouton "Annuler" discret en lien fantome
- *
- * Navigation :
- * - Recoit { transactionId } en parametres
- * - Confirmation -> vers ROUTES.TICKETS (liste billets)
- *
- * Conventions :
- * - Design tokens depuis lib/constants.ts
- * - Commentaires en francais
- */
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +6,8 @@ import {
   Pressable,
   Alert,
   StyleSheet,
+  Animated,
+  Clipboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -37,6 +17,8 @@ import {
   Smartphone,
   Ticket,
   ShieldCheck,
+  Copy,
+  Sparkles,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -51,15 +33,10 @@ import { formatPrice } from '@/services/event.service';
 import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
 import { ScreenBackground } from '@/components/ui/ScreenBackground';
 
-// ============================================================
-// Constantes MTN
-// ============================================================
-
 const OPERATOR_NAME = 'MTN Mobile Money';
 const USSD_CODE = '*126#';
-const OPERATOR_COLOR = '#FFC300'; // MTN jaune
+const OPERATOR_COLOR = '#FFC300';
 
-// Etapes du paiement USSD
 const PAYMENT_STEPS = [
   { step: 1, instruction: `Composez le code ${USSD_CODE} sur votre telephone` },
   { step: 2, instruction: 'Selectionnez "Envoyer de l\'argent"' },
@@ -67,29 +44,17 @@ const PAYMENT_STEPS = [
   { step: 4, instruction: 'Confirmez le montant et validez avec votre code PIN' },
 ] as const;
 
-// ============================================================
-// Helper : afficher le numero formatte
-// ============================================================
-
 function formatPhoneDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 0) return '';
   return digits.replace(/(\d{2})(?=\d)/g, '$1 ');
 }
 
-// ============================================================
-// Styles
-// ============================================================
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-
-  /* =============================================
-     Header premium - degrade sombre + halo or
-     ============================================= */
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
@@ -117,6 +82,16 @@ const styles = StyleSheet.create({
     borderColor: `${colors.gold}2E`,
     top: -70,
     right: -40,
+  },
+  headerRingSmall: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 1,
+    borderColor: `${colors.gold}14`,
+    top: -50,
+    right: -20,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -162,15 +137,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 1,
   },
-
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-
-  /* =============================================
-     Carte recapitulative - billet + montant
-     ============================================= */
   recapCard: {
     backgroundColor: colors.elevated,
     borderRadius: radius.lg,
@@ -221,8 +191,6 @@ const styles = StyleSheet.create({
     color: colors.goldBright,
     letterSpacing: -0.4,
   },
-
-  /* Numero de debit - champ style Input (lecture seule) */
   phoneField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,10 +224,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.text,
   },
-
-  /* =============================================
-     Panneau USSD focal
-     ============================================= */
   ussdCard: {
     backgroundColor: colors.elevated,
     borderRadius: radius.lg,
@@ -269,7 +233,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     marginBottom: spacing.lg,
+    overflow: 'hidden',
     ...shadows.card,
+  },
+  ussdHalo: {
+    position: 'absolute',
+    width: 180,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,195,0,0.08)',
+    top: -10,
   },
   ussdLabelRow: {
     flexDirection: 'row',
@@ -305,8 +278,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
   },
-
-  /* Section titre */
+  copyBtn: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(216,180,90,0.28)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  copyBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.goldBright,
+    letterSpacing: 0.3,
+  },
   sectionTitle: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 18,
@@ -314,8 +304,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
-
-  /* Timeline des etapes */
   stepContainer: {
     backgroundColor: colors.glass,
     borderRadius: radius.lg,
@@ -335,14 +323,18 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   stepIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: `${OPERATOR_COLOR}22`,
-    borderWidth: 1,
-    borderColor: `${OPERATOR_COLOR}45`,
+    borderWidth: 1.5,
+    borderColor: `${OPERATOR_COLOR}55`,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: OPERATOR_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   stepIndicatorCompleted: {
     backgroundColor: 'rgba(91,196,139,0.14)',
@@ -355,11 +347,21 @@ const styles = StyleSheet.create({
     color: OPERATOR_COLOR,
   },
   stepConnector: {
-    width: 1.5,
+    width: 2,
     flex: 1,
-    backgroundColor: `${OPERATOR_COLOR}30`,
+    backgroundColor: `${OPERATOR_COLOR}35`,
     marginVertical: spacing.xs,
     minHeight: 24,
+    borderRadius: 1,
+  },
+  stepConnectorGold: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.gold,
+    opacity: 0.55,
+    marginVertical: spacing.xs,
+    minHeight: 24,
+    borderRadius: 1,
   },
   stepInstruction: {
     fontFamily: 'Inter_400Regular',
@@ -370,8 +372,6 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: spacing.md,
   },
-
-  /* Note de securite */
   securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -385,8 +385,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: colors.textMuted,
   },
-
-  /* Bouton annuler */
   cancelButton: {
     alignItems: 'center',
     paddingVertical: spacing.md,
@@ -400,13 +398,16 @@ const styles = StyleSheet.create({
   },
   payButtonRow: {
     marginTop: spacing.xs,
-    gap: spacing.sm,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  payShimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 120,
   },
 });
-
-// ============================================================
-// Composant
-// ============================================================
 
 export default function MTNPayment() {
   const insets = useSafeAreaInsets();
@@ -416,6 +417,37 @@ export default function MTNPayment() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedSteps] = useState(0);
+
+  const ussdPulse = useRef(new Animated.Value(1)).current;
+  const shimmerX = useRef(new Animated.Value(-1)).current;
+  const btnPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(ussdPulse, { toValue: 1.04, duration: 900, useNativeDriver: true }),
+        Animated.timing(ussdPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [ussdPulse]);
+
+  useEffect(() => {
+    if (isProcessing) return;
+    const l = Animated.loop(Animated.timing(shimmerX, { toValue: 1, duration: 1700, useNativeDriver: true }));
+    shimmerX.setValue(-1);
+    l.start();
+    return () => l.stop();
+  }, [isProcessing, shimmerX]);
+
+  useEffect(() => {
+    if (isProcessing) return;
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(btnPulse, { toValue: 1.015, duration: 900, useNativeDriver: true }),
+        Animated.timing(btnPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [isProcessing, btnPulse]);
 
   const displayAmount = flow.totalAmount;
   const displayPhone = flow.phoneNumber
@@ -427,18 +459,18 @@ export default function MTNPayment() {
     router.back();
   }, [impact, router]);
 
+  const handleCopy = useCallback(() => {
+    impact('medium');
+    Clipboard.setString(USSD_CODE);
+  }, [impact]);
+
   const handleConfirmPayment = useCallback(() => {
     if (isProcessing) return;
     impact('medium');
     setIsProcessing(true);
-
-    // Simuler la confirmation du paiement
     setTimeout(() => {
       setIsProcessing(false);
-
-      // Creer les billets dans le store
       const ticketsCreated = confirmPaymentAndCreateTickets();
-
       Alert.alert(
         'Paiement confirme',
         ticketsCreated > 0
@@ -448,8 +480,6 @@ export default function MTNPayment() {
           {
             text: 'Voir mes billets',
             onPress: () => {
-              // Ferme le flux d'achat (modale) avant d'afficher les billets :
-              // evite un doublon du groupe client et un retour incoherent.
               router.dismissAll();
               router.push(ROUTES.TICKETS as never);
             },
@@ -479,6 +509,7 @@ export default function MTNPayment() {
   }, [impact, router]);
 
   const payLabel = `Payer ${formatPrice(displayAmount)}`;
+  const shimmerTranslate = shimmerX.interpolate({ inputRange: [-1, 1], outputRange: [-260, 260] });
 
   return (
     <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
@@ -489,7 +520,6 @@ export default function MTNPayment() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <LinearGradient
           colors={['#26211B', colors.background]}
           start={{ x: 0.1, y: 0 }}
@@ -498,6 +528,7 @@ export default function MTNPayment() {
         >
           <View pointerEvents="none" style={styles.headerGlow} />
           <View pointerEvents="none" style={styles.headerRingLarge} />
+          <View pointerEvents="none" style={styles.headerRingSmall} />
 
           <View style={styles.headerTopRow}>
             <Pressable
@@ -522,7 +553,6 @@ export default function MTNPayment() {
         </LinearGradient>
 
         <View style={styles.content}>
-          {/* Carte recapitulative */}
           <View style={styles.recapCard}>
             <View style={styles.recapTopRow}>
               <Text style={styles.recapOverline}>VOTRE COMMANDE</Text>
@@ -552,19 +582,24 @@ export default function MTNPayment() {
             )}
           </View>
 
-          {/* Code USSD focal */}
           <View style={styles.ussdCard}>
+            <View pointerEvents="none" style={styles.ussdHalo} />
             <View style={styles.ussdLabelRow}>
               <View style={styles.ussdDot} />
               <Text style={styles.ussdLabel}>CODE USSD A COMPOSER</Text>
+              <Sparkles size={12} color={colors.gold} strokeWidth={1.75} />
             </View>
-            <Text style={styles.ussdCode}>{USSD_CODE}</Text>
+            <Animated.Text style={[styles.ussdCode, { transform: [{ scale: ussdPulse }] }]}>{USSD_CODE}</Animated.Text>
             <Text style={styles.ussdHint}>
               Ouvrez le composeur de votre telephone puis saisissez ce code
             </Text>
+            <Pressable onPress={handleCopy} style={styles.copyBtn} accessibilityRole="button" accessibilityLabel="Copier le code">
+              <Copy size={14} color={colors.goldBright} strokeWidth={1.75} />
+              <Text style={styles.copyBtnText}>Copier</Text>
+              <Sparkles size={10} color={colors.gold} strokeWidth={2} />
+            </Pressable>
           </View>
 
-          {/* Etapes */}
           <Text style={styles.sectionTitle}>Etapes a suivre</Text>
 
           <View style={styles.stepContainer}>
@@ -584,7 +619,7 @@ export default function MTNPayment() {
                         <Text style={styles.stepNumber}>{step.step}</Text>
                       )}
                     </View>
-                    {!isLast && <View style={styles.stepConnector} />}
+                    {!isLast && <View style={index === 0 ? styles.stepConnectorGold : styles.stepConnector} />}
                   </View>
                   <Text style={styles.stepInstruction}>{step.instruction}</Text>
                 </View>
@@ -592,7 +627,6 @@ export default function MTNPayment() {
             })}
           </View>
 
-          {/* Note de securite */}
           <View style={styles.securityNote}>
             <ShieldCheck size={16} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.securityNoteText}>
@@ -600,8 +634,12 @@ export default function MTNPayment() {
             </Text>
           </View>
 
-          {/* Bouton confirmation - or pleine largeur */}
-          <View style={styles.payButtonRow}>
+          <Animated.View style={[styles.payButtonRow, !isProcessing && { transform: [{ scale: btnPulse }] }]}>
+            {!isProcessing && (
+              <Animated.View style={[styles.payShimmer, { transform: [{ translateX: shimmerTranslate }] }]} pointerEvents="none">
+                <LinearGradient colors={['transparent', 'rgba(255,255,255,0.28)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+              </Animated.View>
+            )}
             <Button
               variant="primary"
               size="lg"
@@ -611,7 +649,7 @@ export default function MTNPayment() {
             >
               {isProcessing ? 'Verification en cours...' : payLabel}
             </Button>
-          </View>
+          </Animated.View>
 
           <Pressable
             onPress={handleCancel}

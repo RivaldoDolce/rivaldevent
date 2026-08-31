@@ -1,30 +1,4 @@
-/**
- * Page selection operateur Mobile Money - Tunnel d'achat.
- *
- * Design system « Noir & Or » premium :
- * - En-tete ScreenHeader (degrade sombre + halo or + retour pastille verre)
- * - Recapitulatif commande compact en carte elevee (filet or subtil),
- *   total en Inter_700Bold or champagne
- * - Selection operateur : 3 cartes sombres (MTN, Orange, Moov) avec
- *   logos SVG existants, pastille radio a droite (degrade or quand cochee)
- *   et etat actif : filet or + fond verre dore + halo doux
- * - Champ telephone premium : prefixe +237 en pastille doree, auto-format
- *   sur 9 chiffres, validation temps reel, clavier non masquant
- * - Bouton "Confirmer" or pleine largeur inline (evite les problemes
- *   de clavier) + badge de securite discret
- *
- * Navigation :
- * - Recoit { eventId, tiers, totalAmount } en parametres
- * - CTA navigue vers la page de paiement specifique (mtn/orange/moov)
- *
- * Conventions :
- * - Design tokens depuis lib/constants.ts
- * - Pas de type any (sauf router.push as never), pas d'emojis
- * - Imports @/
- * - Commentaires en francais
- */
-
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,6 +9,7 @@ import {
   ImageBackground,
   Platform,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -49,6 +24,7 @@ import {
   CalendarDays,
   MapPin,
   Check,
+  Sparkles,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -69,21 +45,14 @@ import { usePurchaseFlowStore } from '@/stores/purchase-flow-store';
 import type { SelectedTierInfo } from '@/stores/purchase-flow-store';
 import type { PaymentMethod } from '@/types';
 
-// ============================================================
-// Types
-// ============================================================
-
 interface OperatorInfo {
   readonly id: PaymentMethod;
   readonly name: string;
   readonly subtitle: string;
   readonly logoSource: React.ComponentType<{ width?: number; height?: number }>;
   readonly badge?: string;
-  /** Dégradé aux couleurs officielles de l'operateur */
   readonly brandGradient: readonly [string, string];
-  /** Couleur principale de l'operateur */
   readonly brandColor: string;
-  /** Couleur de texte sur le dégradé */
   readonly textColor: string;
 }
 
@@ -93,10 +62,6 @@ interface RecapRow {
   readonly quantity: number;
   readonly subtotal: number | null;
 }
-
-// ============================================================
-// Donnees operateurs
-// ============================================================
 
 const OPERATORS: readonly OperatorInfo[] = [
   {
@@ -129,20 +94,12 @@ const OPERATORS: readonly OperatorInfo[] = [
   },
 ] as const;
 
-// ============================================================
-// Helper : valider numero camerounais
-// ============================================================
-
 function isValidCameroonPhone(phone: string): boolean {
   const cleaned = phone.replace(/\s/g, '');
   return /^6\d{8}$/.test(cleaned);
 }
 
-/**
- * Auto-formatage du numero : 6 XX XX XX XX (13 caracteres max)
- */
 function formatPhoneNumber(input: string): string {
-  // Ne garder que les chiffres
   const digits = input.replace(/\D/g, '').slice(0, 9);
   if (digits.length === 0) return '';
   if (digits.length <= 1) return digits;
@@ -151,10 +108,6 @@ function formatPhoneNumber(input: string): string {
   if (digits.length <= 7) return `${digits.slice(0, 1)} ${digits.slice(1, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`;
   return `${digits.slice(0, 1)} ${digits.slice(1, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 7)} ${digits.slice(7)}`;
 }
-
-// ============================================================
-// Styles
-// ============================================================
 
 const styles = StyleSheet.create({
   root: {
@@ -167,16 +120,10 @@ const styles = StyleSheet.create({
   bgScrim: {
     ...StyleSheet.absoluteFillObject,
   },
-
-  /* Contenu */
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-
-  /* =====================================================
-     Recapitulatif compact - carte elevee
-     ===================================================== */
   recapCard: {
     backgroundColor: colors.elevated,
     borderRadius: radius.lg,
@@ -184,13 +131,62 @@ const styles = StyleSheet.create({
     borderColor: `${colors.gold}1F`,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    overflow: 'hidden',
     ...shadows.card,
+  },
+  recapPerfoLeft: {
+    position: 'absolute',
+    left: -8,
+    top: '50%',
+    marginTop: -12,
+    width: 16,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}22`,
+  },
+  recapPerfoRight: {
+    position: 'absolute',
+    right: -8,
+    top: '50%',
+    marginTop: -12,
+    width: 16,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}22`,
+  },
+  recapDashed: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 62,
+    height: 1,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: `${colors.gold}26`,
   },
   recapTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
+  },
+  ticketIconGlow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(216,180,90,0.30)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
   },
   recapOverline: {
     fontFamily: 'Inter_600SemiBold',
@@ -282,8 +278,6 @@ const styles = StyleSheet.create({
     color: colors.goldBright,
     letterSpacing: -0.3,
   },
-
-  /* Securite badge */
   securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,8 +297,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.textSecondary,
   },
-
-  /* Section titre */
   sectionOverline: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
@@ -328,8 +320,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: spacing.md,
   },
-
-  /* Carte operateur - degrade aux couleurs officielles */
   operatorCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,8 +333,13 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   operatorCardSelected: {
-    borderColor: colors.goldMuted,
+    borderWidth: 1.5,
     ...shadows.goldGlowSoft,
+  },
+  operatorHalo: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+    borderRadius: radius.lg,
   },
   operatorLogoWrap: {
     width: 48,
@@ -417,8 +412,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  /* Indication dynamique sous la liste */
   operatorHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -431,6 +424,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  operatorHintRowSelected: {
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderColor: 'rgba(216,180,90,0.26)',
+  },
   operatorHintText: {
     flex: 1,
     fontFamily: 'Inter_400Regular',
@@ -442,8 +439,6 @@ const styles = StyleSheet.create({
     color: colors.goldBright,
     fontFamily: 'Inter_600SemiBold',
   },
-
-  /* Champ telephone premium */
   phoneSection: {
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
@@ -466,8 +461,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   phoneInputOuterFocused: {
-    borderColor: `${colors.gold}66`,
-    ...shadows.goldGlowSoft,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
   },
   phoneInputOuterError: {
     borderColor: colors.danger,
@@ -520,8 +519,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.danger,
   },
-
-  /* Bouton annuler */
+  confirmWrap: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  confirmShimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 120,
+  },
   cancelButton: {
     alignItems: 'center',
     paddingVertical: spacing.md,
@@ -544,10 +552,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// ============================================================
-// Composant principal
-// ============================================================
-
 export default function PaymentIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -560,15 +564,34 @@ export default function PaymentIndex() {
   const isOffline = useOffline();
   const flow = usePurchaseFlowStore();
 
-  // -- Refs --
   const phoneInputRef = useRef<TextInput>(null);
 
-  // -- State --
   const [selectedOperator, setSelectedOperator] = useState<PaymentMethod | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
 
-  // -- Parse params --
+  const shimmerX = useRef(new Animated.Value(-1)).current;
+  const validPop = useRef(new Animated.Value(0)).current;
+  const shakeX = useRef(new Animated.Value(0)).current;
+  const hintPulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.timing(shimmerX, { toValue: 1, duration: 1700, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [shimmerX]);
+
+  useEffect(() => {
+    if (selectedOperator) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(hintPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+          Animated.timing(hintPulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [selectedOperator, hintPulse]);
+
   const totalAmount = useMemo(() => {
     return parseInt(params.totalAmount ?? '0', 10);
   }, [params.totalAmount]);
@@ -581,8 +604,6 @@ export default function PaymentIndex() {
     }
   }, [params.tiers]);
 
-  // -- Lignes du recapitulatif : privilegie le store (riches),
-  //    sinon repli sur les parametres de navigation --
   const recapRows: RecapRow[] = useMemo(() => {
     if (flow.selectedTiers.length > 0) {
       return flow.selectedTiers
@@ -607,10 +628,28 @@ export default function PaymentIndex() {
   const displayEventDate = flow.eventStartDate ? formatDate(flow.eventStartDate) : '';
   const displayEventCity = flow.eventCity ?? '';
 
-  // -- Validation --
   const phoneDigits = phoneNumber.replace(/\s/g, '');
   const isPhoneValid = phoneDigits.length === 0 || isValidCameroonPhone(phoneDigits);
   const isPhoneComplete = isValidCameroonPhone(phoneDigits);
+
+  useEffect(() => {
+    if (isPhoneComplete) {
+      Animated.spring(validPop, { toValue: 1, useNativeDriver: true, damping: 9, stiffness: 260 }).start();
+    } else {
+      validPop.setValue(0);
+    }
+  }, [isPhoneComplete, validPop]);
+
+  useEffect(() => {
+    if (!isPhoneValid && phoneDigits.length > 0) {
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: 8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 6, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isPhoneValid, phoneDigits.length, shakeX]);
 
   const canProceed = useMemo(() => {
     return selectedOperator !== null
@@ -618,7 +657,6 @@ export default function PaymentIndex() {
       && !isOffline;
   }, [selectedOperator, isPhoneComplete, isOffline]);
 
-  // -- Aide contextuelle sous le bouton --
   const ctaHelper = useMemo(() => {
     if (isOffline) return 'Hors ligne - verifiez votre connexion';
     if (!selectedOperator) return 'Selectionnez un operateur pour continuer';
@@ -626,7 +664,6 @@ export default function PaymentIndex() {
     return '';
   }, [isOffline, selectedOperator, isPhoneComplete]);
 
-  // -- Handlers --
   const handleBack = useCallback(() => {
     impact('light');
     router.back();
@@ -635,7 +672,6 @@ export default function PaymentIndex() {
   const handleOperatorSelect = useCallback((operator: PaymentMethod) => {
     impact('medium');
     setSelectedOperator(operator);
-    // Auto-focus le champ telephone apres selection
     setTimeout(() => {
       phoneInputRef.current?.focus();
     }, 300);
@@ -649,8 +685,6 @@ export default function PaymentIndex() {
   const handleConfirmPayment = useCallback(() => {
     if (!canProceed || !selectedOperator) return;
     impact('medium');
-
-    // Mettre a jour le purchase-flow-store avec l'operateur et le numero
     const flowStore = usePurchaseFlowStore.getState();
     flowStore.setReservation({
       eventId: flowStore.eventId ?? '',
@@ -663,24 +697,20 @@ export default function PaymentIndex() {
       operator: selectedOperator,
       phoneNumber: phoneDigits,
     });
-
     const transactionId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
     const routeMap: Record<PaymentMethod, string> = {
       mtn: ROUTES.PAYMENT_MTN,
       orange: ROUTES.PAYMENT_ORANGE,
       moov: ROUTES.PAYMENT_MOOV,
     };
-
     router.push({
       pathname: routeMap[selectedOperator],
       params: { transactionId },
     } as never);
   }, [canProceed, selectedOperator, impact, router, phoneDigits]);
 
-  // ============================================================
-  // Rendu
-  // ============================================================
+  const shimmerTranslate = shimmerX.interpolate({ inputRange: [-1, 1], outputRange: [-260, 260] });
+  const validScale = validPop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
 
   return (
     <ImageBackground
@@ -689,7 +719,6 @@ export default function PaymentIndex() {
       imageStyle={styles.bgImage}
       accessibilityIgnoresInvertColors
     >
-      {/* Voile dégradé pour la lisibilité */}
       <LinearGradient
         colors={['rgba(10,9,8,0.50)', 'rgba(10,9,8,0.82)']}
         style={styles.bgScrim}
@@ -709,7 +738,6 @@ export default function PaymentIndex() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        {/* Header */}
         <ScreenHeader
           title="Paiement"
           subtitle="Choisissez votre operateur Mobile Money"
@@ -717,13 +745,15 @@ export default function PaymentIndex() {
         />
 
         <View style={styles.content}>
-          {/* =============================================
-              RECAPITULATIF COMPACT - carte elevee
-              ============================================= */}
           <View style={styles.recapCard}>
+            <View style={styles.recapPerfoLeft} />
+            <View style={styles.recapPerfoRight} />
+            <View style={styles.recapDashed} pointerEvents="none" />
             <View style={styles.recapTopRow}>
               <Text style={styles.recapOverline}>VOTRE COMMANDE</Text>
-              <Ticket size={18} color={colors.gold} strokeWidth={1.5} />
+              <View style={styles.ticketIconGlow}>
+                <Ticket size={16} color={colors.goldBright} strokeWidth={1.75} />
+              </View>
             </View>
 
             <Text style={styles.recapEventTitle} numberOfLines={2}>
@@ -777,7 +807,6 @@ export default function PaymentIndex() {
             </View>
           </View>
 
-          {/* Badge securise */}
           <View style={styles.securityRow}>
             <ShieldCheck size={17} color={colors.goldBright} strokeWidth={1.75} />
             <Text style={styles.securityText}>
@@ -785,9 +814,6 @@ export default function PaymentIndex() {
             </Text>
           </View>
 
-          {/* =============================================
-              SELECTION OPERATEUR - cartes sombres premium
-              ============================================= */}
           <Text style={styles.sectionOverline}>PAIEMENT MOBILE</Text>
           <Text style={styles.sectionTitle}>Operateur Mobile Money</Text>
           <Text style={styles.sectionSubtitle}>
@@ -802,13 +828,13 @@ export default function PaymentIndex() {
                 onPress={() => handleOperatorSelect(op.id)}
                 style={[
                   styles.operatorCard,
-                  isSelected && styles.operatorCardSelected,
+                  isSelected && [styles.operatorCardSelected, { borderColor: op.brandColor, shadowColor: op.brandColor }],
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={op.name}
                 accessibilityState={{ selected: isSelected }}
               >
-                {/* Fond degrade aux couleurs officielles de l'operateur */}
+                {isSelected && <Animated.View style={[styles.operatorHalo, { backgroundColor: `${op.brandColor}14` }]} />}
                 <LinearGradient
                   colors={[...op.brandGradient] as unknown as readonly [string, string, ...string[]]}
                   start={{ x: 0, y: 0 }}
@@ -816,16 +842,12 @@ export default function PaymentIndex() {
                   style={StyleSheet.absoluteFill}
                   pointerEvents="none"
                 />
-
-                {/* Logo sur pastille blanche */}
                 <View style={styles.operatorLogoWrap}>
                   {(() => {
                     const OperatorLogo = op.logoSource;
                     return <OperatorLogo width={38} height={38} />;
                   })()}
                 </View>
-
-                {/* Info */}
                 <View style={styles.operatorInfo}>
                   <View style={styles.operatorNameRow}>
                     <Text style={styles.operatorName}>
@@ -843,11 +865,10 @@ export default function PaymentIndex() {
                     {op.subtitle}
                   </Text>
                 </View>
-
-                {/* Pastille radio */}
-                <View style={[
+                <Animated.View style={[
                   styles.operatorRadioOuter,
                   isSelected && styles.operatorRadioSelected,
+                  isSelected && { transform: [{ scale: 1.01 }] },
                 ]}>
                   {isSelected && (
                     <LinearGradient
@@ -859,19 +880,19 @@ export default function PaymentIndex() {
                       <Check size={14} color={colors.onyx} strokeWidth={3} />
                     </LinearGradient>
                   )}
-                </View>
+                </Animated.View>
               </Pressable>
             );
           })}
 
-          {/* Indication contextuelle */}
-          <View style={styles.operatorHintRow}>
+          <Animated.View style={[styles.operatorHintRow, selectedOperator && styles.operatorHintRowSelected, { opacity: hintPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] }) }]}>
             {selectedOperator ? (
               <>
                 <ArrowRight size={16} color={colors.goldBright} strokeWidth={1.75} />
                 <Text style={[styles.operatorHintText, styles.operatorHintTextSelected]}>
                   Redirection vers {OPERATORS.find((op) => op.id === selectedOperator)?.name}
                 </Text>
+                <Sparkles size={14} color={colors.gold} strokeWidth={1.75} />
               </>
             ) : (
               <>
@@ -881,14 +902,17 @@ export default function PaymentIndex() {
                 </Text>
               </>
             )}
-          </View>
+          </Animated.View>
 
-          {/* =============================================
-              NUMERO DE TELEPHONE
-              ============================================= */}
           <View style={styles.phoneSection}>
             <Text style={styles.phoneLabel}>Numero de telephone</Text>
 
+            <Animated.View
+              style={[
+                { borderRadius: radius.md },
+                { transform: [{ translateX: shakeX }] },
+              ]}
+            >
             <Pressable
               onPress={() => phoneInputRef.current?.focus()}
               style={[
@@ -918,16 +942,16 @@ export default function PaymentIndex() {
                 cursorColor={colors.gold}
                 accessibilityLabel="Numero de telephone"
               />
-              <View style={styles.phoneIcon}>
+              <Animated.View style={[styles.phoneIcon, { transform: [{ scale: validScale }] }]}>
                 {isPhoneComplete ? (
                   <CircleCheck size={22} color={colors.success} strokeWidth={2} />
                 ) : (
-                  <Phone size={22} color={colors.goldMuted} strokeWidth={1.5} />
+                  <Phone size={22} color={phoneFocused ? colors.goldBright : colors.goldMuted} strokeWidth={1.5} />
                 )}
-              </View>
+              </Animated.View>
             </Pressable>
+            </Animated.View>
 
-            {/* Hint / Error */}
             <View style={styles.phoneHint}>
               {!isPhoneValid && phoneDigits.length > 0 ? (
                 <>
@@ -939,26 +963,30 @@ export default function PaymentIndex() {
               ) : (
                 <Text style={styles.phoneHintText}>
                   {isPhoneComplete
-                    ? 'Numero valide'
+                    ? 'Numero valide ✓'
                     : 'Entrez votre numero Mobile Money (9 chiffres)'}
                 </Text>
               )}
             </View>
           </View>
 
-          {/* =============================================
-              BOUTON CONFIRMER - or pleine largeur
-              ============================================= */}
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={!canProceed}
-            onPress={handleConfirmPayment}
-            icon={<ArrowRight size={20} strokeWidth={2.25} />}
-          >
-            {canProceed ? `Confirmer ${formatPrice(displayTotal)}` : 'Confirmer'}
-          </Button>
+          <View style={styles.confirmWrap}>
+            {canProceed && (
+              <Animated.View style={[styles.confirmShimmer, { transform: [{ translateX: shimmerTranslate }] }]} pointerEvents="none">
+                <LinearGradient colors={['transparent', 'rgba(255,255,255,0.28)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, borderRadius: radius.md }} />
+              </Animated.View>
+            )}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={!canProceed}
+              onPress={handleConfirmPayment}
+              icon={<ArrowRight size={20} strokeWidth={2.25} />}
+            >
+              {canProceed ? `Confirmer ${formatPrice(displayTotal)}` : 'Confirmer'}
+            </Button>
+          </View>
 
           {!canProceed && ctaHelper ? (
             <Text style={styles.ctaHelperText}>{ctaHelper}</Text>
