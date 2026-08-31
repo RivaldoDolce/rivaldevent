@@ -18,7 +18,7 @@
  * Donnees : mock en attendant le branchement TanStack Query.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -184,6 +184,9 @@ export default function HomeScreen() {
     impact('light');
     router.push(`${ROUTES.EXPLORE}?filterCategory=${categoryId}`);
   }, [impact, router]);
+
+  const upcomingEvents = useMemo(() => MOCK_EVENTS.filter((e) => e.isFeatured).slice(0, 6), []);
+  const nearbyVenues = useMemo(() => MOCK_VENUES.slice(0, 6), []);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -399,7 +402,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.eventsContainer}>
-          {MOCK_EVENTS.map((event) => (
+          {upcomingEvents.map((event) => (
             <EventCard
               key={event.id}
               id={event.id}
@@ -454,7 +457,7 @@ export default function HomeScreen() {
           style={styles.venuesScroll}
           contentContainerStyle={styles.venuesScrollContent}
         >
-          {MOCK_VENUES.map((venue) => (
+          {nearbyVenues.map((venue) => (
             <VenueCard
               key={venue.id}
               id={venue.id}

@@ -24,7 +24,7 @@
  * Donnees : mock depuis @/data/mock en attendant TanStack Query.
  */
 
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -131,8 +131,10 @@ function VenueGridCard({ venue, onPress }: VenueGridCardProps) {
               source={{ uri: venue.image }}
               style={imageStyle}
               contentFit="cover"
-              transition={300}
+              transition={100}
               cachePolicy="memory-disk"
+              recyclingKey={venue.id}
+              priority="low"
             />
             {/* Dégradé sombre de fond */}
             <LinearGradient
@@ -187,8 +189,15 @@ export default function VenuesScreen() {
 
   // -- State local pour recherche + categorie --
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchQuery(searchQuery), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   // -- Handlers --
   const handleBack = useCallback(() => {
@@ -278,9 +287,9 @@ export default function VenuesScreen() {
       result = result.filter((v) => v.badge === venueFilters.prestige);
     }
 
-    // Filtre par recherche
-    if (searchQuery.trim().length > 0) {
-      const query = searchQuery.toLowerCase().trim();
+    // Filtre par recherche (debounced)
+    if (debouncedSearchQuery.trim().length > 0) {
+      const query = debouncedSearchQuery.toLowerCase().trim();
       result = result.filter((v) =>
         v.name.toLowerCase().includes(query)
         || v.location.toLowerCase().includes(query)
@@ -288,7 +297,11 @@ export default function VenuesScreen() {
     }
 
     return result;
-  }, [activeCategory, venueFilters, searchQuery]);
+  }, [activeCategory, venueFilters, debouncedSearchQuery]);
+
+  useEffect(() => { setVisibleCount(20); }, [activeCategory, venueFilters, debouncedSearchQuery]);
+
+  const displayVenues = useMemo(() => filteredVenues.slice(0, visibleCount), [filteredVenues, visibleCount]);
 
   return (
     <ScreenBackground><View style={[screenStyle, { backgroundColor: 'transparent' }]}>
@@ -416,10 +429,10 @@ export default function VenuesScreen() {
             ============================================ */}
         {filteredVenues.length > 0 ? (
           <View style={gridStyle}>
-            {/* Grille en 2 colonnes : pairs et impairs */}
-            {Array.from({ length: Math.ceil(filteredVenues.length / 2) }).map((_, rowIndex) => {
-              const leftVenue = filteredVenues[rowIndex * 2];
-              const rightVenue = filteredVenues[rowIndex * 2 + 1];
+            {/* Grille en 2 colonnes : pairs et impairs (paginé) */}
+            {Array.from({ length: Math.ceil(displayVenues.length / 2) }).map((_, rowIndex) => {
+              const leftVenue = displayVenues[rowIndex * 2];
+              const rightVenue = displayVenues[rowIndex * 2 + 1];
               return (
                 <View key={rowIndex} style={{ flexDirection: 'row', gap: spacing.md }}>
                   <View style={{ flex: 1 }}>
@@ -441,6 +454,11 @@ export default function VenuesScreen() {
                 </View>
               );
             })}
+            {displayVenues.length < filteredVenues.length && (
+              <Pressable onPress={() => setVisibleCount((c) => c + 20)} style={{ alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: `${colors.gold}40` }}>
+                <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.goldBright, fontSize: 13 }}>Voir plus ({filteredVenues.length - displayVenues.length} restants)</Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           /* Etat vide premium */

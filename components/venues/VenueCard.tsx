@@ -117,8 +117,10 @@ export const VenueCard = React.memo(function VenueCard({
             source={{ uri: image }}
             style={styles.image}
             contentFit="cover"
-            transition={300}
+            transition={100}
             cachePolicy="memory-disk"
+            recyclingKey={image}
+            priority="low"
             accessibilityLabel={`Image de ${name}`}
           />
           <LinearGradient

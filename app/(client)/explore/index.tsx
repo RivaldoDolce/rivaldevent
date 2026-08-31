@@ -67,6 +67,16 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.md) / 2;
 const GRID_IMAGE_HEIGHT = 140;
 const LIST_IMAGE_HEIGHT = 100;
+const EXPLORE_HEADER_TITLE_HEIGHT = 98;
+const EXPLORE_HEADER_TOGGLE_HEIGHT = 72;
+const EXPLORE_HEADER_SEARCH_HEIGHT = 58;
+const EXPLORE_HEADER_CHIPS_HEIGHT = 60;
+const EXPLORE_HEADER_COLLAPSE_DISTANCE = EXPLORE_HEADER_TITLE_HEIGHT + EXPLORE_HEADER_TOGGLE_HEIGHT;
+const EXPLORE_HEADER_BODY_HEIGHT =
+  EXPLORE_HEADER_COLLAPSE_DISTANCE +
+  EXPLORE_HEADER_SEARCH_HEIGHT +
+  EXPLORE_HEADER_CHIPS_HEIGHT +
+  spacing.sm;
 
 // ============================================================
 // Prix range labels (doit correspondre aux filtres du modal)
@@ -127,8 +137,10 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
           source={{ uri: event.image }}
           style={gridImageStyle}
           contentFit="cover"
-          transition={200}
+          transition={100}
           cachePolicy="memory-disk"
+          recyclingKey={event.id}
+          priority="low"
         />
         <LinearGradient
           colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.6)']}
@@ -229,8 +241,10 @@ function ListCard({ event, onPress, onReserve }: ListCardProps) {
           source={{ uri: event.image }}
           style={listImageStyle}
           contentFit="cover"
-          transition={200}
+          transition={100}
           cachePolicy="memory-disk"
+          recyclingKey={event.id}
+          priority="low"
         />
         <LinearGradient
           colors={['rgba(10,9,8,0.02)', 'rgba(10,9,8,0.55)']}
@@ -296,12 +310,36 @@ export default function ExploreScreen() {
 
   // -- State local --
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [visibleCount, setVisibleCount] = useState(20);
   const scrollY = useRef(new Animated.Value(0)).current;
-  const clampedScrollY = Animated.diffClamp(scrollY, 0, 110);
-  const collapsibleHeight = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [72, 0], extrapolate: 'clamp' });
-  const toggleHeight = clampedScrollY.interpolate({ inputRange: [0, 110], outputRange: [36, 0], extrapolate: 'clamp' });
-  const collapsibleOpacity = clampedScrollY.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' });
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchQuery(searchQuery), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+  const headerExpandedHeight = insets.top + spacing.md + EXPLORE_HEADER_BODY_HEIGHT;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, EXPLORE_HEADER_COLLAPSE_DISTANCE],
+    outputRange: [0, -EXPLORE_HEADER_COLLAPSE_DISTANCE],
+    extrapolate: 'clamp',
+  });
+  const collapsibleOpacity = scrollY.interpolate({
+    inputRange: [0, EXPLORE_HEADER_COLLAPSE_DISTANCE * 0.35, EXPLORE_HEADER_COLLAPSE_DISTANCE],
+    outputRange: [1, 0.72, 0],
+    extrapolate: 'clamp',
+  });
+  const collapsibleTranslateY = scrollY.interpolate({
+    inputRange: [0, EXPLORE_HEADER_COLLAPSE_DISTANCE],
+    outputRange: [0, -22],
+    extrapolate: 'clamp',
+  });
+  const headerBackgroundScale = scrollY.interpolate({
+    inputRange: [0, EXPLORE_HEADER_COLLAPSE_DISTANCE],
+    outputRange: [1, 1.035],
+    extrapolate: 'clamp',
+  });
 
   // -- Autofocus si navigation depuis la barre de recherche Home --
   useEffect(() => {
@@ -391,9 +429,9 @@ export default function ExploreScreen() {
   const filteredEvents = useMemo(() => {
     let result = [...MOCK_EVENTS];
 
-    // Filtre recherche textuelle
-    if (searchQuery.trim().length > 0) {
-      const query = searchQuery.trim().toLowerCase();
+    // Filtre recherche textuelle (debounced pour éviter jank à chaque frappe)
+    if (debouncedSearchQuery.trim().length > 0) {
+      const query = debouncedSearchQuery.trim().toLowerCase();
       result = result.filter((e) =>
         e.title.toLowerCase().includes(query) ||
         e.location.toLowerCase().includes(query) ||
@@ -431,7 +469,11 @@ export default function ExploreScreen() {
     }
 
     return result;
-  }, [searchQuery, activeCategory, advancedFilters]);
+  }, [debouncedSearchQuery, activeCategory, advancedFilters]);
+
+  useEffect(() => { setVisibleCount(20); }, [debouncedSearchQuery, activeCategory, advancedFilters]);
+
+  const displayEvents = useMemo(() => filteredEvents.slice(0, visibleCount), [filteredEvents, visibleCount]);
 
   // -- Styles --
   const screenStyle: ViewStyle = {
@@ -453,14 +495,29 @@ export default function ExploreScreen() {
           Minimisation partielle : seul titre + toggle se replient,
           search + categories restent visibles
           ============================================= */}
-      <View style={[stickyHeaderStyle, { paddingTop: insets.top + spacing.md }]}>
+      <Animated.View
+        pointerEvents="box-none"
+        style={[
+          stickyHeaderStyle,
+          {
+            height: headerExpandedHeight,
+            paddingTop: insets.top + spacing.md,
+            transform: [{ translateY: headerTranslateY }],
+          },
+        ]}
+      >
         {/* Image de fond banniere explore */}
-        <ImageBackground
-          source={clientBackgrounds.exploreHero}
-          style={headerBgStyle}
-          imageStyle={headerBgImageStyle}
-          accessibilityIgnoresInvertColors
-        />
+        <Animated.View
+          pointerEvents="none"
+          style={[headerBgStyle, { transform: [{ scale: headerBackgroundScale }] }]}
+        >
+          <ImageBackground
+            source={clientBackgrounds.exploreHero}
+            style={StyleSheet.absoluteFillObject}
+            imageStyle={headerBgImageStyle}
+            accessibilityIgnoresInvertColors
+          />
+        </Animated.View>
         {/* Voile dégradé pour la lisibilité */}
         <LinearGradient
           colors={['rgba(10,9,8,0.45)', 'rgba(10,9,8,0.78)', 'rgba(10,9,8,0.96)']}
@@ -468,8 +525,13 @@ export default function ExploreScreen() {
           pointerEvents="none"
         />
 
-        {/* Titre — se replie au scroll avec hauteur adaptative */}
-        <Animated.View style={{ height: collapsibleHeight, opacity: collapsibleOpacity, overflow: 'hidden' }}>
+        {/* Titre + toggle : sortent du cadre par translation, sans recalculer le layout du ScrollView. */}
+        <Animated.View
+          style={{
+            opacity: collapsibleOpacity,
+            transform: [{ translateY: collapsibleTranslateY }],
+          }}
+        >
           <View style={titleBlockStyle}>
             <Text style={overlineStyle}>CATALOGUE COMPLET</Text>
             <Text style={titleStyle}>Explorer</Text>
@@ -477,9 +539,41 @@ export default function ExploreScreen() {
               Decouvrez tous les evenements disponibles pres de chez vous
             </Text>
           </View>
+
+          <View style={viewToggleRowStyle}>
+            <View style={viewToggleGroupStyle}>
+              <Pressable
+                onPress={() => {
+                  impact('light');
+                  setViewMode('grid');
+                }}
+                style={[viewToggleButtonStyle, viewMode === 'grid' ? viewToggleActiveStyle : null]}
+                accessibilityRole="button"
+                accessibilityLabel="Vue grille"
+                accessibilityState={{ selected: viewMode === 'grid' }}
+              >
+                <LayoutGrid size={17} color={viewMode === 'grid' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  impact('light');
+                  setViewMode('list');
+                }}
+                style={[viewToggleButtonStyle, viewMode === 'list' ? viewToggleActiveStyle : null]}
+                accessibilityRole="button"
+                accessibilityLabel="Vue liste"
+                accessibilityState={{ selected: viewMode === 'list' }}
+              >
+                <List size={17} color={viewMode === 'list' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
+              </Pressable>
+            </View>
+            <Text style={resultCountStyle}>
+              {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
+            </Text>
+          </View>
         </Animated.View>
 
-        {/* Barre de recherche active — reste visible */}
+        {/* Barre de recherche active — reste visible dans le header compact */}
         <View style={searchContainerStyle}>
           <Search size={20} color={colors.goldMuted} strokeWidth={1.75} />
           <TextInput
@@ -522,41 +616,6 @@ export default function ExploreScreen() {
           </Pressable>
         </View>
 
-        {/* Toggle Vue Grille / Liste + Compteur — se replie aussi */}
-        <Animated.View style={{ height: toggleHeight, opacity: collapsibleOpacity, overflow: 'hidden' }}>
-          <View style={viewToggleRowStyle}>
-          <View style={viewToggleGroupStyle}>
-            <Pressable
-              onPress={() => {
-                impact('light');
-                setViewMode('grid');
-              }}
-              style={[viewToggleButtonStyle, viewMode === 'grid' ? viewToggleActiveStyle : null]}
-              accessibilityRole="button"
-              accessibilityLabel="Vue grille"
-              accessibilityState={{ selected: viewMode === 'grid' }}
-            >
-              <LayoutGrid size={17} color={viewMode === 'grid' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                impact('light');
-                setViewMode('list');
-              }}
-              style={[viewToggleButtonStyle, viewMode === 'list' ? viewToggleActiveStyle : null]}
-              accessibilityRole="button"
-              accessibilityLabel="Vue liste"
-              accessibilityState={{ selected: viewMode === 'list' }}
-            >
-              <List size={17} color={viewMode === 'list' ? colors.onyx : colors.textMuted} strokeWidth={1.75} />
-            </Pressable>
-          </View>
-          <Text style={resultCountStyle}>
-            {filteredEvents.length} evenement{filteredEvents.length > 1 ? 's' : ''}
-          </Text>
-          </View>
-        </Animated.View>
-
         {/* Chips filtres categorie — restent visibles */}
         <ScrollView
           horizontal
@@ -581,7 +640,7 @@ export default function ExploreScreen() {
             );
           })}
         </ScrollView>
-      </View>
+      </Animated.View>
 
       {/* =============================================
           CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
@@ -590,10 +649,13 @@ export default function ExploreScreen() {
         style={screenStyle}
         contentContainerStyle={{
           paddingBottom: 120, // Espace aeré pour la TabBar
-          paddingTop: spacing.md,
+          paddingTop: headerExpandedHeight + spacing.md,
         }}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
       >
         {/* =============================================
@@ -602,7 +664,7 @@ export default function ExploreScreen() {
         {filteredEvents.length > 0 ? (
           viewMode === 'grid' ? (
             <View style={gridContainerStyle}>
-              {filteredEvents.reduce<(MockEvent[])[]>((rows, event, index) => {
+              {displayEvents.reduce<(MockEvent[])[]>((rows, event, index) => {
                 if (index % 2 === 0) rows.push([event]);
                 else rows[rows.length - 1].push(event);
                 return rows;
@@ -620,10 +682,15 @@ export default function ExploreScreen() {
                   {row.length < 2 && <View style={{ width: GRID_CARD_WIDTH }} />}
                 </View>
               ))}
+              {displayEvents.length < filteredEvents.length && (
+                <Pressable onPress={() => setVisibleCount((c) => c + 20)} style={{ alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: `${colors.gold}40` }}>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.goldBright, fontSize: 13 }}>Voir plus ({filteredEvents.length - displayEvents.length} restants)</Text>
+                </Pressable>
+              )}
             </View>
           ) : (
             <View style={listContainerStyle}>
-              {filteredEvents.map((event) => (
+              {displayEvents.map((event) => (
                 <ListCard
                   key={event.id}
                   event={event}
@@ -631,6 +698,11 @@ export default function ExploreScreen() {
                   onReserve={() => handleReserve(event.id)}
                 />
               ))}
+              {displayEvents.length < filteredEvents.length && (
+                <Pressable onPress={() => setVisibleCount((c) => c + 20)} style={{ alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: `${colors.gold}40` }}>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.goldBright, fontSize: 13 }}>Voir plus ({filteredEvents.length - displayEvents.length} restants)</Text>
+                </Pressable>
+              )}
             </View>
           )
         ) : (
@@ -730,6 +802,12 @@ const styles: { divider: ViewStyle } = {
 };
 
 const stickyHeaderStyle: ViewStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 20,
+  elevation: 20,
   backgroundColor: 'transparent',
   paddingHorizontal: spacing.lg,
   paddingBottom: spacing.sm,
@@ -738,7 +816,6 @@ const stickyHeaderStyle: ViewStyle = {
   borderBottomLeftRadius: radius.xxl,
   borderBottomRightRadius: radius.xxl,
   overflow: 'hidden',
-  // Pas de zIndex probleme car hors du ScrollView
 };
 
 const headerBgStyle: ViewStyle = {
@@ -754,7 +831,9 @@ const headerScrimStyle: ViewStyle = {
 };
 
 const titleBlockStyle: ViewStyle = {
-  marginBottom: spacing.md,
+  height: EXPLORE_HEADER_TITLE_HEIGHT,
+  justifyContent: 'flex-start',
+  paddingBottom: spacing.lg,
 };
 
 const overlineStyle: TextStyle = {
@@ -806,11 +885,12 @@ const searchInputStyle: TextStyle = {
 };
 
 const viewToggleRowStyle: ViewStyle = {
+  height: EXPLORE_HEADER_TOGGLE_HEIGHT,
   flexDirection: 'row',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: spacing.md,
-  marginBottom: spacing.md,
+  alignItems: 'flex-start',
+  paddingTop: spacing.md,
+  paddingBottom: spacing.lg,
 };
 
 const viewToggleGroupStyle: ViewStyle = {
@@ -873,8 +953,9 @@ const filtersBadgeTextStyle: TextStyle = {
 // ============================================================
 
 const filterChipsContainerStyle: ViewStyle = {
+  height: EXPLORE_HEADER_CHIPS_HEIGHT,
   paddingBottom: spacing.md,
-  marginTop: spacing.xs,
+  marginTop: spacing.sm,
   flexGrow: 0,
 };
 

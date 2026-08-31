@@ -147,8 +147,10 @@ export const EventCard = React.memo(function EventCard({
             source={{ uri: image }}
             style={{ width: '100%', height: IMAGE_HEIGHT }}
             contentFit="cover"
-            transition={300}
+            transition={100}
             cachePolicy="memory-disk"
+            recyclingKey={image}
+            priority="low"
             accessibilityLabel={`Image de ${title}`}
           />
           {/* Dégradé de fond */}
