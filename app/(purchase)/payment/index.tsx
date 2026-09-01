@@ -24,7 +24,6 @@ import {
   CalendarDays,
   MapPin,
   Check,
-  Sparkles,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -892,7 +891,7 @@ export default function PaymentIndex() {
                 <Text style={[styles.operatorHintText, styles.operatorHintTextSelected]}>
                   Redirection vers {OPERATORS.find((op) => op.id === selectedOperator)?.name}
                 </Text>
-                <Sparkles size={14} color={colors.gold} strokeWidth={1.75} />
+                <CircleCheck size={14} color={colors.gold} strokeWidth={1.75} />
               </>
             ) : (
               <>

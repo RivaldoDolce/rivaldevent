@@ -13,7 +13,7 @@
  * modifiable cote client).
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useAuth as useClerkAuth, useUser } from '@clerk/expo';
 
 import { useAppMode } from '@/stores/app-mode';
@@ -42,7 +42,8 @@ function buildProfile(
   id: string,
   fullName: string | null,
   imageUrl: string | null,
-  unsafeMetadata: Record<string, unknown>
+  unsafeMetadata: Record<string, unknown>,
+  createdAt: string | undefined
 ): Profile {
   const now = new Date().toISOString();
   return {
@@ -52,7 +53,7 @@ function buildProfile(
     phone: (unsafeMetadata.phone as string | undefined) ?? null,
     role: 'client',
     is_seller: (unsafeMetadata.is_seller as boolean | undefined) ?? false,
-    created_at: now,
+    created_at: createdAt ?? now,
     updated_at: now,
   };
 }
@@ -62,42 +63,40 @@ export function useAuth(): UseAuthReturn {
   const { user } = useUser();
   const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
-  const isAuthenticated = isLoaded && isSignedIn && !!userId && !!user;
+  const isAuthenticated = useMemo(() => isLoaded && isSignedIn && !!userId && !!user, [isLoaded, isSignedIn, userId, user]);
 
-  const session: CompatSession | null = isAuthenticated
+  const session: CompatSession | null = useMemo(() => isAuthenticated
     ? {
         user: {
-          id: user.id,
-          email: user.primaryEmailAddress?.emailAddress ?? null,
-          user_metadata: { full_name: user.fullName },
+          id: user!.id,
+          email: user!.primaryEmailAddress?.emailAddress ?? null,
+          user_metadata: { full_name: user!.fullName },
         },
       }
-    : null;
+    : null, [isAuthenticated, user]);
 
-  const profile: Profile | null = isAuthenticated
-    ? buildProfile(user.id, user.fullName, user.imageUrl, user.unsafeMetadata)
-    : null;
+  const profile: Profile | null = useMemo(() => isAuthenticated
+    ? buildProfile(user!.id, user!.fullName, user!.imageUrl, user!.unsafeMetadata as Record<string, unknown>, user!.createdAt?.toISOString())
+    : null, [isAuthenticated, user]);
 
-  // Synchronise le mode (acheteur/vendeur) dans le store app-mode
   useEffect(() => {
     if (!isAuthenticated) return;
     initializeFromProfile(profile?.is_seller ?? false);
   }, [isAuthenticated, profile?.is_seller, initializeFromProfile]);
 
-  const refreshProfile = async (): Promise<void> => {
+  const refreshProfile = useCallback(async (): Promise<void> => {
     try {
       await user?.reload();
     } catch {
-      // Reload silencieux : l'etat se mettra a jour au prochain rendu
     }
-  };
+  }, [user]);
 
-  return {
+  return useMemo(() => ({
     session,
     user: session?.user ?? null,
     profile,
     isLoading: !isLoaded,
     isAuthenticated,
     refreshProfile,
-  };
+  }), [session, profile, isLoaded, isAuthenticated, refreshProfile]);
 }

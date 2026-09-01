@@ -218,12 +218,12 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.28,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 16,
+        elevation: 8,
       },
     }),
   },
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
     borderColor: `${colors.goldBright}59`,
     ...Platform.select({
       ios: {
-        shadowColor: 'rgba(216, 180, 90, 0.5)',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 1,
-        shadowRadius: 12,
+        shadowColor: 'rgba(216, 180, 90, 0.35)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.6,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 14,
+        elevation: 6,
       },
     }),
   },

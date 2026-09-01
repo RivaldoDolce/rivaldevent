@@ -18,7 +18,7 @@
  * - TextInput natif, BottomSheet du design system pour les filtres
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import {
   type TextStyle,
   type ImageStyle,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -47,7 +48,6 @@ import {
   CalendarDays,
   Clock,
   TrendingUp,
-  ChevronRight,
 } from 'lucide-react-native';
 
 import { colors, spacing, radius, shadows, gradients, ROUTES } from '@/lib/constants';
@@ -57,6 +57,8 @@ import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import type { MockEvent } from '@/data/mock';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { VoirPlusButton } from '@/components/ui/VoirPlusButton';
+import { VoirToutButton } from '@/components/ui/VoirToutButton';
 import { useExploreStore } from '@/stores/explore-store';
 
 // ============================================================
@@ -82,6 +84,10 @@ const EXPLORE_HEADER_BODY_HEIGHT =
 // Prix range labels (doit correspondre aux filtres du modal)
 // ============================================================
 
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as unknown as typeof FlashList;
+
+const FLASH_GRID_ITEM_WRAPPER: ViewStyle = { flex: 1, paddingHorizontal: spacing.md / 2 };
+
 const PRICE_RANGES = [
   { id: 'all', label: 'Tous', min: 0, max: null },
   { id: 'free', label: 'Gratuit', min: 0, max: 0 },
@@ -101,7 +107,7 @@ interface GridCardProps {
   readonly onReserve: () => void;
 }
 
-function GridCard({ event, onPress, onReserve }: GridCardProps) {
+const GridCard = memo(function GridCard({ event, onPress, onReserve }: GridCardProps) {
   const { impact } = useHaptics();
 
   // -- Prix complet avec 'F' (FCFA abrege) en Or brillant --
@@ -194,7 +200,7 @@ function GridCard({ event, onPress, onReserve }: GridCardProps) {
       </View>
     </Pressable>
   );
-}
+});
 
 // ============================================================
 // Composant : ListCard (horizontal, plus dense)
@@ -206,7 +212,7 @@ interface ListCardProps {
   readonly onReserve: () => void;
 }
 
-function ListCard({ event, onPress, onReserve }: ListCardProps) {
+const ListCard = memo(function ListCard({ event, onPress, onReserve }: ListCardProps) {
   const { impact } = useHaptics();
   // -- Prix complet avec 'F' (FCFA abrege) en Or brillant --
   const formattedPrice = useMemo(() => {
@@ -291,11 +297,7 @@ function ListCard({ event, onPress, onReserve }: ListCardProps) {
       </View>
     </Pressable>
   );
-}
-
-// ============================================================
-// Ecran principal
-// ============================================================
+});
 
 type ViewMode = 'grid' | 'list';
 
@@ -475,6 +477,62 @@ export default function ExploreScreen() {
 
   const displayEvents = useMemo(() => filteredEvents.slice(0, visibleCount), [filteredEvents, visibleCount]);
 
+  const keyExtractor = useCallback((item: MockEvent) => item.id, []);
+  const handleEndReached = useCallback(() => {
+    if (displayEvents.length < filteredEvents.length) {
+      setVisibleCount((c) => Math.min(c + 20, filteredEvents.length));
+    }
+  }, [displayEvents.length, filteredEvents.length]);
+  const renderGridItem = useCallback(({ item }: { item: MockEvent }) => (
+    <View style={FLASH_GRID_ITEM_WRAPPER}>
+      <GridCard event={item} onPress={() => handleEventPress(item.id)} onReserve={() => handleReserve(item.id)} />
+    </View>
+  ), [handleEventPress, handleReserve]);
+  const renderListItem = useCallback(({ item }: { item: MockEvent }) => (
+    <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+      <ListCard event={item} onPress={() => handleEventPress(item.id)} onReserve={() => handleReserve(item.id)} />
+    </View>
+  ), [handleEventPress, handleReserve]);
+  const renderEmpty = useCallback(() => (
+    <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+      <EmptyState
+        icon={<Search size={34} color={colors.goldMuted} strokeWidth={1.5} />}
+        title="Aucun evenement trouve"
+        description="Essayez de modifier vos filtres ou votre recherche"
+        actionLabel="Reinitialiser"
+        onAction={() => {
+          impact('light');
+          setSearchQuery('');
+          setActiveCategory('all');
+          handleResetFilters();
+        }}
+      />
+    </View>
+  ), [impact, handleResetFilters, setActiveCategory]);
+  const renderFooter = useCallback(() => (
+    <View>
+      {displayEvents.length < filteredEvents.length && filteredEvents.length > 0 ? (
+        <View style={{ marginTop: spacing.lg, marginBottom: spacing.lg }}>
+          <VoirPlusButton remaining={filteredEvents.length - displayEvents.length} onPress={() => setVisibleCount((c) => c + 20)} />
+        </View>
+      ) : <View style={{ height: spacing.lg }} />}
+      <View style={{ height: spacing.md }} />
+      <View style={sectionHeaderStyle}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={sectionOverlineStyle}>ADRESSES D'EXCEPTION</Text>
+          <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
+        </View>
+        <VoirToutButton onPress={() => { impact('light'); router.push(ROUTES.VENUES); }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={venuesScrollContainerStyle} contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.md }}>
+        {MOCK_VENUES.map((venue) => (
+          <VenueCard key={venue.id} id={venue.id} name={venue.name} image={venue.image} location={venue.location} rating={venue.rating} badge={venue.badge} onPress={() => handleVenuePress(venue.id)} />
+        ))}
+      </ScrollView>
+      <View style={{ height: spacing.xxl }} />
+    </View>
+  ), [displayEvents.length, filteredEvents.length, handleVenuePress, impact, router]);
+
   // -- Styles --
   const screenStyle: ViewStyle = {
     flex: 1,
@@ -642,134 +700,43 @@ export default function ExploreScreen() {
         </ScrollView>
       </Animated.View>
 
-      {/* =============================================
-          CONTENU SCROLLABLE : Resultats + Lieux a decouvrir
-          ============================================= */}
-      <Animated.ScrollView
-        style={screenStyle}
-        contentContainerStyle={{
-          paddingBottom: 120, // Espace aeré pour la TabBar
-          paddingTop: headerExpandedHeight + spacing.md,
-        }}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        alwaysBounceVertical={false}
-        overScrollMode="never"
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-        scrollEventThrottle={16}
-      >
-        {/* =============================================
-            RESULTATS (Grille ou Liste)
-            ============================================= */}
-        {filteredEvents.length > 0 ? (
-          viewMode === 'grid' ? (
-            <View style={gridContainerStyle}>
-              {displayEvents.reduce<(MockEvent[])[]>((rows, event, index) => {
-                if (index % 2 === 0) rows.push([event]);
-                else rows[rows.length - 1].push(event);
-                return rows;
-              }, []).map((row, rowIndex) => (
-                <View key={rowIndex} style={gridRowStyle}>
-                  {row.map((event) => (
-                    <GridCard
-                      key={event.id}
-                      event={event}
-                      onPress={() => handleEventPress(event.id)}
-                      onReserve={() => handleReserve(event.id)}
-                    />
-                  ))}
-                  {/* Cellule vide si row incomplet */}
-                  {row.length < 2 && <View style={{ width: GRID_CARD_WIDTH }} />}
-                </View>
-              ))}
-              {displayEvents.length < filteredEvents.length && (
-                <Pressable onPress={() => setVisibleCount((c) => c + 20)} style={{ alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: `${colors.gold}40` }}>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.goldBright, fontSize: 13 }}>Voir plus ({filteredEvents.length - displayEvents.length} restants)</Text>
-                </Pressable>
-              )}
-            </View>
-          ) : (
-            <View style={listContainerStyle}>
-              {displayEvents.map((event) => (
-                <ListCard
-                  key={event.id}
-                  event={event}
-                  onPress={() => handleEventPress(event.id)}
-                  onReserve={() => handleReserve(event.id)}
-                />
-              ))}
-              {displayEvents.length < filteredEvents.length && (
-                <Pressable onPress={() => setVisibleCount((c) => c + 20)} style={{ alignSelf: 'center', marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.glass, borderWidth: 1, borderColor: `${colors.gold}40` }}>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', color: colors.goldBright, fontSize: 13 }}>Voir plus ({filteredEvents.length - displayEvents.length} restants)</Text>
-                </Pressable>
-              )}
-            </View>
-          )
+      <View style={{ flex: 1 }}>
+        {viewMode === 'grid' ? (
+          <AnimatedFlashList
+            key="explore-grid"
+            data={displayEvents}
+            keyExtractor={keyExtractor}
+            renderItem={renderGridItem}
+            numColumns={2}
+            extraData={viewMode}
+            contentContainerStyle={{ paddingTop: headerExpandedHeight + spacing.md, paddingBottom: 120, paddingHorizontal: spacing.lg - spacing.md / 2 }}
+            showsVerticalScrollIndicator={false}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            scrollEventThrottle={16}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
+          />
         ) : (
-          /* Etat vide premium */
-          <EmptyState
-            icon={<Search size={34} color={colors.goldMuted} strokeWidth={1.5} />}
-            title="Aucun evenement trouve"
-            description="Essayez de modifier vos filtres ou votre recherche"
-            actionLabel="Reinitialiser"
-            onAction={() => {
-              impact('light');
-              setSearchQuery('');
-              setActiveCategory('all');
-              handleResetFilters();
-            }}
+          <AnimatedFlashList
+            key="explore-list"
+            data={displayEvents}
+            keyExtractor={keyExtractor}
+            renderItem={renderListItem}
+            numColumns={1}
+            extraData={viewMode}
+            contentContainerStyle={{ paddingTop: headerExpandedHeight + spacing.md, paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            scrollEventThrottle={16}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
           />
         )}
-
-        {/* Espacement entre resultats et lieux */}
-        <View style={{ height: spacing.xxl }} />
-
-        {/* =============================================
-            SECTION "LIEUX A DECOUVRIR"
-            ============================================= */}
-        <View style={sectionHeaderStyle}>
-          <View>
-            <Text style={sectionOverlineStyle}>ADRESSES D'EXCEPTION</Text>
-            <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
-          </View>
-          <Pressable
-            onPress={() => {
-              impact('light');
-              router.push(ROUTES.VENUES);
-            }}
-            hitSlop={8}
-            style={seeAllPressableStyle}
-            accessibilityRole="button"
-            accessibilityLabel="Voir tous les lieux"
-          >
-            <Text style={seeAllTextStyle}>Voir tout</Text>
-            <ChevronRight size={15} color={colors.gold} strokeWidth={2} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={venuesScrollContainerStyle}
-          contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.md }}
-        >
-          {MOCK_VENUES.map((venue) => (
-            <VenueCard
-              key={venue.id}
-              id={venue.id}
-              name={venue.name}
-              image={venue.image}
-              location={venue.location}
-              rating={venue.rating}
-              badge={venue.badge}
-              onPress={() => handleVenuePress(venue.id)}
-            />
-          ))}
-        </ScrollView>
-
-        {/* Espacement final aeré */}
-        <View style={{ height: spacing.xxl }} />
-      </Animated.ScrollView>
+      </View>
       </View>
     </ImageBackground>
   );
@@ -1002,16 +969,7 @@ const chipInactiveTextStyle: TextStyle = {
 // Styles - Grille (prix overlay sur image, bouton seul)
 // ============================================================
 
-const gridContainerStyle: ViewStyle = {
-  paddingHorizontal: spacing.lg,
-  gap: spacing.md,
-  paddingTop: spacing.md,
-};
 
-const gridRowStyle: ViewStyle = {
-  flexDirection: 'row',
-  gap: spacing.md,
-};
 
 const gridCardStyle: ViewStyle = {
   width: GRID_CARD_WIDTH,
@@ -1162,11 +1120,7 @@ const gridReserveTextStyle: TextStyle = {
 // Styles - Liste
 // ============================================================
 
-const listContainerStyle: ViewStyle = {
-  paddingHorizontal: spacing.lg,
-  gap: spacing.md,
-  paddingTop: spacing.md,
-};
+
 
 const listCardStyle: ViewStyle = {
   flexDirection: 'row',
@@ -1312,20 +1266,7 @@ const sectionTitleStyle: TextStyle = {
   color: colors.text,
 };
 
-const seeAllPressableStyle: ViewStyle = {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 2,
-  paddingVertical: spacing.xs,
-};
 
-const seeAllTextStyle: TextStyle = {
-  fontFamily: 'Inter_600SemiBold',
-  fontSize: 12,
-  lineHeight: 16,
-  color: colors.goldBright,
-  letterSpacing: 0.3,
-};
 
 const venuesScrollContainerStyle: ViewStyle = {
   marginHorizontal: spacing.lg,

@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Minus, Plus, Sparkles } from 'lucide-react-native';
+import { Minus, Plus, CircleCheck, Receipt } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { colors, spacing, radius, shadows } from '@/lib/constants';
@@ -125,11 +125,6 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
           <View style={styles.nameContainer}>
             <View style={[styles.qualityTile, { borderColor: `${quality.color}40` }, isElected && { borderColor: `${quality.color}88`, backgroundColor: 'rgba(255,255,255,0.10)' }]}>
               <QualityIcon width={26} height={26} />
-              {isElected && (
-                <View style={styles.tileSparkle}>
-                  <Sparkles size={10} color={colors.goldBright} strokeWidth={2} />
-                </View>
-              )}
             </View>
 
             <View style={styles.nameBlock}>
@@ -137,7 +132,7 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
                 <Text style={styles.tierName} numberOfLines={1}>
                   {tier.name}
                 </Text>
-                {isElected && <Sparkles size={12} color={colors.gold} strokeWidth={1.75} />}
+                {isElected && <CircleCheck size={12} color={colors.gold} strokeWidth={1.75} />}
               </View>
               <Text style={[styles.qualityLabel, { color: quality.color }]}>
                 {quality.label}
@@ -224,7 +219,7 @@ export default function TicketTierCard({ tier, quantity, onQuantityChange }: Tic
             <View style={styles.subtotalBlock}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Text style={styles.subtotalOverline}>SOUS-TOTAL</Text>
-                <Sparkles size={10} color={colors.gold} strokeWidth={2} />
+                <Receipt size={10} color={colors.gold} strokeWidth={2} />
               </View>
               <View style={styles.subtotalShimmerWrap}>
                 <Text style={styles.subtotal}>{formatPrice(subtotal)}</Text>
@@ -320,19 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
-  tileSparkle: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.elevated,
-    borderWidth: 1,
-    borderColor: `${colors.gold}55`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
+
   tierName: {
     fontFamily: 'Inter_700Bold',
     fontSize: 16,

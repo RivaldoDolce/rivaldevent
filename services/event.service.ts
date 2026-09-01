@@ -90,7 +90,162 @@ export function formatDateShort(isoDate: string): string {
 // Service
 // ============================================================
 
+export type FetchEventsPaginatedParams = {
+  readonly limit: number;
+  readonly offset: number;
+  readonly category?: string;
+  readonly search?: string;
+};
+
+export type PaginatedEventsResult = {
+  readonly data: EventListItem[];
+  readonly count: number;
+};
+
+function filterMockEventsForPagination(
+  events: readonly (typeof MOCK_EVENTS)[number][],
+  category?: string,
+  search?: string,
+): typeof MOCK_EVENTS[number][] {
+  let filtered = [...events];
+  if (category && category !== 'all') {
+    const cat = category.toLowerCase();
+    filtered = filtered.filter((e) => e.category.toLowerCase() === cat);
+  }
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter(
+      (e) =>
+        e.title.toLowerCase().includes(q) ||
+        e.location.toLowerCase().includes(q) ||
+        e.organizerName.toLowerCase().includes(q),
+    );
+  }
+  return filtered;
+}
+
+function mockEventToListItem(mock: (typeof MOCK_EVENTS)[number]): EventListItem {
+  return {
+    id: mock.id,
+    title: mock.title,
+    description: null,
+    category: mock.category,
+    event_type: mock.category,
+    start_date: `2026-09-${String((parseInt(mock.id, 10) % 28) + 1).padStart(2, '0')}T20:00:00Z`,
+    end_date: null,
+    address: mock.location,
+    city: mock.location.includes('Yaounde') || mock.location.includes('Yaoundé') ? 'Yaoundé' : mock.location.includes('Douala') ? 'Douala' : 'Buea',
+    cover_image: mock.image,
+    images: [mock.image],
+    status: 'published',
+    is_featured: mock.isFeatured,
+    organizer_id: null,
+    venue_id: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    organizer_name: mock.organizerName,
+    venue_name: null,
+    min_price: mock.price,
+    available_tickets: 120,
+  };
+}
+
+function paginateMockEvents(params: FetchEventsPaginatedParams): PaginatedEventsResult {
+  const filtered = filterMockEventsForPagination(MOCK_EVENTS, params.category, params.search);
+  const count = filtered.length;
+  const sliced = filtered.slice(params.offset, params.offset + params.limit);
+  return { data: sliced.map(mockEventToListItem), count };
+}
+
+export async function fetchEventsPaginated(params: FetchEventsPaginatedParams): Promise<PaginatedEventsResult> {
+  return eventService.fetchEventsPaginated(params);
+}
+
 export const eventService = {
+  /**
+   * Pagination realiste cote mock (comme Supabase .range).
+   * Tente Supabase avec .range(offset, offset+limit-1) puis fallback slice sur MOCK_EVENTS.
+   */
+  async fetchEventsPaginated(params: FetchEventsPaginatedParams): Promise<PaginatedEventsResult> {
+    const { limit, offset, category, search } = params;
+    try {
+      let query = supabase
+        .from('events')
+        .select(
+          `
+          *,
+          organizer:profiles!organizer_id(id, full_name, avatar_url),
+          venue:venues(id, name, city),
+          ticket_tiers(id, price, quantity_total, quantity_sold)
+        `,
+          { count: 'exact' },
+        )
+        .eq('status', 'published')
+        .order('start_date', { ascending: true })
+        .range(offset, offset + limit - 1);
+
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+      if (search && search.trim() !== '') {
+        query = query.ilike('title', `%${search.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (!error && data) {
+        const mapped: EventListItem[] = (data as Record<string, unknown>[]).map((row) => {
+          const tiers = (row.ticket_tiers as Record<string, unknown>[]) ?? [];
+          const prices = tiers
+            .map((t) => (t.price as number) ?? 0)
+            .filter((p: number) => p > 0);
+          const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+          const totalAvailable = tiers.reduce(
+            (sum: number, t: Record<string, unknown>) =>
+              sum + ((t.quantity_total as number) ?? 0) - ((t.quantity_sold as number) ?? 0),
+            0,
+          );
+          const organizer = row.organizer as Record<string, unknown> | null;
+          const venue = row.venue as Record<string, unknown> | null;
+          return {
+            id: row.id as string,
+            title: row.title as string,
+            description: row.description as string | null,
+            category: row.category as string | null,
+            event_type: row.event_type as string | null,
+            start_date: row.start_date as string,
+            end_date: row.end_date as string | null,
+            address: row.address as string | null,
+            city: row.city as string | null,
+            cover_image: row.cover_image as string | null,
+            images: (row.images as string[]) ?? [],
+            status: row.status as 'draft' | 'published' | 'cancelled' | 'completed',
+            is_featured: (row.is_featured as boolean) ?? false,
+            organizer_id: row.organizer_id as string | null,
+            venue_id: row.venue_id as string | null,
+            created_at: row.created_at as string,
+            updated_at: row.updated_at as string,
+            organizer_name: (organizer?.full_name as string) ?? null,
+            venue_name: (venue?.name as string) ?? null,
+            min_price: minPrice,
+            available_tickets: totalAvailable,
+          };
+        });
+
+        if (mapped.length > 0 || (count !== null && count !== undefined)) {
+          return { data: mapped, count: count ?? mapped.length };
+        }
+      }
+
+      if (error) {
+        logger.warn('[eventService] fetchEventsPaginated Supabase error, fallback mock:', error.message);
+      }
+    } catch (err) {
+      logger.warn('[eventService] fetchEventsPaginated exception, fallback mock:', err);
+    }
+    return paginateMockEvents(params);
+  },
+
   /**
    * Liste des evenements publies avec prix min et billets disponibles.
    */

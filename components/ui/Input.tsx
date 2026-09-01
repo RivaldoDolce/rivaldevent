@@ -10,7 +10,7 @@
  * Compatible React Hook Form (onChangeText / onBlur / error).
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -73,6 +73,15 @@ export const Input = React.memo(function Input({
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const hasFloating = !label && !!placeholder;
+  const floatingLabel = placeholder ?? label ?? '';
+
+  useEffect(() => {
+    if (!hasFloating) return;
+    const shouldFloat = isFocused || value.length > 0;
+    Animated.timing(floatAnim, { toValue: shouldFloat ? 1 : 0, duration: 200, useNativeDriver: false }).start();
+  }, [isFocused, value, hasFloating, floatAnim]);
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
@@ -133,9 +142,36 @@ export const Input = React.memo(function Input({
     ...typography.body,
     color: colors.text,
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: hasFloating ? 16 : 14,
     paddingHorizontal: iconLeft ? spacing.sm : 0,
     outlineWidth: 0,
+  };
+
+  const floatingStyle = hasFloating
+    ? {
+        position: 'absolute' as const,
+        left: iconLeft ? 42 : 14,
+        top: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [18, -9] }),
+        backgroundColor: 'rgba(30,26,22,1)',
+        paddingHorizontal: 6,
+        borderRadius: 4,
+        zIndex: 2,
+        transform: [
+          { scale: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }) },
+        ],
+        opacity: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      }
+    : null;
+
+  const floatingTextStyle: TextStyle = {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.4,
+    color: floatAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [colors.textMuted, colors.text] as unknown as string[],
+    }) as unknown as string,
   };
 
   return (
@@ -157,6 +193,11 @@ export const Input = React.memo(function Input({
 
       <Animated.View style={containerStyle}>
         <Animated.View pointerEvents="none" style={glowStyle} />
+        {hasFloating && (
+          <Animated.View pointerEvents="none" style={floatingStyle}>
+            <Animated.Text style={floatingTextStyle}>{floatingLabel}</Animated.Text>
+          </Animated.View>
+        )}
         {iconLeft && (
           <View style={{ marginRight: spacing.sm, opacity: 0.85 }}>{iconLeft}</View>
         )}
@@ -168,15 +209,15 @@ export const Input = React.memo(function Input({
           onChangeText={onChangeText}
           onBlur={handleBlur}
           onFocus={handleFocus}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
+          placeholder={hasFloating && (isFocused || value.length > 0) ? '' : placeholder}
+          placeholderTextColor="rgba(245,240,230,0.58)"
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
           editable={editable}
           maxLength={maxLength}
-          accessibilityLabel={label}
+          accessibilityLabel={label ?? placeholder}
           accessibilityState={{ disabled: !editable }}
           selectionColor={colors.gold}
           cursorColor={colors.gold}

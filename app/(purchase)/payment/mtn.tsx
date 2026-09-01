@@ -18,7 +18,7 @@ import {
   Ticket,
   ShieldCheck,
   Copy,
-  Sparkles,
+  Hash,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -587,7 +587,7 @@ export default function MTNPayment() {
             <View style={styles.ussdLabelRow}>
               <View style={styles.ussdDot} />
               <Text style={styles.ussdLabel}>CODE USSD A COMPOSER</Text>
-              <Sparkles size={12} color={colors.gold} strokeWidth={1.75} />
+              <Hash size={12} color={colors.gold} strokeWidth={1.75} />
             </View>
             <Animated.Text style={[styles.ussdCode, { transform: [{ scale: ussdPulse }] }]}>{USSD_CODE}</Animated.Text>
             <Text style={styles.ussdHint}>
@@ -596,7 +596,6 @@ export default function MTNPayment() {
             <Pressable onPress={handleCopy} style={styles.copyBtn} accessibilityRole="button" accessibilityLabel="Copier le code">
               <Copy size={14} color={colors.goldBright} strokeWidth={1.75} />
               <Text style={styles.copyBtnText}>Copier</Text>
-              <Sparkles size={10} color={colors.gold} strokeWidth={2} />
             </Pressable>
           </View>
 

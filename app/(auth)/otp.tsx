@@ -110,7 +110,24 @@ export default function OtpScreen() {
 
   const handleInputChange = useCallback(
     (index: number, value: string) => {
-      const digit = value.replace(/[^0-9]/g, '').slice(-1);
+      const cleaned = value.replace(/[^0-9]/g, '');
+      if (cleaned.length > 1) {
+        const digits = cleaned.slice(0, OTP_LENGTH).split('');
+        setCode((prev) => {
+          const next = [...prev];
+          digits.forEach((d, i) => {
+            const pos = index + i;
+            if (pos < OTP_LENGTH) next[pos] = d;
+          });
+          return next;
+        });
+        setError(null);
+        const full = cleaned.slice(0, OTP_LENGTH);
+        if (full.length === OTP_LENGTH) handleVerify(full);
+        else inputRefs.current[Math.min(index + digits.length, OTP_LENGTH - 1)]?.focus();
+        return;
+      }
+      const digit = cleaned.slice(-1);
       setCode((prev) => {
         const newCode = [...prev];
         newCode[index] = digit;
@@ -122,7 +139,6 @@ export default function OtpScreen() {
         inputRefs.current[index + 1]?.focus();
       }
 
-      // Auto-submit si dernier chiffre
       if (digit && index === OTP_LENGTH - 1) {
         const fullCode = code.map((c, i) => (i === index ? digit : c)).join('');
         if (fullCode.length === OTP_LENGTH) {
@@ -281,20 +297,18 @@ export default function OtpScreen() {
             Valider
           </Button>
 
-          {/* Lien renvoyer */}
+          {/* Lien renvoyer premium */}
           <View style={styles.resendWrapper}>
             {countdown > 0 ? (
-              <Text style={styles.countdownText}>
-                Vous n&apos;avez pas recu le code ?{' '}
-                <Text style={styles.countdownTimer}>
+              <View style={styles.countdownCapsule}>
+                <Text style={styles.countdownText}>
                   Renvoyer dans 0:{countdown.toString().padStart(2, '0')}
                 </Text>
-              </Text>
+              </View>
             ) : (
-              <Pressable onPress={handleResend} hitSlop={12}>
+              <Pressable onPress={handleResend} hitSlop={12} style={styles.resendCapsule}>
                 <Text style={styles.resendLink}>
-                  Vous n&apos;avez pas recu le code ?{' '}
-                  <Text style={styles.resendLinkBold}>Renvoyer le code</Text>
+                  Vous n&apos;avez pas recu le code ? <Text style={styles.resendLinkBold}>Renvoyer</Text>
                 </Text>
               </Pressable>
             )}
@@ -485,23 +499,32 @@ const styles = StyleSheet.create({
     borderColor: `${colors.danger}60`,
   },
 
-  // Lien renvoyer
+  // Lien renvoyer premium
   resendWrapper: {
     alignItems: 'center',
     marginTop: spacing.lg,
+  },
+  countdownCapsule: {
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+  },
+  resendCapsule: {
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
   },
   countdownText: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-    textAlign: 'center',
-    letterSpacing: 0.4,
-  },
-  countdownTimer: {
     ...typography.overline,
     color: colors.goldMuted,
+    textAlign: 'center',
     letterSpacing: 1.4,
-    textTransform: 'uppercase',
   },
   resendLink: {
     ...typography.bodySmall,

@@ -100,11 +100,12 @@ export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(
     const visible = useRef(indexProp >= 0);
     const [showModal, setShowModal] = React.useState(indexProp >= 0);
 
-    // Animations
-    const slideAnim = useRef(
-      new Animated.Value(indexProp >= 0 ? 0 : SCREEN_HEIGHT),
-    ).current;
-    const backdropOpacity = useRef(new Animated.Value(indexProp >= 0 ? 0.5 : 0)).current;
+    const slideAnimRef = useRef<Animated.Value | null>(null);
+    if (!slideAnimRef.current) slideAnimRef.current = new Animated.Value(indexProp >= 0 ? 0 : SCREEN_HEIGHT);
+    const slideAnim = slideAnimRef.current;
+    const backdropOpacityRef = useRef<Animated.Value | null>(null);
+    if (!backdropOpacityRef.current) backdropOpacityRef.current = new Animated.Value(indexProp >= 0 ? 0.5 : 0);
+    const backdropOpacity = backdropOpacityRef.current;
 
     // Drag gesture
     const dragStartY = useRef(0);

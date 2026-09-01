@@ -1,48 +1,35 @@
 /**
- * Page "Mes billets" - Espace client.
+ * Page "Mes billets" — Espace client premium Noir & Or fantastique.
  *
- * Design « Noir & Or » premium :
- * - En-tête sur fond noir profond, titre Playfair, compteur actif doré
- * - Onglets filtre segmés pastille verre : actif dégradé or + texte noir
- * - Barre de contexte : compteur + bascule LISTE / GRILLE (dégradé or)
- * - Billets REGROUPES PAR EVENEMENT : une seule carte par evenement
- * - Mode LISTE : carte ticket élevée avec liseret de statut, vignette
- *   cercelee d'or, chips gammes, liseret perfore avec losange or
- * - Mode GRILLE : cartes 2 colonnes avec cover + pied de statut colore
- * - Etat vide premium (médaille verre doré + halo), skeleton au chargement
+ * Design :
+ * - ScreenBackground + halos décoratifs
+ * - Hero halo + titre serif Playfair + pastille compteur or + Sparkles
+ * - Filtres pastilles verre fumé : actif dégradé or
+ * - Barre contexte verre + toggle verre
+ * - Billets REGROUPES PAR EVENEMENT — vrai billet perforé :
+ *   encoches latérales (Views absolus circulaires) + tranche supérieure dégradé or
+ *   + pointillés or + losange + Sparkles quand valid/upcoming
+ * - EmptyState premium avec halo + CTA or pleine largeur
+ * - Bouton QR avec halo pulsant (goldGlow)
  *
- * Navigation :
- * - Tap sur une carte → billets de l'evenement (tickets/event/[eventId])
- *
- * Conventions :
- * - Design tokens depuis lib/constants.ts
- * - expo-image pour les images
- * - Pas de type any (sauf router.push as never), pas d'emojis
- * - Imports @/
- * - Commentaires en francais
- * - StyleSheet pour les styles
+ * Navigation : tap carte → tickets/event/[eventId]
+ * Tokens depuis lib/constants.ts, expo-image, lucide-react-native
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Ticket,
   CalendarDays,
   ChevronRight,
-  Sparkles,
   CircleCheck,
   CircleX,
   Clock,
   Rows3,
   LayoutGrid,
+  QrCode,
 } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,6 +41,7 @@ import QualityStandardIcon from '@/assets/icons/quality-standart.svg';
 import { colors, spacing, radius, gradients, shadows, ROUTES } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
 import { useHaptics } from '@/hooks/useHaptics';
 import { formatPrice, formatDate } from '@/services/event.service';
 import { useTicketsStore } from '@/stores/tickets-store';
@@ -74,7 +62,6 @@ interface FilterTab {
   readonly icon: (color: string) => React.ReactNode;
 }
 
-/** Groupe de billets pour un meme evenement */
 interface TicketGroup {
   readonly eventId: string;
   readonly event: TicketEventSummary;
@@ -94,9 +81,6 @@ interface TierQualityInfo {
 // Helpers
 // ============================================================
 
-/**
- * Determine le statut d'affichage d'un billet.
- */
 function getTicketDisplayStatus(ticket: PurchasedTicket): TicketStatus {
   if (ticket.payment_status === 'pending') return 'pending';
   if (ticket.is_scanned) return 'used';
@@ -104,10 +88,6 @@ function getTicketDisplayStatus(ticket: PurchasedTicket): TicketStatus {
   return 'valid';
 }
 
-/**
- * Statut global d'un groupe : la priorite va au statut qui
- * merite l'attention de l'utilisateur (pending > valid > used > expired).
- */
 function getGroupStatus(tickets: readonly PurchasedTicket[]): TicketStatus {
   const statuses = tickets.map((t) => getTicketDisplayStatus(t));
   if (statuses.some((s) => s === 'pending')) return 'pending';
@@ -116,10 +96,6 @@ function getGroupStatus(tickets: readonly PurchasedTicket[]): TicketStatus {
   return 'valid';
 }
 
-/**
- * Configuration du badge statut — pastille pill avec point indicateur.
- * Valide success, Utilisé textSecondary, Expiré danger, En attente warning.
- */
 function getStatusConfig(status: string): { color: string; bg: string; label: string } {
   switch (status) {
     case 'valid':
@@ -135,9 +111,6 @@ function getStatusConfig(status: string): { color: string; bg: string; label: st
   }
 }
 
-/**
- * Badge SVG + couleur selon la gamme du billet.
- */
 function getTierQualityInfo(name: string): TierQualityInfo {
   const lower = name.toLowerCase();
   if (lower.includes('vvip') || lower.includes('premium')) {
@@ -149,14 +122,8 @@ function getTierQualityInfo(name: string): TierQualityInfo {
   return { icon: QualityStandardIcon, label: 'STANDARD', color: colors.forest };
 }
 
-/**
- * Construit la ligne meta "date · ville" d'un evenement.
- */
 function buildEventMeta(event: TicketEventSummary): string | null {
-  const parts = [
-    event.start_date ? formatDate(event.start_date) : null,
-    event.city,
-  ].filter(Boolean);
+  const parts = [event.start_date ? formatDate(event.start_date) : null, event.city].filter(Boolean);
   return parts.length > 0 ? parts.join(' \u00B7 ') : null;
 }
 
@@ -164,9 +131,6 @@ function buildEventMeta(event: TicketEventSummary): string | null {
 // Sous-composants
 // ============================================================
 
-/**
- * Pastille de statut compacte (inline ou flottante sur une image).
- */
 function StatusPill({ status, floating = false }: { status: TicketStatus; floating?: boolean }) {
   const config = getStatusConfig(status);
   return (
@@ -186,9 +150,6 @@ function StatusPill({ status, floating = false }: { status: TicketStatus; floati
   );
 }
 
-/**
- * Chips des gammes achetees (2 max + "+n").
- */
 function TierChips({ tickets }: { tickets: readonly PurchasedTicket[] }) {
   const visible = tickets.slice(0, 2);
   const extra = tickets.length - visible.length;
@@ -197,7 +158,7 @@ function TierChips({ tickets }: { tickets: readonly PurchasedTicket[] }) {
       {visible.map((t) => {
         const quality = getTierQualityInfo(t.tier.name);
         return (
-          <View key={t.id} style={[styles.chip, { backgroundColor: `${quality.color}14` }]}>
+          <View key={t.id} style={[styles.chip, { backgroundColor: `${quality.color}14`, borderColor: `${quality.color}30` }]}>
             <Text style={[styles.chipText, { color: quality.color }]} numberOfLines={1}>
               {t.quantity}x {t.tier.name}
             </Text>
@@ -213,9 +174,6 @@ function TierChips({ tickets }: { tickets: readonly PurchasedTicket[] }) {
   );
 }
 
-/**
- * Vignette evenement (image ou placeholder) avec cerclage or.
- */
 function EventThumb({
   cover,
   size = 64,
@@ -245,20 +203,22 @@ function EventThumb({
 }
 
 /**
- * Carte compacte horizontale "ticket" (mode liste).
- *
- * Structure : liseret de statut + vignette + infos, puis liseret
- * perfore avec losange or, puis pied (quantite · total · chevron).
+ * Carte liste — vrai billet perforé :
+ * tranche supérieure dégradé or + encoches latérales + Sparkles si valid
+ * + bouton QR avec halo pulsant
  */
 function ListGroupCard({
   group,
   onPress,
+  onQr,
 }: {
   group: TicketGroup;
   onPress: (eventId: string) => void;
+  onQr?: (eventId: string) => void;
 }) {
   const meta = buildEventMeta(group.event);
   const statusConfig = getStatusConfig(group.status);
+  const isUpcoming = group.status === 'valid';
   return (
     <Pressable
       onPress={() => onPress(group.eventId)}
@@ -266,23 +226,33 @@ function ListGroupCard({
       accessibilityRole="button"
       accessibilityLabel={`Billets pour ${group.event.title}`}
     >
+      {/* Tranche supérieure dégradé or */}
+      <LinearGradient
+        colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.cardGoldTranche}
+      />
+      {/* Encoches latérales perforées */}
+      <View pointerEvents="none" style={styles.notchLeft} />
+      <View pointerEvents="none" style={styles.notchRight} />
       {/* Liseret de statut */}
       <View style={[styles.listAccent, { backgroundColor: statusConfig.color }]} />
-
-      {/* Colonne principale */}
       <View style={styles.listColumn}>
-        {/* Vignette + infos */}
         <View style={styles.listTopRow}>
           <EventThumb cover={group.event.cover_image} />
-
           <View style={styles.listBody}>
             <View style={styles.listTitleRow}>
               <Text style={styles.listTitle} numberOfLines={1}>
                 {group.event.title}
               </Text>
+              {isUpcoming && (
+                <View style={styles.sparklePill}>
+                  <Clock size={12} color={colors.goldBright} strokeWidth={1.75} />
+                </View>
+              )}
               <StatusPill status={group.status} />
             </View>
-
             {meta && (
               <View style={styles.listMetaRow}>
                 <CalendarDays size={12} color={colors.goldMuted} strokeWidth={1.5} />
@@ -291,39 +261,44 @@ function ListGroupCard({
                 </Text>
               </View>
             )}
-
             <TierChips tickets={group.tickets} />
           </View>
         </View>
-
-        {/* Liseret perfore avec losange or */}
         <View style={styles.perfRow}>
           <View style={styles.perfLine} />
           <View style={styles.perfDiamond} />
           <View style={styles.perfLine} />
         </View>
-
-        {/* Pied : quantite · total · chevron */}
         <View style={styles.listFooterRow}>
           <Text style={styles.listQuantity}>
             {group.totalQuantity} billet{group.totalQuantity > 1 ? 's' : ''}
           </Text>
           <Text style={styles.listTotal}>{formatPrice(group.totalAmount)}</Text>
-          <View style={styles.listChevron}>
-            <ChevronRight size={15} color={colors.goldMuted} strokeWidth={1.75} />
-          </View>
+          {isUpcoming ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                onQr?.(group.eventId);
+              }}
+              style={styles.qrHalo}
+              accessibilityRole="button"
+              accessibilityLabel="Voir QR code"
+            >
+              <View style={styles.qrHaloInner}>
+                <QrCode size={14} color={colors.onyx} strokeWidth={2} />
+              </View>
+            </Pressable>
+          ) : (
+            <View style={styles.listChevron}>
+              <ChevronRight size={15} color={colors.goldMuted} strokeWidth={1.75} />
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
   );
 }
 
-/**
- * Carte 2 colonnes avec cover (mode grille).
- *
- * Structure : cover + statut flottant, puis infos, liseret perfore
- * avec losange or, pied (quantite · total) et barre de statut.
- */
 function GridGroupCard({
   group,
   onPress,
@@ -333,6 +308,7 @@ function GridGroupCard({
 }) {
   const meta = buildEventMeta(group.event);
   const statusConfig = getStatusConfig(group.status);
+  const isUpcoming = group.status === 'valid';
   return (
     <Pressable
       onPress={() => onPress(group.eventId)}
@@ -340,7 +316,14 @@ function GridGroupCard({
       accessibilityRole="button"
       accessibilityLabel={`Billets pour ${group.event.title}`}
     >
-      {/* Cover image + overlay + statut flottant */}
+      <LinearGradient
+        colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.cardGoldTranche}
+      />
+      <View pointerEvents="none" style={styles.notchLeftGrid} />
+      <View pointerEvents="none" style={styles.notchRightGrid} />
       <View style={styles.gridCover}>
         {group.event.cover_image ? (
           <>
@@ -363,9 +346,12 @@ function GridGroupCard({
           </View>
         )}
         <StatusPill status={group.status} floating />
+        {isUpcoming && (
+          <View style={styles.gridSparkle}>
+            <Ticket size={14} color={colors.goldBright} strokeWidth={1.75} />
+          </View>
+        )}
       </View>
-
-      {/* Corps compact */}
       <View style={styles.gridBody}>
         <Text style={styles.gridTitle} numberOfLines={2}>
           {group.event.title}
@@ -375,17 +361,12 @@ function GridGroupCard({
             {meta}
           </Text>
         )}
-
         <TierChips tickets={group.tickets} />
-
-        {/* Liseret perfore avec losange or */}
         <View style={styles.perfRow}>
           <View style={styles.perfLine} />
           <View style={styles.perfDiamond} />
           <View style={styles.perfLine} />
         </View>
-
-        {/* Pied : quantite + total */}
         <View style={styles.gridFooterRow}>
           <View style={styles.gridQuantityBlock}>
             <Text style={styles.gridQuantityLabel}>BILLETS</Text>
@@ -394,18 +375,18 @@ function GridGroupCard({
             </Text>
           </View>
           <Text style={styles.gridTotal}>{formatPrice(group.totalAmount)}</Text>
+          {isUpcoming && (
+            <View style={styles.qrHaloSmall}>
+              <QrCode size={12} color={colors.onyx} strokeWidth={2} />
+            </View>
+          )}
         </View>
       </View>
-
-      {/* Barre de statut */}
       <View style={[styles.gridAccent, { backgroundColor: statusConfig.color }]} />
     </Pressable>
   );
 }
 
-/**
- * Squelette de carte pendant le chargement initial.
- */
 function TicketListSkeleton() {
   return (
     <View>
@@ -429,12 +410,58 @@ function TicketListSkeleton() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-
-  /* Header premium */
+  bgHalo: {
+    position: 'absolute',
+    top: 140,
+    right: -40,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(216,180,90,0.05)',
+  },
+  bgHalo2: {
+    position: 'absolute',
+    top: 480,
+    left: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
   header: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+    overflow: 'hidden',
+  },
+  headerGlow: {
+    position: 'absolute',
+    top: -70,
+    right: -30,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(216,180,90,0.07)',
+  },
+  headerRingLarge: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}1E`,
+    top: -50,
+    right: -20,
+  },
+  headerRingSmall: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderColor: `${colors.gold}14`,
+    top: -16,
+    right: 18,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -472,8 +499,21 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: colors.goldBright,
   },
-
-  /* Onglets filtre */
+  headerOverline: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 2,
+    color: colors.goldMuted,
+  },
+  headerHairline: {
+    position: 'absolute',
+    bottom: 0,
+    left: spacing.lg,
+    right: spacing.lg,
+    height: 1,
+    backgroundColor: `${colors.gold}1A`,
+  },
   tabsContent: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
@@ -485,20 +525,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.sm + 2,
     borderRadius: radius.full,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.08)',
     gap: spacing.xs,
   },
-  tabActive: {
-    borderWidth: 0,
-    overflow: 'hidden',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
+  tabActive: { borderWidth: 0, overflow: 'hidden' },
+  tabRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   tabGradientFill: {
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.sm + 2,
@@ -510,9 +543,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textSecondary,
   },
-  tabTextActive: {
-    color: colors.onyx,
-  },
+  tabTextActive: { color: colors.onyx },
   tabCount: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
@@ -525,12 +556,7 @@ const styles = StyleSheet.create({
     minWidth: 18,
     textAlign: 'center',
   },
-  tabCountActive: {
-    color: colors.onyx,
-    backgroundColor: 'rgba(10,9,8,0.25)',
-  },
-
-  /* Barre de contexte : compteur + toggle LISTE / GRILLE */
+  tabCountActive: { color: colors.onyx, backgroundColor: 'rgba(10,9,8,0.25)' },
   contextRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -544,16 +570,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textSecondary,
   },
-  contextHairline: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.divider,
-  },
+  contextHairline: { flex: 1, height: 1, backgroundColor: colors.divider },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: radius.full,
     padding: 3,
   },
@@ -564,9 +586,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  viewToggleBtnActive: {
-    overflow: 'hidden',
-  },
+  viewToggleBtnActive: { overflow: 'hidden' },
   viewToggleFill: {
     width: 36,
     height: 32,
@@ -574,13 +594,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  /* Contenu */
-  content: {
-    paddingHorizontal: spacing.lg,
-  },
-
-  /* --- Skeleton --- */
+  content: { paddingHorizontal: spacing.lg },
   skeletonCard: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -592,53 +606,82 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.card,
   },
-  skeletonBody: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-
-  /* --- Carte LISTE (compacte, type ticket) --- */
+  skeletonBody: { flex: 1, justifyContent: 'center' },
   listCard: {
     flexDirection: 'row',
     backgroundColor: colors.elevated,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}45`,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
     ...shadows.card,
   },
-  cardPressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.99 }],
+  cardPressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+  cardGoldTranche: { position: 'absolute', top: 0, left: 0, right: 0, height: 2.5 },
+  notchLeft: {
+    position: 'absolute',
+    left: -8,
+    top: '50%',
+    marginTop: -12,
+    width: 16,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}18`,
   },
-  listAccent: {
-    alignSelf: 'stretch',
-    width: 3,
+  notchRight: {
+    position: 'absolute',
+    right: -8,
+    top: '50%',
+    marginTop: -12,
+    width: 16,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}18`,
   },
-  listColumn: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+  notchLeftGrid: {
+    position: 'absolute',
+    left: -7,
+    top: 118,
+    width: 14,
+    height: 20,
+    borderRadius: 7,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}12`,
+    zIndex: 2,
   },
+  notchRightGrid: {
+    position: 'absolute',
+    right: -7,
+    top: 118,
+    width: 14,
+    height: 20,
+    borderRadius: 7,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: `${colors.gold}12`,
+    zIndex: 2,
+  },
+  listAccent: { alignSelf: 'stretch', width: 3 },
+  listColumn: { flex: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.md, paddingTop: 2.5 },
   listTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  thumbRing: {
-    borderWidth: 1,
-    borderColor: `${colors.gold}45`,
-  },
+  thumbRing: { borderWidth: 1, borderColor: `${colors.gold}45` },
   thumbPlaceholder: {
     backgroundColor: colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listBody: {
-    flex: 1,
-  },
+  listBody: { flex: 1 },
   listTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -652,6 +695,16 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.text,
     letterSpacing: -0.2,
+  },
+  sparklePill: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}30`,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listMetaRow: {
     flexDirection: 'row',
@@ -696,8 +749,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  /* --- Pastille statut compacte --- */
+  qrHalo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.goldGlow,
+    borderWidth: 1,
+    borderColor: colors.goldBright,
+  },
+  qrHaloInner: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrHaloSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -707,11 +785,7 @@ const styles = StyleSheet.create({
     gap: 5,
     borderWidth: 1,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusPillFloating: {
     position: 'absolute',
     top: spacing.sm,
@@ -728,8 +802,6 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     letterSpacing: 0.2,
   },
-
-  /* --- Chips gammes --- */
   chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -741,26 +813,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
+    borderWidth: 1,
   },
-  chipText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
-    lineHeight: 14,
-    flexShrink: 1,
-  },
-  chipMore: {
-    backgroundColor: colors.glass,
-  },
-  chipMoreText: {
-    color: colors.textSecondary,
-  },
-
-  /* --- Liseret perfore partage (liste + grille) --- */
-  perfRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
+  chipText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, lineHeight: 14, flexShrink: 1 },
+  chipMore: { backgroundColor: colors.glass, borderColor: colors.border },
+  chipMoreText: { color: colors.textSecondary },
+  perfRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   perfLine: {
     flex: 1,
     height: 1,
@@ -775,39 +833,20 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
     marginHorizontal: spacing.sm,
   },
-
-  /* --- Carte GRILLE (2 colonnes) --- */
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   gridCard: {
     width: '48.5%',
     backgroundColor: colors.elevated,
-    borderWidth: 1.5,
-    borderColor: `${colors.gold}45`,
+    borderWidth: 1,
+    borderColor: `${colors.gold}1F`,
     borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: spacing.md,
     ...shadows.card,
   },
-  gridCover: {
-    height: 118,
-    position: 'relative',
-    backgroundColor: colors.surfaceAlt,
-  },
-  gridCoverImage: {
-    width: '100%',
-    height: 118,
-  },
-  gridCoverOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 52,
-  },
+  gridCover: { height: 118, position: 'relative', backgroundColor: colors.surfaceAlt },
+  gridCoverImage: { width: '100%', height: 118 },
+  gridCoverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 52 },
   gridCoverPlaceholder: {
     width: '100%',
     height: 118,
@@ -815,10 +854,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  gridBody: {
-    padding: spacing.md,
-    paddingBottom: 0,
+  gridSparkle: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(10,9,8,0.55)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}35`,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  gridBody: { padding: spacing.md, paddingBottom: 0 },
   gridTitle: {
     fontFamily: 'PlayfairDisplay_600SemiBold',
     fontSize: 15,
@@ -841,9 +890,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
-  gridQuantityBlock: {
-    flex: 1,
-  },
+  gridQuantityBlock: { flex: 1 },
   gridQuantityLabel: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 9,
@@ -859,14 +906,24 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     color: colors.textSecondary,
   },
-  gridTotal: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.goldBright,
+  gridTotal: { fontFamily: 'Inter_700Bold', fontSize: 15, lineHeight: 20, color: colors.goldBright },
+  gridAccent: { height: 3 },
+  emptyWrap: {
+    marginTop: spacing.lg,
+    backgroundColor: 'rgba(30,26,22,0.55)',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}12`,
+    overflow: 'hidden',
   },
-  gridAccent: {
-    height: 3,
+  emptyHalo: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(216,180,90,0.06)',
   },
 });
 
@@ -883,23 +940,24 @@ export default function TicketsList() {
   const [activeFilter, setActiveFilter] = useState<TicketFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
-  // -- Skeleton au chargement initial (purement visuel) --
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 450);
     return () => clearTimeout(timer);
   }, []);
 
-  // -- Regroupement des billets par evenement --
   const groups = useMemo<TicketGroup[]>(() => {
-    const byEvent = new Map<string, {
-      event: TicketEventSummary;
-      tickets: PurchasedTicket[];
-      totalQuantity: number;
-      totalAmount: number;
-      statuses: TicketStatus[];
-      lastCreatedAt: string;
-    }>();
+    const byEvent = new Map<
+      string,
+      {
+        event: TicketEventSummary;
+        tickets: PurchasedTicket[];
+        totalQuantity: number;
+        totalAmount: number;
+        statuses: TicketStatus[];
+        lastCreatedAt: string;
+      }
+    >();
 
     for (const ticket of tickets) {
       const current = byEvent.get(ticket.event_id);
@@ -927,9 +985,7 @@ export default function TicketsList() {
       .map(([eventId, group]): TicketGroup => ({
         eventId,
         event: group.event,
-        tickets: group.tickets.sort((a, b) =>
-          b.created_at.localeCompare(a.created_at),
-        ),
+        tickets: group.tickets.sort((a, b) => b.created_at.localeCompare(a.created_at)),
         totalQuantity: group.totalQuantity,
         totalAmount: group.totalAmount,
         status: getGroupStatus(group.tickets),
@@ -937,7 +993,6 @@ export default function TicketsList() {
       .sort((a, b) => b.tickets[0].created_at.localeCompare(a.tickets[0].created_at));
   }, [tickets]);
 
-  // -- Groupes filtres --
   const filteredGroups = useMemo(() => {
     if (activeFilter === 'all') return groups;
     return groups.filter((group) => {
@@ -948,7 +1003,6 @@ export default function TicketsList() {
     });
   }, [groups, activeFilter]);
 
-  // -- Compteurs (nombre de groupes par statut) --
   const groupCounts = useMemo(() => {
     let valid = 0;
     let used = 0;
@@ -961,7 +1015,6 @@ export default function TicketsList() {
     return { valid, used, expired, total: groups.length };
   }, [groups]);
 
-  // -- Nombre de billets actifs (pour la pastille du header) --
   const activeTicketCount = useMemo(() => {
     let count = 0;
     for (const ticket of tickets) {
@@ -974,214 +1027,276 @@ export default function TicketsList() {
     return groups.reduce((sum, group) => sum + group.totalQuantity, 0);
   }, [groups]);
 
-  // -- Handlers --
   const handleFilterChange = useCallback((filter: TicketFilter) => {
     impact('light');
     setActiveFilter(filter);
   }, [impact]);
 
-  const handleToggleMode = useCallback((mode: ViewMode) => {
-    if (mode === viewMode) return;
-    impact('light');
-    setViewMode(mode);
-  }, [impact, viewMode]);
+  const handleToggleMode = useCallback(
+    (mode: ViewMode) => {
+      if (mode === viewMode) return;
+      impact('light');
+      setViewMode(mode);
+    },
+    [impact, viewMode],
+  );
 
-  const handleGroupPress = useCallback((eventId: string) => {
-    impact('light');
-    router.push({
-      pathname: ROUTES.TICKET_EVENT,
-      params: { eventId },
-    } as never);
-  }, [impact, router]);
+  const handleGroupPress = useCallback(
+    (eventId: string) => {
+      impact('light');
+      router.push({
+        pathname: ROUTES.TICKET_EVENT,
+        params: { eventId },
+      } as never);
+    },
+    [impact, router],
+  );
+
+  const handleQrPress = useCallback(
+    (eventId: string) => {
+      impact('medium');
+      router.push({
+        pathname: ROUTES.TICKET_EVENT,
+        params: { eventId },
+      } as never);
+    },
+    [impact, router],
+  );
 
   const handleExplore = useCallback(() => {
     impact('light');
     router.push(ROUTES.EXPLORE as never);
   }, [impact, router]);
 
-  // -- Onglets avec compteurs --
-  const filterTabs: readonly FilterTab[] = useMemo(() => [
-    { key: 'all', label: 'Tous', icon: (c: string) => <Ticket size={14} color={c} strokeWidth={1.75} /> },
-    { key: 'valid', label: 'Valides', icon: (c: string) => <CircleCheck size={14} color={c} strokeWidth={1.75} /> },
-    { key: 'used', label: 'Utilises', icon: (c: string) => <CircleX size={14} color={c} strokeWidth={1.75} /> },
-    { key: 'expired', label: 'Expires', icon: (c: string) => <Clock size={14} color={c} strokeWidth={1.75} /> },
-  ], []);
+  const filterTabs: readonly FilterTab[] = useMemo(
+    () => [
+      { key: 'all', label: 'Tous', icon: (c: string) => <Ticket size={14} color={c} strokeWidth={1.75} /> },
+      { key: 'valid', label: 'Valides', icon: (c: string) => <CircleCheck size={14} color={c} strokeWidth={1.75} /> },
+      { key: 'used', label: 'Utilises', icon: (c: string) => <CircleX size={14} color={c} strokeWidth={1.75} /> },
+      { key: 'expired', label: 'Expires', icon: (c: string) => <Clock size={14} color={c} strokeWidth={1.75} /> },
+    ],
+    [],
+  );
 
-  const getCountForFilter = useCallback((key: TicketFilter): number => {
-    switch (key) {
-      case 'all': return groupCounts.total;
-      case 'valid': return groupCounts.valid;
-      case 'used': return groupCounts.used;
-      case 'expired': return groupCounts.expired;
-    }
-  }, [groupCounts]);
-
-  // ============================================================
-  // Rendu
-  // ============================================================
+  const getCountForFilter = useCallback(
+    (key: TicketFilter): number => {
+      switch (key) {
+        case 'all':
+          return groupCounts.total;
+        case 'valid':
+          return groupCounts.valid;
+        case 'used':
+          return groupCounts.used;
+        case 'expired':
+          return groupCounts.expired;
+      }
+    },
+    [groupCounts],
+  );
 
   return (
-    <ScreenBackground><View style={[styles.root, { backgroundColor: 'transparent' }]}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingTop: insets.top + spacing.sm,
-          paddingBottom: insets.bottom + spacing.xxxl + 20,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTopRow}>
-            <Text style={styles.headerTitle}>Mes billets</Text>
-            {tickets.length > 0 && (
-              <View style={styles.headerCountPill}>
-                <Sparkles size={14} color={colors.gold} strokeWidth={1.75} />
-                <Text style={styles.headerCountText}>
-                  {activeTicketCount} actif{activeTicketCount > 1 ? 's' : ''}
-                </Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.headerSubtitle}>
-            {groups.length > 0
-              ? `${groups.length} evenement${groups.length > 1 ? 's' : ''} · ${totalQuantity} billet${totalQuantity > 1 ? 's' : ''}`
-              : 'Vos billets achetes apparaitront ici'}
-          </Text>
-        </View>
-
-        {/* Onglets filtre */}
+    <ScreenBackground>
+      <View style={[styles.root, { backgroundColor: 'transparent' }]}>
+        <View pointerEvents="none" style={styles.bgHalo} />
+        <View pointerEvents="none" style={styles.bgHalo2} />
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingTop: insets.top + spacing.sm,
+            paddingBottom: insets.bottom + spacing.xxxl + 20,
+          }}
+          showsVerticalScrollIndicator={false}
         >
-          {filterTabs.map((tab) => {
-            const isActive = activeFilter === tab.key;
-            const count = getCountForFilter(tab.key);
-            return (
+          {/* Hero header halo + titre serif */}
+          <View style={styles.header}>
+            <View pointerEvents="none" style={styles.headerGlow} />
+            <View pointerEvents="none" style={styles.headerRingLarge} />
+            <View pointerEvents="none" style={styles.headerRingSmall} />
+            <View style={styles.headerTopRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ticket size={14} color={colors.gold} strokeWidth={1.75} />
+                <Text style={styles.headerOverline}>MES BILLETS</Text>
+              </View>
+              {tickets.length > 0 && (
+                <View style={styles.headerCountPill}>
+                  <Clock size={14} color={colors.gold} strokeWidth={1.75} />
+                  <Text style={styles.headerCountText}>
+                    {activeTicketCount} actif{activeTicketCount > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.headerTitle}>Mes billets</Text>
+            <Text style={styles.headerSubtitle}>
+              {groups.length > 0
+                ? `${groups.length} evenement${groups.length > 1 ? 's' : ''} \u00B7 ${totalQuantity} billet${totalQuantity > 1 ? 's' : ''}`
+                : 'Vos billets achetes apparaitront ici'}
+            </Text>
+            <View pointerEvents="none" style={styles.headerHairline} />
+          </View>
+
+          {/* Filtres pastilles verre */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+            {filterTabs.map((tab) => {
+              const isActive = activeFilter === tab.key;
+              const count = getCountForFilter(tab.key);
+              return (
+                <Pressable
+                  key={tab.key}
+                  onPress={() => handleFilterChange(tab.key)}
+                  style={[styles.tab, isActive && styles.tabActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={tab.label}
+                >
+                  {isActive ? (
+                    <LinearGradient
+                      colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.tabGradientFill}
+                    >
+                      <View style={styles.tabRow}>
+                        {tab.icon(colors.onyx)}
+                        <Text style={[styles.tabText, styles.tabTextActive]}>{tab.label}</Text>
+                        <Text style={[styles.tabCount, styles.tabCountActive]}>{count}</Text>
+                      </View>
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.tabRow}>
+                      {tab.icon(colors.textSecondary)}
+                      <Text style={styles.tabText}>{tab.label}</Text>
+                      <Text style={styles.tabCount}>{count}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Barre contexte */}
+          <View style={styles.contextRow}>
+            <Text style={styles.contextCount}>
+              {filteredGroups.length} evenement{filteredGroups.length > 1 ? 's' : ''}
+            </Text>
+            <View style={styles.contextHairline} />
+            <View style={styles.viewToggle}>
               <Pressable
-                key={tab.key}
-                onPress={() => handleFilterChange(tab.key)}
-                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => handleToggleMode('list')}
+                style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
                 accessibilityRole="button"
-                accessibilityLabel={tab.label}
+                accessibilityLabel="Vue liste"
+                accessibilityState={{ selected: viewMode === 'list' }}
+                hitSlop={4}
               >
-                {isActive ? (
+                {viewMode === 'list' ? (
                   <LinearGradient
                     colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.tabGradientFill}
+                    style={styles.viewToggleFill}
                   >
-                    <View style={styles.tabRow}>
-                      {tab.icon(colors.onyx)}
-                      <Text style={[styles.tabText, styles.tabTextActive]}>
-                        {tab.label}
-                      </Text>
-                      <Text style={[styles.tabCount, styles.tabCountActive]}>
-                        {count}
-                      </Text>
-                    </View>
+                    <Rows3 size={16} color={colors.onyx} strokeWidth={2} />
                   </LinearGradient>
                 ) : (
-                  <View style={styles.tabRow}>
-                    {tab.icon(colors.textSecondary)}
-                    <Text style={styles.tabText}>{tab.label}</Text>
-                    <Text style={styles.tabCount}>{count}</Text>
-                  </View>
+                  <Rows3 size={16} color={colors.textSecondary} strokeWidth={2} />
                 )}
               </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Barre de contexte : compteur + bascule LISTE / GRILLE */}
-        <View style={styles.contextRow}>
-          <Text style={styles.contextCount}>
-            {filteredGroups.length} evenement{filteredGroups.length > 1 ? 's' : ''}
-          </Text>
-          <View style={styles.contextHairline} />
-          <View style={styles.viewToggle}>
-            <Pressable
-              onPress={() => handleToggleMode('list')}
-              style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
-              accessibilityRole="button"
-              accessibilityLabel="Vue liste"
-              accessibilityState={{ selected: viewMode === 'list' }}
-              hitSlop={4}
-            >
-              {viewMode === 'list' ? (
-                <LinearGradient
-                  colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.viewToggleFill}
-                >
-                  <Rows3 size={16} color={colors.onyx} strokeWidth={2} />
-                </LinearGradient>
-              ) : (
-                <Rows3 size={16} color={colors.textSecondary} strokeWidth={2} />
-              )}
-            </Pressable>
-            <Pressable
-              onPress={() => handleToggleMode('grid')}
-              style={[styles.viewToggleBtn, viewMode === 'grid' && styles.viewToggleBtnActive]}
-              accessibilityRole="button"
-              accessibilityLabel="Vue grille"
-              accessibilityState={{ selected: viewMode === 'grid' }}
-              hitSlop={4}
-            >
-              {viewMode === 'grid' ? (
-                <LinearGradient
-                  colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.viewToggleFill}
-                >
-                  <LayoutGrid size={16} color={colors.onyx} strokeWidth={2} />
-                </LinearGradient>
-              ) : (
-                <LayoutGrid size={16} color={colors.textSecondary} strokeWidth={2} />
-              )}
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Liste des groupes (evenements) */}
-        <View style={styles.content}>
-          {isLoading ? (
-            <TicketListSkeleton />
-          ) : filteredGroups.length === 0 ? (
-            /* Etat vide premium */
-            <EmptyState
-              icon={<Ticket size={36} color={colors.gold} strokeWidth={1.5} />}
-              title={
-                groups.length === 0
-                  ? 'Aucun billet pour le moment'
-                  : 'Aucun billet dans cette categorie'
-              }
-              description={
-                groups.length === 0
-                  ? 'Reservez des billets lors de vos prochains evenements et retrouvez-les ici.'
-                  : 'Changez de filtre pour voir vos autres billets.'
-              }
-              actionLabel={groups.length === 0 ? 'Explorer les evenements' : undefined}
-              onAction={groups.length === 0 ? handleExplore : undefined}
-            />
-          ) : (
-            <View style={viewMode === 'grid' ? styles.gridContainer : undefined}>
-              {filteredGroups.map((group) =>
-                viewMode === 'grid' ? (
-                  <GridGroupCard key={group.eventId} group={group} onPress={handleGroupPress} />
+              <Pressable
+                onPress={() => handleToggleMode('grid')}
+                style={[styles.viewToggleBtn, viewMode === 'grid' && styles.viewToggleBtnActive]}
+                accessibilityRole="button"
+                accessibilityLabel="Vue grille"
+                accessibilityState={{ selected: viewMode === 'grid' }}
+                hitSlop={4}
+              >
+                {viewMode === 'grid' ? (
+                  <LinearGradient
+                    colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.viewToggleFill}
+                  >
+                    <LayoutGrid size={16} color={colors.onyx} strokeWidth={2} />
+                  </LinearGradient>
                 ) : (
-                  <ListGroupCard key={group.eventId} group={group} onPress={handleGroupPress} />
-                ),
-              )}
+                  <LayoutGrid size={16} color={colors.textSecondary} strokeWidth={2} />
+                )}
+              </Pressable>
             </View>
-          )}
-        </View>
-      </ScrollView>
-    </View></ScreenBackground>
+          </View>
+
+          {/* Liste */}
+          <View style={styles.content}>
+            {isLoading ? (
+              <TicketListSkeleton />
+            ) : filteredGroups.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <View pointerEvents="none" style={styles.emptyHalo} />
+                <EmptyState
+                  icon={
+                    <View style={{ alignItems: 'center' }}>
+                      <View
+                        style={{
+                          width: 72,
+                          height: 72,
+                          borderRadius: 36,
+                          backgroundColor: 'rgba(216,180,90,0.12)',
+                          borderWidth: 1,
+                          borderColor: `${colors.gold}35`,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ticket size={32} color={colors.gold} strokeWidth={1.5} />
+                      </View>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: -4,
+                          right: 6,
+                          width: 22,
+                          height: 22,
+                          borderRadius: 11,
+                          backgroundColor: colors.elevated,
+                          borderWidth: 1,
+                          borderColor: `${colors.gold}30`,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ticket size={12} color={colors.gold} strokeWidth={1.75} />
+                      </View>
+                    </View>
+                  }
+                  title={groups.length === 0 ? 'Aucun billet pour le moment' : 'Aucun billet dans cette categorie'}
+                  description={
+                    groups.length === 0
+                      ? 'Reservez des billets lors de vos prochains evenements et retrouvez-les ici.'
+                      : 'Changez de filtre pour voir vos autres billets.'
+                  }
+                />
+                {groups.length === 0 && (
+                  <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+                    <Button variant="primary" size="lg" fullWidth onPress={handleExplore}>
+                      Explorer les evenements
+                    </Button>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={viewMode === 'grid' ? styles.gridContainer : undefined}>
+                {filteredGroups.map((group) =>
+                  viewMode === 'grid' ? (
+                    <GridGroupCard key={group.eventId} group={group} onPress={handleGroupPress} />
+                  ) : (
+                    <ListGroupCard key={group.eventId} group={group} onPress={handleGroupPress} onQr={handleQrPress} />
+                  ),
+                )}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </ScreenBackground>
   );
 }

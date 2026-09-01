@@ -21,13 +21,16 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { useFonts } from 'expo-font';
-import { PlayfairDisplay_400Regular, PlayfairDisplay_500Medium, PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold, PlayfairDisplay_800ExtraBold, PlayfairDisplay_900Black } from '@expo-google-fonts/playfair-display';
-import { Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
+import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
+// @ts-ignore
+import { Asset } from 'expo-asset';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
 import { colors } from '@/lib/constants';
-import { RouteTransitionLoader } from '@/components/ui/RouteTransitionLoader';
+import { RouteTransitionLoader, RouteTransitionProvider } from '@/components/ui/RouteTransitionLoader';
+import { clientBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Configuration & Initialisation
@@ -39,23 +42,7 @@ if (!clerkPublishableKey) {
   throw new Error('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY est manquant (voir .env)');
 }
 
-// Filtre les warnings de navigation Expo Router
 LogBox.ignoreLogs(['[Layout children]', 'Unable to resolve manifest assets']);
-
-// Supprime les erreurs réseau internes de la console
-const _originalConsoleError = console.error;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-console.error = (...args: any[]) => {
-  const message = args.map((a: unknown) => (typeof a === 'string' ? a : '')).join(' ');
-  if (
-    message.includes('Network request failed') ||
-    message.includes('AuthRetryableFetchError') ||
-    message.includes('fetch.umd.js')
-  ) {
-    return;
-  }
-  _originalConsoleError.apply(console, args);
-};
 
 // Empêche le splash screen de se cacher automatiquement
 preventAutoHideAsync().catch(() => {
@@ -69,21 +56,12 @@ preventAutoHideAsync().catch(() => {
 export default function RootLayout() {
   const [isQueryClientReady, setQueryClientReady] = useState(false);
   const [fontsLoaded] = useFonts({
-    PlayfairDisplay_400Regular,
-    PlayfairDisplay_500Medium,
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_700Bold,
-    PlayfairDisplay_800ExtraBold,
-    PlayfairDisplay_900Black,
-    Inter_300Light,
     Inter_400Regular,
-    Inter_500Medium,
     Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
   });
 
-  // Initialise la persistance de React Query
   useEffect(() => {
     const init = async () => {
       try {
@@ -94,8 +72,11 @@ export default function RootLayout() {
         setQueryClientReady(true);
       }
     };
-
     init();
+  }, []);
+
+  useEffect(() => {
+    Asset.loadAsync(Object.values(clientBackgrounds)).catch(() => {});
   }, []);
 
   const isAppReady = fontsLoaded && isQueryClientReady;
@@ -115,21 +96,26 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <StatusBar style="light" backgroundColor={colors.background} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-              animation: 'none',
-            }}
-          >
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(client)" />
-            <Stack.Screen name="(seller)" />
-            <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
-          </Stack>
-          <RouteTransitionLoader />
+          <RouteTransitionProvider>
+            <StatusBar style="light" backgroundColor={colors.background} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+                animation: 'slide_from_right',
+                animationDuration: 250,
+                gestureEnabled: true,
+              }}
+            >
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(client)" />
+              <Stack.Screen name="(seller)" />
+              <Stack.Screen name="(shared)" options={{ headerShown: false, animation: 'slide_from_right' }} />
+              <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
+            </Stack>
+            <RouteTransitionLoader />
+          </RouteTransitionProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </ClerkProvider>

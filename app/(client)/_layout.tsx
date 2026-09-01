@@ -17,6 +17,7 @@
  *   - Icones passees comme composants (pas comme ReactNode)
  */
 
+import React, { useCallback, useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -43,45 +44,54 @@ const TABS: readonly TabConfig[] = [
   { name: 'profile', label: 'Profil', icon: ProfileIcon },
 ];
 
+const MemoTabBar = React.memo(TabBar);
+
+const tabBarIconMap: Record<string, IconComponent> = {
+  home: HomeIcon,
+  explore: ExploreIcon,
+  tickets: TicketIcon,
+  profile: ProfileIcon,
+};
+
 export default function ClientLayout() {
   const insets = useSafeAreaInsets();
+  const tabsForBar = useMemo(() => TABS.map((t) => ({ key: t.name, label: t.label, icon: t.icon })), []);
+  const renderTabBar = useCallback(
+    (props: any) => (
+      <MemoTabBar state={props.state} navigation={props.navigation} descriptors={props.descriptors} insets={insets} tabs={tabsForBar} />
+    ),
+    [insets, tabsForBar],
+  );
 
   return (
     <>
       <OfflineBanner />
       <Tabs
-      tabBar={(props) => (
-        <TabBar
-          state={props.state}
-          navigation={props.navigation}
-          descriptors={props.descriptors}
-          insets={insets}
-          tabs={TABS.map((t) => ({
-            key: t.name,
-            label: t.label,
-            icon: t.icon,
-          }))}
-        />
-      )}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      {TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            tabBarLabel: tab.label,
-            title: tab.label,
-            tabBarIcon: ({ color, size }) => {
-              const Icon = tab.icon;
-              return <Icon color={color} size={size} />;
-            },
-          }}
-        />
-      ))}
-    </Tabs>
+        tabBar={renderTabBar}
+        screenOptions={{
+          headerShown: false,
+          // @ts-ignore expo-router Tabs extra props
+          lazy: true,
+          detachInactiveScreens: true,
+          freezeOnBlur: true,
+          tabBarHideOnKeyboard: true,
+        } as any}
+      >
+        {TABS.map((tab) => (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            options={{
+              tabBarLabel: tab.label,
+              title: tab.label,
+              tabBarIcon: ({ color, size }) => {
+                const Icon = tabBarIconMap[tab.name]!;
+                return <Icon color={color} size={size} />;
+              },
+            }}
+          />
+        ))}
+      </Tabs>
     </>
   );
 }

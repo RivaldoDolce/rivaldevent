@@ -127,7 +127,7 @@ export const spacing = {
 const FONT_DISPLAY_BOLD = 'PlayfairDisplay_700Bold';
 const FONT_DISPLAY_SEMI = 'PlayfairDisplay_600SemiBold';
 const FONT_UI_SEMI = 'Inter_600SemiBold';
-const FONT_UI_MEDIUM = 'Inter_500Medium';
+const FONT_UI_MEDIUM = 'Inter_600SemiBold';
 const FONT_UI_REGULAR = 'Inter_400Regular';
 
 export const typography = {
@@ -176,45 +176,45 @@ export const radius = radii;
 export const shadows = {
   card: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
   },
   elevated: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 4,
   },
   search: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   eventCard: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   goldGlow: {
-    shadowColor: 'rgba(216,180,90,0.45)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: 'rgba(216,180,90,0.35)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
   },
   goldGlowSoft: {
-    shadowColor: 'rgba(216,180,90,0.25)',
+    shadowColor: 'rgba(216,180,90,0.2)',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 2,
   },
 } as const;
 

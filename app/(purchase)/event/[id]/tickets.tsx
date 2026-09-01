@@ -14,7 +14,6 @@ import {
   MapPin,
   Ticket,
   Info,
-  Sparkles,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -114,21 +113,24 @@ export default function SelectTickets() {
 
   useEffect(() => {
     if (totalQuantity > 0) {
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      pulseAnim.setValue(0);
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
     }
+    pulseAnim.stopAnimation();
+    pulseAnim.setValue(0);
+    return undefined;
   }, [totalQuantity, pulseAnim]);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(goldLineAnim, { toValue: 1, duration: 2200, useNativeDriver: true })
-    ).start();
+    const loop = Animated.loop(Animated.timing(goldLineAnim, { toValue: 1, duration: 2200, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
   }, [goldLineAnim]);
 
   const handleProceedToPayment = useCallback(() => {
@@ -230,7 +232,7 @@ export default function SelectTickets() {
             <View pointerEvents="none" style={styles.heroRing} />
             <View pointerEvents="none" style={styles.heroRing2} />
             <View style={styles.heroSparkle}>
-              <Sparkles size={16} color={colors.goldBright} strokeWidth={1.75} />
+              <Ticket size={16} color={colors.goldBright} strokeWidth={1.75} />
             </View>
             <View style={styles.heroContent}>
               <View style={styles.heroBadge}>
@@ -297,7 +299,7 @@ export default function SelectTickets() {
         </View>
       </ScrollView>
 
-      <BlurView intensity={42} tint="dark" style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}>
+      <BlurView intensity={20} tint="dark" style={[styles.bottomBar, { paddingBottom: insets.bottom || spacing.md }]}>
         <View style={styles.bottomBarGoldLineWrap}>
           <Animated.View style={[styles.bottomBarGoldShimmer, { transform: [{ translateX: goldLineTranslate }] }]}>
             <LinearGradient colors={['transparent', 'rgba(242,220,155,0.9)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />

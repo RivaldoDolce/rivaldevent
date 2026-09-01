@@ -410,11 +410,16 @@ export function useAuthService() {
       try {
         const { firstName, lastName } = splitFullName(payload.full_name);
         await user.update({ firstName, lastName });
-        await user.updateMetadata({
-          unsafeMetadata: {
-            phone: payload.phone && payload.phone.length > 0 ? payload.phone : null,
-          },
-        });
+        try {
+          await user.updateMetadata({
+            unsafeMetadata: {
+              phone: payload.phone && payload.phone.length > 0 ? payload.phone : null,
+            },
+          });
+        } catch (err) {
+          logger.debug('updateProfile second update error:', err);
+          return { data: null, error: GENERIC_ERROR };
+        }
         return { data: null, error: null };
       } catch (err) {
         logger.debug('updateProfile error:', err);

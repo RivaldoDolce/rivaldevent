@@ -1,18 +1,17 @@
 /**
  * Mes favoris — evenements et lieux mis en favori.
  *
- * Design « Noir & Or » :
+ * Design « Noir & Or » fantastique :
+ * - ScreenBackground + halos décoratifs
  * - En-tete hero degrade noir profond avec halo doré, anneaux et filet or bas
- * - Titre Playfair Display 28px + sous-titre compteurs
- * - Segmented control Evenements / Lieux : pastille verre, actif degrade or texte onyx
- * - Evenements : EventCard full-width (meme rendu que l'accueil)
- * - Lieux : VenueCard horizontale (meme rendu que l'accueil)
- * - Etat vide premium : icone coeur en medaillon verre avec halo doré
+ * - Overline or + titre Playfair Display 28px + compteur pastille or avec Sparkles
+ * - Segmented control Evenements / Lieux : pastilles verre, actif degrade or
+ * - Evenements : EventCard full-width
+ * - Lieux : VenueCard horizontale
+ * - EmptyState premium : halo doré + Sparkles + CTA or pleine largeur
  *
- * Source de verite : stores/favorites-store.ts (mock pour l'instant,
- * remplace par l'API Supabase au Jalon 6).
- *
- * Toutes les couleurs viennent de lib/constants.ts.
+ * Source de verite : stores/favorites-store.ts
+ * Toutes les couleurs depuis lib/constants.ts.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -25,7 +24,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Heart } from 'lucide-react-native';
+import { Heart, MapPin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,6 +35,7 @@ import { useFavoritesStore } from '@/stores/favorites-store';
 import { EventCard } from '@/components/events/EventCard';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
 import { MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 
 // ============================================================
@@ -87,8 +87,6 @@ export default function FavoritesScreen() {
 
   const handleEventPress = useCallback((eventId: string) => {
     impact('light');
-    // Pousse le detail DANS la stack Favoris : le retour revient
-    // ici, segment et scroll intacts.
     router.push({
       pathname: ROUTES.FAVORITES_EVENT_DETAIL,
       params: { id: eventId },
@@ -105,7 +103,6 @@ export default function FavoritesScreen() {
 
   const handleVenuePress = useCallback((venueId: string) => {
     impact('light');
-    // Meme principe : detail du lieu dans la stack Favoris.
     router.push({
       pathname: ROUTES.FAVORITES_VENUE_DETAIL,
       params: { id: venueId },
@@ -126,9 +123,9 @@ export default function FavoritesScreen() {
   const tabBarStyle: ViewStyle = {
     flexDirection: 'row',
     alignSelf: 'center',
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: `${colors.gold}2E`,
+    borderColor: `${colors.gold}18`,
     borderRadius: radius.full,
     padding: 4,
     marginTop: spacing.lg,
@@ -188,170 +185,199 @@ export default function FavoritesScreen() {
     marginBottom: spacing.sm,
   };
 
+  const totalCount = activeTab === 'events' ? favoritedEvents.length : favoritedVenues.length;
+
   return (
     <ScreenBackground>
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      {/* ============================================
-          EN-TETE HERO — degradef noir + halo doré
-          ============================================ */}
-      <LinearGradient
-        colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
-      >
-        {/* Halos et anneaux décoratifs */}
-        <View pointerEvents="none" style={styles.headerGlow} />
-        <View pointerEvents="none" style={styles.headerRingLarge} />
-        <View pointerEvents="none" style={styles.headerRingSmall} />
-        <View pointerEvents="none" style={styles.headerGoldDot} />
+        {/* Halos décoratifs verre fumé */}
+        <View pointerEvents="none" style={styles.bgHalo} />
+        <View pointerEvents="none" style={styles.bgHalo2} />
 
-        <Text style={styles.headerOverline}>VOTRE SELECTION</Text>
-        <Text style={styles.headerTitle}>Mes favoris</Text>
-        <Text style={styles.headerSubtitle}>
-          {activeTab === 'events'
-            ? `${favoritedEvents.length} evenement${favoritedEvents.length > 1 ? 's' : ''} sauvegarde${favoritedEvents.length > 1 ? 's' : ''}`
-            : `${favoritedVenues.length} lieu${favoritedVenues.length > 1 ? 'x' : ''} sauvegarde${favoritedVenues.length > 1 ? 's' : ''}`}
-        </Text>
+        {/* ============================================
+            EN-TETE HERO — degrade noir + halo doré + Sparkles
+            ============================================ */}
+        <LinearGradient
+          colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
+        >
+          <View pointerEvents="none" style={styles.headerGlow} />
+          <View pointerEvents="none" style={styles.headerRingLarge} />
+          <View pointerEvents="none" style={styles.headerRingSmall} />
+          <View pointerEvents="none" style={styles.headerGoldDot} />
+          <LinearGradient
+            colors={['rgba(216,180,90,0.0)', 'rgba(216,180,90,0.12)', 'rgba(216,180,90,0.0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.headerShimmer}
+            pointerEvents="none"
+          />
 
-        {/* Filet or bas */}
-        <View pointerEvents="none" style={styles.headerHairline} />
-      </LinearGradient>
+          <View style={styles.headerOverlineRow}>
+            <Heart size={12} color={colors.gold} fill="rgba(216,180,90,0.25)" strokeWidth={1.75} />
+            <Text style={styles.headerOverline}>VOTRE SELECTION</Text>
+          </View>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.headerTitle}>Mes favoris</Text>
+            {/* Compteur pastille or */}
+            <View style={styles.headerCountPill}>
+              <Heart size={12} color={colors.onyx} fill="rgba(10,9,8,0.12)" strokeWidth={2} />
+              <Text style={styles.headerCountText}>{totalCount}</Text>
+            </View>
+          </View>
+          <Text style={styles.headerSubtitle}>
+            {activeTab === 'events'
+              ? `${favoritedEvents.length} evenement${favoritedEvents.length > 1 ? 's' : ''} sauvegarde${favoritedEvents.length > 1 ? 's' : ''}`
+              : `${favoritedVenues.length} lieu${favoritedVenues.length > 1 ? 'x' : ''} sauvegarde${favoritedVenues.length > 1 ? 's' : ''}`}
+          </Text>
+          <View pointerEvents="none" style={styles.headerHairline} />
+        </LinearGradient>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={contentStyle}
-      >
-        {/* Segmented control Evenements / Lieux */}
-        <View style={tabBarStyle} accessibilityRole="tablist">
-          {TABS.map((tab) => {
-            const active = activeTab === tab.key;
-            const count = tab.key === 'events' ? favoritedEvents.length : favoritedVenues.length;
-            return (
-              <Pressable
-                key={tab.key}
-                onPress={() => handleTabPress(tab.key)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-              >
-                {active ? (
-                  <LinearGradient
-                    colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={activeTabStyle}
-                  >
-                    <Text style={tabLabelStyle(active)}>{tab.label}</Text>
-                    <View style={countBadgeStyle(active)}>
-                      <Text style={countBadgeTextStyle(active)}>{count}</Text>
-                    </View>
-                  </LinearGradient>
-                ) : (
-                  <View style={inactiveTabStyle}>
-                    <Text style={tabLabelStyle(active)}>{tab.label}</Text>
-                    <View style={countBadgeStyle(active)}>
-                      <Text style={countBadgeTextStyle(active)}>{count}</Text>
-                    </View>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Onglet Evenements */}
-        {activeTab === 'events' && (
-          <>
-            {favoritedEvents.length === 0 ? (
-              <EmptyState
-                icon={
-                  <Heart
-                    size={30}
-                    color={colors.goldBright}
-                    fill="rgba(216,180,90,0.25)"
-                    strokeWidth={1.5}
-                  />
-                }
-                title="Aucun evenement en favori"
-                description="Touchez le coeur sur un evenement pour le retrouver ici."
-                actionLabel="Explorer"
-                onAction={handleExplore}
-              />
-            ) : (
-              <>
-                <Text style={sectionTitleStyle}>Evenements sauvegardes</Text>
-                <View style={{ gap: spacing.md }}>
-                  {favoritedEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      image={event.image}
-                      date={event.date}
-                      location={event.location}
-                      time={event.time}
-                      organizerName={event.organizerName}
-                      organizerAvatar={event.organizerAvatar}
-                      price={event.price}
-                      currency={event.currency}
-                      category={event.category}
-                      isFeatured={event.isFeatured}
-                      isFavorited
-                      onPress={() => handleEventPress(event.id)}
-                      onReserve={() => handleReserve(event.id)}
-                      onToggleFavorite={() => toggleEvent(event.id)}
-                    />
-                  ))}
-                </View>
-              </>
-            )}
-          </>
-        )}
-
-        {/* Onglet Lieux */}
-        {activeTab === 'venues' && (
-          <>
-            {favoritedVenues.length === 0 ? (
-              <EmptyState
-                icon={
-                  <Heart
-                    size={30}
-                    color={colors.goldBright}
-                    fill="rgba(216,180,90,0.25)"
-                    strokeWidth={1.5}
-                  />
-                }
-                title="Aucun lieu en favori"
-                description="Touchez le coeur sur un lieu pour le retrouver ici."
-                actionLabel="Explorer"
-                onAction={handleExplore}
-              />
-            ) : (
-              <>
-                <Text style={sectionTitleStyle}>Lieux sauvegardes</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.lg }}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={contentStyle}>
+          {/* Segmented control */}
+          <View style={tabBarStyle} accessibilityRole="tablist">
+            {TABS.map((tab) => {
+              const active = activeTab === tab.key;
+              const count = tab.key === 'events' ? favoritedEvents.length : favoritedVenues.length;
+              return (
+                <Pressable
+                  key={tab.key}
+                  onPress={() => handleTabPress(tab.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
                 >
-                  {favoritedVenues.map((venue) => (
-                    <VenueCard
-                      key={venue.id}
-                      id={venue.id}
-                      name={venue.name}
-                      image={venue.image}
-                      location={venue.location}
-                      rating={venue.rating}
-                      badge={venue.badge}
-                      onPress={() => handleVenuePress(venue.id)}
-                    />
-                  ))}
-                </ScrollView>
-              </>
-            )}
-          </>
-        )}
-      </ScrollView>
+                  {active ? (
+                    <LinearGradient
+                      colors={[...gradients.gold] as unknown as readonly [string, string, ...string[]]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={activeTabStyle}
+                    >
+                      <Text style={tabLabelStyle(active)}>{tab.label}</Text>
+                      <View style={countBadgeStyle(active)}>
+                        <Text style={countBadgeTextStyle(active)}>{count}</Text>
+                      </View>
+                    </LinearGradient>
+                  ) : (
+                    <View style={inactiveTabStyle}>
+                      <Text style={tabLabelStyle(active)}>{tab.label}</Text>
+                      <View style={countBadgeStyle(active)}>
+                        <Text style={countBadgeTextStyle(active)}>{count}</Text>
+                      </View>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Onglet Evenements */}
+          {activeTab === 'events' && (
+            <>
+              {favoritedEvents.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <View style={styles.emptyHalo} pointerEvents="none" />
+                  <EmptyState
+                    icon={
+                      <View style={styles.emptyIconHalo}>
+                        <Heart size={30} color={colors.goldBright} fill="rgba(216,180,90,0.25)" strokeWidth={1.5} />
+                        <View style={styles.emptySparkle}>
+                          <Heart size={12} color={colors.gold} fill="rgba(216,180,90,0.35)" strokeWidth={1.75} />
+                        </View>
+                      </View>
+                    }
+                    title="Aucun evenement en favori"
+                    description="Touchez le coeur sur un evenement pour le retrouver ici. Votre collection vous attend."
+                  />
+                  <View style={styles.emptyCtaWrap}>
+                    <Button variant="primary" size="lg" fullWidth onPress={handleExplore}>
+                      Explorer les evenements
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text style={sectionTitleStyle}>Evenements sauvegardes</Text>
+                  <View style={{ gap: spacing.md }}>
+                    {favoritedEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        id={event.id}
+                        title={event.title}
+                        image={event.image}
+                        date={event.date}
+                        location={event.location}
+                        time={event.time}
+                        organizerName={event.organizerName}
+                        organizerAvatar={event.organizerAvatar}
+                        price={event.price}
+                        currency={event.currency}
+                        category={event.category}
+                        isFeatured={event.isFeatured}
+                        isFavorited
+                        onPress={() => handleEventPress(event.id)}
+                        onReserve={() => handleReserve(event.id)}
+                        onToggleFavorite={() => toggleEvent(event.id)}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Onglet Lieux */}
+          {activeTab === 'venues' && (
+            <>
+              {favoritedVenues.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <View style={styles.emptyHalo} pointerEvents="none" />
+                  <EmptyState
+                    icon={
+                      <View style={styles.emptyIconHalo}>
+                        <Heart size={30} color={colors.goldBright} fill="rgba(216,180,90,0.25)" strokeWidth={1.5} />
+                        <View style={styles.emptySparkle}>
+                          <MapPin size={12} color={colors.gold} strokeWidth={1.75} />
+                        </View>
+                      </View>
+                    }
+                    title="Aucun lieu en favori"
+                    description="Touchez le coeur sur un lieu pour le retrouver ici."
+                  />
+                  <View style={styles.emptyCtaWrap}>
+                    <Button variant="primary" size="lg" fullWidth onPress={handleExplore}>
+                      Explorer les lieux
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text style={sectionTitleStyle}>Lieux sauvegardes</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: spacing.md, paddingRight: spacing.lg }}
+                  >
+                    {favoritedVenues.map((venue) => (
+                      <VenueCard
+                        key={venue.id}
+                        id={venue.id}
+                        name={venue.name}
+                        image={venue.image}
+                        location={venue.location}
+                        rating={venue.rating}
+                        badge={venue.badge}
+                        onPress={() => handleVenuePress(venue.id)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+            </>
+          )}
+        </ScrollView>
       </View>
     </ScreenBackground>
   );
@@ -362,7 +388,24 @@ export default function FavoritesScreen() {
 // ============================================================
 
 const styles = {
-  // -- En-tete hero --
+  bgHalo: {
+    position: 'absolute',
+    top: 160,
+    left: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(216,180,90,0.045)',
+  } as ViewStyle,
+  bgHalo2: {
+    position: 'absolute',
+    top: 520,
+    right: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  } as ViewStyle,
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
@@ -408,20 +451,55 @@ const styles = {
     bottom: spacing.xl + 8,
     right: spacing.lg,
   } as ViewStyle,
+  headerShimmer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+  } as ViewStyle,
+  headerOverlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.sm,
+  } as ViewStyle,
   headerOverline: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 11,
     lineHeight: 15,
     letterSpacing: 2.2,
     color: colors.goldMuted,
-    marginBottom: spacing.sm,
   } as TextStyle,
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  } as ViewStyle,
   headerTitle: {
     fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 28,
     lineHeight: 36,
     letterSpacing: -0.4,
     color: colors.text,
+    flex: 1,
+  } as TextStyle,
+  headerCountPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.gold,
+    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginLeft: spacing.md,
+    ...shadows.goldGlowSoft,
+  } as ViewStyle,
+  headerCountText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.onyx,
   } as TextStyle,
   headerSubtitle: {
     fontFamily: 'Inter_400Regular',
@@ -437,5 +515,49 @@ const styles = {
     right: spacing.lg,
     height: 1,
     backgroundColor: `${colors.gold}2E`,
+  } as ViewStyle,
+  emptyWrap: {
+    marginTop: spacing.xl,
+    backgroundColor: 'rgba(30,26,22,0.55)',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: `${colors.gold}12`,
+    overflow: 'hidden',
+  } as ViewStyle,
+  emptyHalo: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(216,180,90,0.06)',
+  } as ViewStyle,
+  emptyIconHalo: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}35`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  emptySparkle: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.elevated,
+    borderWidth: 1,
+    borderColor: `${colors.gold}30`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  emptyCtaWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   } as ViewStyle,
 } as const;

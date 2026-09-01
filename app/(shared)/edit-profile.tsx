@@ -1,31 +1,3 @@
-/**
- * Modifier mon profil — edition du nom complet et du telephone.
- *
- * Ecran PARTAGE (hors groupes client/vendeur) afin que le retour
- * (router.back) ramene toujours a l'ecran d'origine avec son etat,
- * quel que soit le mode (acheteur ou organisateur).
- *
- * Design « Noir & Or » :
- * - Header partage via components/profile/ScreenHeader (degrade noir + halo)
- * - Carte identite : avatar xl anneau or editable + pastille photo verre
- * - Formulaire react-hook-form + zod (nom, telephone +237, email verrouille)
- * - Bouton enregistrer desactive si formulaire inchange ou invalide
- *
- * Avatar :
- * - Selection via expo-image-picker (bibliotheque, recadrage carre)
- * - Apercu immediat + stockage local (stores/avatar-store.ts)
- * - Tentative d'upload Supabase Storage au moment de l'enregistrement
- *   (bascule silencieuse sur le local si le bucket n'est pas configure)
- *
- * Donnees :
- * - Valeurs initiales depuis useAuth (profil Supabase)
- * - Enregistrement via authService.updateProfile + refreshProfile
- *
- * Conventions :
- * - Toutes les couleurs viennent de lib/constants.ts
- * - Pas de type any, pas d'emojis, imports @/
- */
-
 import { useState, useCallback, useEffect } from 'react';
 import {
   View,
@@ -38,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,7 +21,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ScreenHeader } from '@/components/profile/ScreenHeader';
 import { ScreenBackground } from '@/components/ui/ScreenBackground';
-import { colors, typography, spacing, radius } from '@/lib/constants';
+import { colors, typography, spacing, radius, ROUTES } from '@/lib/constants';
 import { clientBackgrounds } from '@/lib/images';
 import { profileSchema, type ProfileInput } from '@/lib/validation';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -59,6 +32,7 @@ import { useAuthService } from '@/services/auth.service';
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user, profile, refreshProfile } = useAuth();
   const authService = useAuthService();
   const { impact, notification } = useHaptics();
@@ -71,6 +45,9 @@ export default function EditProfileScreen() {
   const displayName = profile?.full_name || user?.user_metadata?.full_name || '';
   const displayEmail = user?.email || '';
   const avatarUrl = useAvatarUrl(user?.id, profile?.avatar_url);
+
+  // Indique si l'avatar a été modifié localement
+  const isAvatarDirty = pickedAvatar !== null;
 
   const {
     control,
@@ -96,6 +73,12 @@ export default function EditProfileScreen() {
     });
   }, [profile, reset]);
 
+  // Retour robuste : back si possible sinon replace vers le profil
+  const goBackOrReplace = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace(ROUTES.PROFILE);
+  }, [router]);
+
   const pickAvatar = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -116,67 +99,71 @@ export default function EditProfileScreen() {
 
   const onSubmit = useCallback(
     async (data: ProfileInput) => {
-      if (!user?.id) return;
+      if (!user?.id) return false;
 
       setIsLoading(true);
       setAuthError(null);
       impact('light');
 
-      const result = await authService.updateProfile(user.id, {
-        full_name: data.full_name,
-        phone: data.phone,
-      });
+      try {
+        const result = await authService.updateProfile(user.id, {
+          full_name: data.full_name,
+          phone: data.phone,
+        });
 
-      if (result.error) {
-        setAuthError(result.error.message);
-        notification('error');
-        setIsLoading(false);
-        return;
-      }
-
-      // Photo : stockage local immediat, puis upload serveur (bascule
-      // silencieuse si le bucket Supabase n'est pas encore configure).
-      if (pickedAvatar) {
-        setAvatar(user.id, pickedAvatar);
-        const upload = await authService.uploadAvatar(user.id, pickedAvatar);
-        if (upload.data) {
-          await refreshProfile();
+        if (result.error) {
+          setAuthError(result.error.message);
+          notification('error');
+          return false;
         }
-      }
 
-      notification('success');
-      router.back();
+        // Photo : stockage local immediat, puis upload serveur
+        if (pickedAvatar) {
+          setAvatar(user.id, pickedAvatar);
+          await authService.uploadAvatar(user.id, pickedAvatar);
+        }
+
+        // Toujours rafraichir le profil apres succes, meme sans avatar
+        await refreshProfile();
+
+        notification('success');
+        goBackOrReplace();
+        return true;
+      } finally {
+        // Garantit le reset du loader meme en cas de succes
+        setIsLoading(false);
+      }
     },
-    [user, pickedAvatar, setAvatar, refreshProfile, notification, router, impact, authService]
+    [user, pickedAvatar, setAvatar, refreshProfile, notification, goBackOrReplace, impact, authService]
   );
 
   const completion = [
     profile?.full_name,
     profile?.phone,
-    profile?.avatar_url,
+    pickedAvatar ?? avatarUrl,
   ].filter(Boolean).length;
 
   return (
     <ScreenBackground>
       <KeyboardAvoidingView
         style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        {/* Header hors ScrollView pour eviter le scroll du header */}
+        <ScreenHeader
+          title="Modifier mon profil"
+          subtitle="Gardez vos informations a jour"
+          background={clientBackgrounds.fallback}
+        />
         <ScrollView
           style={styles.screen}
           contentContainerStyle={{
-            paddingBottom: 120,
+            paddingBottom: 120 + insets.bottom,
           }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <ScreenHeader
-            title="Modifier mon profil"
-            subtitle="Gardez vos informations a jour"
-            background={clientBackgrounds.fallback}
-          />
-
         {/* ============================================
             Carte identite
             ============================================ */}
@@ -279,7 +266,7 @@ export default function EditProfileScreen() {
             size="lg"
             fullWidth
             loading={isLoading}
-            disabled={!isDirty || !isValid}
+            disabled={(!isDirty && !isAvatarDirty) || !isValid}
             onPress={handleSubmit(onSubmit)}
           >
             {isLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
@@ -291,7 +278,7 @@ export default function EditProfileScreen() {
             fullWidth
             onPress={() => {
               impact('light');
-              router.back();
+              goBackOrReplace();
             }}
           >
             Annuler

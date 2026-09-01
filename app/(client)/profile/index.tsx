@@ -1,16 +1,16 @@
 /**
- * Profil (mode acheteur) — page signature « Noir & Or ».
+ * Profil (mode acheteur) — page signature « Noir & Or » fantastique.
  *
- * Direction artistique : "Le salon du membre".
- * - Banniere haut de page plein degrade noir (gradients.hero) avec halo
- *   doré, anneaux decoratifs et filet or bas
- * - Avatar xl avec anneau or, nom Playfair, badge role (badge-check doré)
- * - Carte stats : 3 colonnes (Billets / Profil / Niveau) valeurs Playfair
- * - Menu en carte verre : pastilles 44px verre + libelle + chevron or
- * - CTA mode vendeur premium + footer version en pied
+ * Direction artistique : "Le salon du membre" — halo or + verre fumé + Playfair + Sparkles.
+ * - ScreenBackground + halos décoratifs absolus
+ * - Hero LinearGradient hero + halo doré + anneaux + filet or + Sparkles
+ * - Avatar xl bordure or + halo pulsant + dot présence + anneau externe
+ * - Stats en pastilles verre fumé avec valeurs Playfair or
+ * - Cartes elevated filet or 1F + shadows.card
+ * - Boutons dégradé or
  *
- * Donnees : profil Supabase (useAuth) + compteur billets (tickets-store).
- * Toutes les couleurs viennent de lib/constants.ts — aucun hexadécimal en dur.
+ * Données : profil Supabase (useAuth) + compteur billets (tickets-store).
+ * Toutes les couleurs depuis lib/constants.ts — aucun hex en dur.
  */
 
 import { useState, useCallback } from 'react';
@@ -22,7 +22,6 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
-  ImageBackground,
   type ViewStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -41,6 +40,7 @@ import {
   PenLine,
   MessageCircle,
   ShieldCheck,
+  User,
 } from 'lucide-react-native';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -52,8 +52,8 @@ import { useAuthService } from '@/services/auth.service';
 import { useHaptics } from '@/hooks/useHaptics';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ScreenBackground } from '@/components/ui/ScreenBackground';
 import { colors, gradients, spacing, radius, typography, shadows, ROUTES } from '@/lib/constants';
-import { clientBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Types & données statiques
@@ -81,7 +81,7 @@ const MONTHS_FR = [
 ] as const;
 
 // ============================================================
-// Helpers (dérivés des données réelles — aucun chiffre inventé)
+// Helpers
 // ============================================================
 
 function formatMemberSince(iso?: string | null): string {
@@ -103,9 +103,7 @@ function computeCompletion(profile?: {
   readonly phone?: string | null;
   readonly avatar_url?: string | null;
 } | null): number {
-  const done = [profile?.full_name, profile?.phone, profile?.avatar_url].filter(
-    Boolean
-  ).length;
+  const done = [profile?.full_name, profile?.phone, profile?.avatar_url].filter(Boolean).length;
   return Math.round((done / 3) * 100);
 }
 
@@ -143,20 +141,15 @@ export default function ClientProfileScreen() {
     if (!user?.id) return;
     setIsSwitching(true);
     impact('medium');
-
     const success = await authService.toggleSellerMode(user.id, true);
-
     if (success) {
       setMode('seller');
       notification('success');
       setShowSwitchModal(false);
-      // Push (et non replace) : le retour revient au profil client
-      // avec son etat intact (onglets, scroll, filtres).
       router.push('/(seller)/home');
     } else {
       notification('error');
     }
-
     setIsSwitching(false);
   }, [user, setMode, notification, router, impact, authService]);
 
@@ -168,7 +161,7 @@ export default function ClientProfileScreen() {
     router.replace('/(auth)/login');
   }, [setMode, router, impact, authService]);
 
-  // -- Menu (toutes les actions existantes conservees) --
+  // -- Menu --
   const menuItems: readonly MenuItem[] = [
     {
       label: 'Mes billets',
@@ -202,26 +195,16 @@ export default function ClientProfileScreen() {
     },
   ];
 
-  // -- Style dynamique : banniere --
   const heroStyle: ViewStyle = {
     paddingTop: insets.top + spacing.lg,
   };
 
   return (
-    <ImageBackground
-      source={clientBackgrounds.profil}
-      style={styles.screen}
-      imageStyle={styles.bgImage}
-      blurRadius={6}
-      accessibilityIgnoresInvertColors
-    >
-      {/* Voile dégradé pour la lisibilité */}
-      <LinearGradient
-        colors={['rgba(10,9,8,0.42)', 'rgba(10,9,8,0.72)']}
-        style={styles.bgScrim}
-        pointerEvents="none"
-      />
-      <StatusBar style="light" backgroundColor={colors.background} />
+    <ScreenBackground>
+      <StatusBar style="light" />
+      {/* Halo décoratif global */}
+      <View pointerEvents="none" style={styles.bgHalo} />
+      <View pointerEvents="none" style={styles.bgHalo2} />
 
       <ScrollView
         style={styles.scroll}
@@ -229,7 +212,7 @@ export default function ClientProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================
-            (a) BANNIERE — plein degrade hero + halo or
+            (a) HERO — LinearGradient hero + halo + anneaux
             ============================================ */}
         <LinearGradient
           colors={[...gradients.hero] as unknown as readonly [string, string, ...string[]]}
@@ -237,15 +220,23 @@ export default function ClientProfileScreen() {
           end={{ x: 0.9, y: 1 }}
           style={[styles.hero, heroStyle]}
         >
-          {/* Motif : halo doré + anneaux + point or */}
           <View pointerEvents="none" style={styles.heroGlow} />
           <View pointerEvents="none" style={styles.heroRingLarge} />
           <View pointerEvents="none" style={styles.heroRingSmall} />
           <View pointerEvents="none" style={styles.heroGoldDot} />
+          <LinearGradient
+            colors={['rgba(216,180,90,0.0)', 'rgba(216,180,90,0.14)', 'rgba(216,180,90,0.0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.heroTopShimmer}
+            pointerEvents="none"
+          />
 
-          {/* Barre du haut */}
           <View style={styles.heroTopBar}>
-            <Text style={styles.heroOverline}>MON ESPACE</Text>
+            <View style={styles.heroOverlineWrap}>
+              <User size={12} color={colors.gold} strokeWidth={1.75} />
+              <Text style={styles.heroOverline}>MON ESPACE</Text>
+            </View>
             <Pressable
               onPress={() => {
                 impact('light');
@@ -260,24 +251,27 @@ export default function ClientProfileScreen() {
             </Pressable>
           </View>
 
-          {/* Avatar xl + identite */}
-          <Pressable
-            onPress={() => {
-              impact('light');
-              router.push(ROUTES.PROFILE_EDIT);
-            }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Modifier mon profil"
-            style={styles.avatarWrapper}
-          >
-            <Avatar
-              source={avatarUrl}
-              fallback={initials}
-              size="xl"
-              border="highlight"
-            />
-          </Pressable>
+          {/* Avatar avec bordure or + halo + dot */}
+          <View style={styles.avatarHaloWrap}>
+            <View pointerEvents="none" style={styles.avatarHalo} />
+            <View pointerEvents="none" style={styles.avatarOuterRing} />
+            <Pressable
+              onPress={() => {
+                impact('light');
+                router.push(ROUTES.PROFILE_EDIT);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Modifier mon profil"
+              style={styles.avatarWrapper}
+            >
+              <Avatar source={avatarUrl} fallback={initials} size="xl" border="highlight" />
+              {/* Dot présence */}
+              <View style={styles.avatarDot}>
+                <View style={styles.avatarDotInner} />
+              </View>
+            </Pressable>
+          </View>
 
           <View style={styles.identityBlock}>
             <View style={styles.nameRow}>
@@ -285,17 +279,13 @@ export default function ClientProfileScreen() {
                 {displayName || 'Utilisateur'}
               </Text>
             </View>
-
-            {/* Badge role — verre doré + badge-check */}
             <View style={styles.roleBadge}>
               <BadgeCheck size={14} color={colors.goldBright} strokeWidth={2} />
               <Text style={styles.roleBadgeText}>Membre verifie</Text>
             </View>
-
             <Text style={styles.subtitle} numberOfLines={1}>
               {displayEmail || (displayPhone ? `+237 ${displayPhone}` : '')}
             </Text>
-
             {memberSince ? (
               <View style={styles.sinceRow}>
                 <View style={styles.sinceDot} />
@@ -304,32 +294,33 @@ export default function ClientProfileScreen() {
             ) : null}
           </View>
 
-          {/* Filet or bas */}
           <View pointerEvents="none" style={styles.heroHairline} />
         </LinearGradient>
 
         {/* ============================================
-            (b) CARTE STATS — 3 colonnes premium
+            (b) STATS — pastilles verre fumé
             ============================================ */}
         <View style={styles.statsCard}>
-          <View style={styles.statColumn}>
+          <View style={styles.statPill}>
             <Text style={styles.statValue}>{ticketCount}</Text>
             <Text style={styles.statLabel}>BILLETS</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statColumn}>
+          <View style={styles.statPill}>
             <Text style={styles.statValue}>{completion}%</Text>
-            <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>PROFIL</Text>
+            <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+              PROFIL
+            </Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statColumn}>
-            <Text style={styles.statValue}>OR</Text>
-            <Text style={styles.statLabel}>NIVEAU</Text>
+          <View style={styles.statPillGold}>
+            <Text style={styles.statValueGold}>OR</Text>
+            <Text style={styles.statLabelGold}>NIVEAU</Text>
           </View>
         </View>
 
         {/* ============================================
-            (c) MENU — carte verre premium
+            (c) MENU — carte elevated verre
             ============================================ */}
         <View style={styles.menuSection}>
           <Text style={styles.menuOverline}>ESPACE MEMBRE</Text>
@@ -337,10 +328,7 @@ export default function ClientProfileScreen() {
             {menuItems.map((item, index) => (
               <Pressable
                 key={item.label}
-                style={[
-                  styles.menuRow,
-                  index < menuItems.length - 1 ? styles.menuRowBorder : null,
-                ]}
+                style={[styles.menuRow, index < menuItems.length - 1 ? styles.menuRowBorder : null]}
                 onPress={() => {
                   impact('light');
                   item.onPress?.();
@@ -353,8 +341,6 @@ export default function ClientProfileScreen() {
                 <ChevronRight size={18} color={colors.goldMuted} strokeWidth={1.5} />
               </Pressable>
             ))}
-
-            {/* Separateur + Deconnexion */}
             <View style={styles.menuDivider} />
             <Pressable
               style={styles.menuRow}
@@ -374,9 +360,7 @@ export default function ClientProfileScreen() {
           </View>
         </View>
 
-        {/* ============================================
-            CTA MODE VENDEUR — premium
-            ============================================ */}
+        {/* CTA MODE VENDEUR — dégradé or */}
         <Pressable
           style={styles.sellerCta}
           onPress={() => {
@@ -400,12 +384,11 @@ export default function ClientProfileScreen() {
               {mode === 'seller' ? 'Mode vendeur actif' : 'Creez des evenements, vendez vos billets'}
             </Text>
           </View>
-          <ChevronRight size={20} color={colors.goldBright} strokeWidth={1.75} />
+          <View style={styles.sellerCtaChevron}>
+            <ChevronRight size={20} color={colors.goldBright} strokeWidth={1.75} />
+          </View>
         </Pressable>
 
-        {/* ============================================
-            (d) VERSION EN PIED
-            ============================================ */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>{memberNumber}</Text>
           <Text style={styles.footerText}>Rivald'event — Edition Or v{appVersion}</Text>
@@ -414,56 +397,30 @@ export default function ClientProfileScreen() {
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
 
-      {/* ============================================
-          MODAL — confirmation switch vendeur
-          ============================================ */}
-      <Modal
-        visible={showSwitchModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowSwitchModal(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setShowSwitchModal(false)}
-        >
+      {/* Modal vendeur */}
+      <Modal visible={showSwitchModal} transparent animationType="slide" onRequestClose={() => setShowSwitchModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowSwitchModal(false)}>
           <View style={styles.modalCard}>
             <View style={styles.modalGrabber} />
-
             <View style={styles.modalIconWrap}>
               <Store size={24} color={colors.goldBright} strokeWidth={1.75} />
             </View>
-
             <Text style={styles.modalTitle}>Passer en mode Vendeur</Text>
             <Text style={styles.modalDescription}>
-              Accedez a vos outils de creation d'evenements, gestion des
-              billets et suivi de vos ventes.
+              Accedez a vos outils de creation d'evenements, gestion des billets et suivi de vos ventes.
             </Text>
-
             <View style={styles.modalConfirmWrap}>
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isSwitching}
-                onPress={handleSwitchMode}
-              >
+              <Button variant="primary" size="lg" fullWidth loading={isSwitching} onPress={handleSwitchMode}>
                 {isSwitching ? 'Changement en cours...' : 'Confirmer le changement'}
               </Button>
             </View>
-
-            <Pressable
-              style={styles.modalCancel}
-              onPress={() => setShowSwitchModal(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Annuler"
-            >
+            <Pressable style={styles.modalCancel} onPress={() => setShowSwitchModal(false)} accessibilityRole="button" accessibilityLabel="Annuler">
               <Text style={styles.modalCancelText}>Annuler</Text>
             </Pressable>
           </View>
         </Pressable>
       </Modal>
-    </ImageBackground>
+    </ScreenBackground>
   );
 }
 
@@ -472,24 +429,26 @@ export default function ClientProfileScreen() {
 // ============================================================
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
+  bgHalo: {
+    position: 'absolute',
+    top: 120,
+    left: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(216,180,90,0.05)',
   },
-  bgImage: {
-    ...StyleSheet.absoluteFillObject,
+  bgHalo2: {
+    position: 'absolute',
+    top: 420,
+    right: -40,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  bgScrim: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-
-  // -- Hero --
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 120 },
   hero: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
@@ -535,6 +494,13 @@ const styles = StyleSheet.create({
     bottom: spacing.lg + 6,
     right: spacing.lg,
   },
+  heroTopShimmer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+  },
   heroHairline: {
     position: 'absolute',
     bottom: 0,
@@ -548,6 +514,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xl,
+  },
+  heroOverlineWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   heroOverline: {
     fontFamily: 'Inter_600SemiBold',
@@ -566,19 +537,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarWrapper: {
+  avatarHaloWrap: {
     alignSelf: 'center',
-  },
-  identityBlock: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  nameRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: '92%',
   },
+  avatarHalo: {
+    position: 'absolute',
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}18`,
+  },
+  avatarOuterRing: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1,
+    borderColor: `${colors.gold}12`,
+  },
+  avatarWrapper: { alignSelf: 'center' },
+  avatarDot: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  identityBlock: { alignItems: 'center', marginTop: spacing.md },
+  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', maxWidth: '92%' },
   name: {
     fontFamily: 'PlayfairDisplay_700Bold',
     fontSize: 26,
@@ -613,26 +615,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     maxWidth: '90%',
   },
-  sinceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  sinceDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.gold,
-    marginRight: spacing.sm,
-  },
+  sinceRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+  sinceDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.gold, marginRight: spacing.sm },
   sinceText: {
     fontFamily: 'Inter_500Medium',
     fontSize: 12,
     lineHeight: 16,
     color: colors.textMuted,
   },
-
-  // -- Carte stats --
   statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -643,11 +633,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${colors.gold}1F`,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     ...shadows.card,
   },
-  statColumn: {
+  statPill: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  statPillGold: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: 'rgba(216,180,90,0.12)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: `${colors.gold}28`,
   },
   statValue: {
     fontFamily: 'PlayfairDisplay_700Bold',
@@ -656,30 +663,18 @@ const styles = StyleSheet.create({
     color: colors.goldBright,
     letterSpacing: -0.3,
   },
-  statLabel: {
-    ...typography.overline,
-    color: colors.textMuted,
-    marginTop: 2,
-    textAlign: 'center',
+  statValueGold: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.gold,
+    letterSpacing: -0.3,
   },
-  statDivider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: 'stretch',
-    marginVertical: spacing.sm,
-    backgroundColor: colors.divider,
-  },
-
-  // -- Menu carte verre --
-  menuSection: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  menuOverline: {
-    ...typography.overline,
-    color: colors.goldMuted,
-    marginBottom: spacing.sm + 2,
-    marginLeft: spacing.xs,
-  },
+  statLabel: { ...typography.overline, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
+  statLabelGold: { ...typography.overline, color: colors.goldMuted, marginTop: 2, textAlign: 'center' },
+  statDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: spacing.sm, backgroundColor: colors.divider },
+  menuSection: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
+  menuOverline: { ...typography.overline, color: colors.goldMuted, marginBottom: spacing.sm + 2, marginLeft: spacing.xs },
   menuCard: {
     backgroundColor: 'rgba(30,26,22,0.88)',
     borderRadius: radius.lg,
@@ -688,21 +683,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.card,
   },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-  },
-  menuRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.divider,
-  },
-  menuDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: spacing.md,
-    backgroundColor: `${colors.gold}2E`,
-  },
+  menuRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
+  menuRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
+  menuDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: spacing.md, backgroundColor: `${colors.gold}2E` },
   menuIconPill: {
     width: 44,
     height: 44,
@@ -713,24 +696,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuIconPillLogout: {
-    backgroundColor: 'rgba(201,96,63,0.10)',
-    borderColor: 'rgba(201,96,63,0.30)',
-  },
-  menuLabel: {
-    flex: 1,
-    marginLeft: spacing.md,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    lineHeight: 21,
-    color: colors.text,
-  },
-  logoutLabel: {
-    fontFamily: 'Inter_500Medium',
-    color: colors.terracotta,
-  },
-
-  // -- CTA vendeur --
+  menuIconPillLogout: { backgroundColor: 'rgba(201,96,63,0.10)', borderColor: 'rgba(201,96,63,0.30)' },
+  menuLabel: { flex: 1, marginLeft: spacing.md, fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 21, color: colors.text },
+  logoutLabel: { fontFamily: 'Inter_500Medium', color: colors.terracotta },
   sellerCta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -743,52 +711,23 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadows.card,
   },
-  sellerCtaIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+  sellerCtaIcon: { width: 48, height: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  sellerCtaTextBlock: { flex: 1, marginLeft: spacing.md },
+  sellerCtaTitle: { fontFamily: 'PlayfairDisplay_600SemiBold', fontSize: 16, lineHeight: 22, color: colors.text, letterSpacing: -0.2 },
+  sellerCtaSub: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17, color: colors.textMuted, marginTop: 2 },
+  sellerCtaChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(216,180,90,0.10)',
+    borderWidth: 1,
+    borderColor: `${colors.gold}26`,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sellerCtaTextBlock: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  sellerCtaTitle: {
-    fontFamily: 'PlayfairDisplay_600SemiBold',
-    fontSize: 16,
-    lineHeight: 22,
-    color: colors.text,
-    letterSpacing: -0.2,
-  },
-  sellerCtaSub: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-
-  // -- Pied de page --
-  footer: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  footerText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.textFaint,
-    letterSpacing: 0.5,
-  },
-
-  // -- Modal --
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: `${colors.onyx}8A`,
-    justifyContent: 'flex-end',
-  },
+  footer: { alignItems: 'center', marginTop: spacing.xl, paddingHorizontal: spacing.lg },
+  footerText: { fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16, color: colors.textFaint, letterSpacing: 0.5 },
+  modalBackdrop: { flex: 1, backgroundColor: `${colors.onyx}8A`, justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: colors.elevated,
     borderTopLeftRadius: radius.xxl,
@@ -838,19 +777,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     letterSpacing: 0.2,
   },
-  modalConfirmWrap: {
-    alignSelf: 'stretch',
-  },
-  modalCancel: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  modalCancelText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.goldBright,
-    letterSpacing: 0.2,
-  },
+  modalConfirmWrap: { alignSelf: 'stretch' },
+  modalCancel: { alignItems: 'center', marginTop: spacing.md, paddingVertical: spacing.sm },
+  modalCancelText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20, color: colors.goldBright, letterSpacing: 0.2 },
 });

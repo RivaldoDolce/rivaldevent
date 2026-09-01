@@ -5,13 +5,15 @@
  * Pour Android/iOS : utilise une approche native (sélecteur système ou modal).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   Pressable,
+  Animated,
   Platform,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar } from 'lucide-react-native';
@@ -62,18 +64,26 @@ export const DateInput = React.memo(function DateInput({
 
   const displayValue = value ? formatDateDisplay(value) : '';
   const currentDate = value ? new Date(value) : new Date();
+  const isFloating = !!value || showPicker;
+  const floatAnim = useRef(new Animated.Value(isFloating ? 1 : 0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(floatAnim, { toValue: isFloating ? 1 : 0, duration: 200, useNativeDriver: false }).start();
+  }, [isFloating, floatAnim]);
 
   const borderColor = error
     ? colors.danger
     : isValid
       ? colors.success
-      : colors.border;
+      : showPicker
+        ? colors.borderGold
+        : colors.border;
 
   const containerStyle: ViewStyle = {
     borderColor,
-    borderWidth: 1,
+    borderWidth: showPicker ? 1.5 : 1,
     borderRadius: radius.md,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(30,26,22,0.92)',
     paddingHorizontal: spacing.md,
     minHeight: 56,
     flexDirection: 'row',
@@ -93,9 +103,29 @@ export const DateInput = React.memo(function DateInput({
     }
   };
 
+  const floatingStyle: ViewStyle = {
+    position: 'absolute',
+    left: 14,
+    top: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [18, -9] }) as unknown as number,
+    backgroundColor: 'rgba(30,26,22,1)',
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    zIndex: 2,
+    transform: [{ scale: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] }) as unknown as number }],
+    opacity: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+  } as unknown as ViewStyle;
+
+  const floatingTextStyle: TextStyle = {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.4,
+    color: error ? colors.danger : showPicker ? colors.text : colors.textSecondary,
+  };
+
   return (
     <View style={{ marginBottom: spacing.md }}>
-      {label && (
+      {label && !isFloating && (
         <Text
           style={[
             typography.captionSemiBold,
@@ -106,26 +136,33 @@ export const DateInput = React.memo(function DateInput({
         </Text>
       )}
 
-      <Pressable
-        testID={testID}
-        style={containerStyle}
-        accessibilityRole="button"
-        onPress={openPicker}
-      >
-        <Text
-          style={[
-            typography.body,
-            {
-              color: displayValue ? colors.text : colors.textMuted,
-              flex: 1,
-              fontFamily: 'Inter_500Medium',
-            },
-          ]}
+      <View style={{ position: 'relative' }}>
+        {label && (
+          <Animated.View pointerEvents="none" style={floatingStyle}>
+            <Text style={floatingTextStyle}>{label}</Text>
+          </Animated.View>
+        )}
+        <Pressable
+          testID={testID}
+          style={containerStyle}
+          accessibilityRole="button"
+          onPress={openPicker}
         >
-          {displayValue || placeholder}
-        </Text>
-        <Calendar color={colors.goldMuted} size={20} strokeWidth={1.5} />
-      </Pressable>
+          <Text
+            style={[
+              typography.body,
+              {
+                color: displayValue ? colors.text : 'rgba(245,240,230,0.58)',
+                flex: 1,
+                fontFamily: 'Inter_500Medium',
+              },
+            ]}
+          >
+            {displayValue || placeholder}
+          </Text>
+          <Calendar color={showPicker ? colors.goldBright : colors.goldMuted} size={20} strokeWidth={1.5} />
+        </Pressable>
+      </View>
 
       {showPicker && (
         <DateTimePicker

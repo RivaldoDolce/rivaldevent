@@ -31,7 +31,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, SlidersHorizontal, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Search, SlidersHorizontal, Crown } from 'lucide-react-native';
 
 import ConcertIcon from '@/assets/icons/concert.svg';
 import FestivalIcon from '@/assets/icons/festival.svg';
@@ -51,6 +51,7 @@ import { FeaturedCarousel } from '@/components/events/FeaturedCarousel';
 import { VenueCard } from '@/components/venues/VenueCard';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
+import { VoirToutButton } from '@/components/ui/VoirToutButton';
 import { useRouter } from 'expo-router';
 import { MOCK_FEATURED, MOCK_EVENTS, MOCK_VENUES } from '@/data/mock';
 import { useFavoritesStore } from '@/stores/favorites-store';
@@ -315,19 +316,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionOverline}>TENDANCES DE LA SEMAINE</Text>
             <Text style={styles.sectionTitle}>A la une</Text>
           </View>
-          <Pressable
-            onPress={() => {
-              impact('light');
-              router.push(ROUTES.EXPLORE);
-            }}
-            hitSlop={8}
-            style={styles.seeAllButton}
-            accessibilityRole="button"
-            accessibilityLabel="Voir tous les evenements tendance"
-          >
-            <Text style={styles.seeAllText}>Voir tout</Text>
-            <ChevronRight size={15} color={colors.goldMuted} strokeWidth={2} />
-          </Pressable>
+          <VoirToutButton onPress={() => { impact('light'); router.push(ROUTES.EXPLORE); }} />
         </View>
 
         <FeaturedCarousel
@@ -386,19 +375,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionOverline}>SELECTION PRIVILEGE</Text>
             <Text style={styles.sectionTitle}>A venir</Text>
           </View>
-          <Pressable
-            onPress={() => {
-              impact('light');
-              router.push(ROUTES.EXPLORE);
-            }}
-            hitSlop={8}
-            style={styles.seeAllButton}
-            accessibilityRole="button"
-            accessibilityLabel="Voir tous les evenements"
-          >
-            <Text style={styles.seeAllText}>Voir tout</Text>
-            <ChevronRight size={15} color={colors.goldMuted} strokeWidth={2} />
-          </Pressable>
+          <VoirToutButton onPress={() => { impact('light'); router.push(ROUTES.EXPLORE); }} />
         </View>
 
         <View style={styles.eventsContainer}>
@@ -436,19 +413,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionOverline}>ADRESSES D'EXCEPTION</Text>
             <Text style={styles.sectionTitle}>Lieux a decouvrir</Text>
           </View>
-          <Pressable
-            onPress={() => {
-              impact('light');
-              router.push(ROUTES.VENUES);
-            }}
-            hitSlop={8}
-            style={styles.seeAllButton}
-            accessibilityRole="button"
-            accessibilityLabel="Voir tous les lieux"
-          >
-            <Text style={styles.seeAllText}>Voir tout</Text>
-            <ChevronRight size={15} color={colors.goldMuted} strokeWidth={2} />
-          </Pressable>
+          <VoirToutButton onPress={() => { impact('light'); router.push(ROUTES.VENUES); }} />
         </View>
 
         <ScrollView
@@ -473,7 +438,7 @@ export default function HomeScreen() {
 
         {/* Signature premium */}
         <View style={styles.signatureRow}>
-          <Sparkles size={13} color={colors.goldMuted} strokeWidth={1.5} />
+          <Crown size={13} color={colors.goldMuted} strokeWidth={1.5} />
           <Text style={styles.signatureText}>RIVAL'EVENT — L'EXCELLENCE EN EVIDENCE</Text>
         </View>
 

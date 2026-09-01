@@ -119,7 +119,107 @@ function mockDetailToVenueWithPromotion(mock: ReturnType<typeof getMockVenueDeta
 // Service
 // ============================================================
 
+export type FetchVenuesPaginatedParams = {
+  readonly limit: number;
+  readonly offset: number;
+  readonly category?: string;
+  readonly search?: string;
+};
+
+export type PaginatedVenuesResult = {
+  readonly data: Venue[];
+  readonly count: number;
+};
+
+function filterMockVenuesForPagination(
+  venues: readonly (typeof MOCK_VENUES)[number][],
+  category?: string,
+  search?: string,
+): typeof MOCK_VENUES[number][] {
+  let filtered = [...venues];
+  if (category && category !== 'all') {
+    const cat = category.toLowerCase();
+    filtered = filtered.filter((v) => v.category.toLowerCase() === cat);
+  }
+  if (search && search.trim() !== '') {
+    const q = search.toLowerCase().trim();
+    filtered = filtered.filter(
+      (v) => v.name.toLowerCase().includes(q) || v.location.toLowerCase().includes(q),
+    );
+  }
+  return filtered;
+}
+
+function mockVenueToVenue(mock: (typeof MOCK_VENUES)[number]): Venue {
+  return {
+    id: mock.id,
+    owner_id: null,
+    name: mock.name,
+    description: null,
+    address: mock.location,
+    city: mock.location.includes('Yaounde') || mock.location.includes('Yaoundé') ? 'Yaoundé' : mock.location.includes('Douala') ? 'Douala' : 'Buea',
+    country: 'Cameroun',
+    capacity_min: null,
+    capacity_max: mock.capacity_max,
+    price_per_day: mock.price_per_day,
+    images: [mock.image],
+    amenities: [],
+    event_types: [...mock.event_types],
+    is_premium: mock.badge !== null,
+    promotion_tier:
+      mock.badge === 'Premium' ? 'premium' : mock.badge === 'Or Savane' ? 'vip' : mock.badge === 'Recommande' || mock.badge === 'Recommandé' ? 'basique' : null,
+    lat: null,
+    lng: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+function paginateMockVenues(params: FetchVenuesPaginatedParams): PaginatedVenuesResult {
+  const filtered = filterMockVenuesForPagination(MOCK_VENUES, params.category, params.search);
+  const count = filtered.length;
+  const sliced = filtered.slice(params.offset, params.offset + params.limit);
+  return { data: sliced.map(mockVenueToVenue), count };
+}
+
+export async function fetchVenuesPaginated(params: FetchVenuesPaginatedParams): Promise<PaginatedVenuesResult> {
+  return venueService.fetchVenuesPaginated(params);
+}
+
 export const venueService = {
+  /**
+   * Pagination realiste cote mock (comme Supabase .range).
+   * Tente Supabase avec .range(offset, offset+limit-1) puis fallback slice sur MOCK_VENUES.
+   */
+  async fetchVenuesPaginated(params: FetchVenuesPaginatedParams): Promise<PaginatedVenuesResult> {
+    const { limit, offset, category, search } = params;
+    try {
+      let query = supabase.from('venues').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+      if (search && search.trim() !== '') {
+        query = query.ilike('name', `%${search.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (!error && data) {
+        if (data.length > 0 || (count !== null && count !== undefined)) {
+          return { data: data as Venue[], count: count ?? (data as Venue[]).length };
+        }
+      }
+
+      if (error) {
+        logger.warn('[venueService] fetchVenuesPaginated Supabase error, fallback mock:', error.message);
+      }
+    } catch (err) {
+      logger.warn('[venueService] fetchVenuesPaginated exception, fallback mock:', err);
+    }
+    return paginateMockVenues(params);
+  },
+
   /**
    * Liste des lieux.
    * Fallback mock si Supabase echoue.

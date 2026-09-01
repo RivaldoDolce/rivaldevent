@@ -178,8 +178,10 @@ export const FeaturedCarousel = React.memo(function FeaturedCarousel({
                 source={{ uri: event.image }}
                 style={styles.image}
                 contentFit="cover"
-                transition={400}
+                transition={100}
                 cachePolicy="memory-disk"
+                priority="high"
+                recyclingKey={event.id}
                 accessibilityLabel={`Image de ${event.title}`}
               />
 
