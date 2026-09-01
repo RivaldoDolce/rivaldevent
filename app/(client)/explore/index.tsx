@@ -522,7 +522,7 @@ export default function ExploreScreen() {
           <Text style={sectionOverlineStyle}>ADRESSES D'EXCEPTION</Text>
           <Text style={sectionTitleStyle}>Lieux a decouvrir</Text>
         </View>
-        <VoirToutButton onPress={() => { impact('light'); router.push('/explore/venues' as never); }} />
+        <VoirToutButton onPress={() => { impact('light'); router.push(ROUTES.VENUES); }} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={venuesScrollContainerStyle} contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.md }}>
         {MOCK_VENUES.map((venue) => (
