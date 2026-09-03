@@ -152,6 +152,7 @@ export const Button = React.memo(function Button({
     borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    width: fullWidth ? '100%' : undefined,
   };
 
   const containerSolid: ViewStyle = {
@@ -211,6 +212,7 @@ export const Button = React.memo(function Button({
         disabled={disabled || loading}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
+        style={fullWidth ? { width: '100%' } : undefined}
       >
         {isGradient ? (
           <LinearGradient

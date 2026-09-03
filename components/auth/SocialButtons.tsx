@@ -47,7 +47,9 @@ export function SocialButtons({
         <View style={styles.iconSlot} pointerEvents="none">
           <GoogleLogo size="md" />
         </View>
-        <Text style={styles.label}>{googleBusy ? 'Connexion en cours...' : googleLabel}</Text>
+        <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+          {googleBusy ? 'Connexion en cours...' : googleLabel}
+        </Text>
       </Pressable>
 
       <Pressable
@@ -60,7 +62,9 @@ export function SocialButtons({
         <View style={styles.iconSlot} pointerEvents="none">
           <Apple color={colors.goldBright} size={22} strokeWidth={1.6} />
         </View>
-        <Text style={styles.label}>{appleBusy ? 'Connexion en cours...' : appleLabel}</Text>
+        <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+          {appleBusy ? 'Connexion en cours...' : appleLabel}
+        </Text>
       </Pressable>
     </View>
   );
@@ -100,6 +104,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     letterSpacing: 0.2,
-    paddingHorizontal: spacing.xl,
+    paddingLeft: spacing.xxl,
+    paddingRight: spacing.md,
   },
 });

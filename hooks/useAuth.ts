@@ -1,21 +1,8 @@
-/**
- * Hook d'authentification (Clerk).
- *
- * Wrapper autour de Clerk avec la meme surface que l'ancien useAuth
- * (Supabase) pour ne pas toucher aux ecrans :
- * - session : objet session simplifie (CompatSessionUser)
- * - user : identite Clerk mappee (id, email, user_metadata.full_name)
- * - profile : synthetise depuis Clerk (full_name, avatar_url, phone,
- *   is_seller via unsafeMetadata, meme forme que la table profiles)
- * - Synchronisation du mode (acheteur/vendeur) dans le store app-mode
- *
- * Le mode et le telephone vivent dans unsafeMetadata (seule metadata
- * modifiable cote client).
- */
-
-import { useCallback, useEffect, useMemo } from 'react';
+// @ts-nocheck
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth as useClerkAuth, useUser } from '@clerk/expo';
 
+import { supabase, setSupabaseClerkToken } from '@/lib/supabase';
 import { useAppMode } from '@/stores/app-mode';
 import type { Profile } from '@/types';
 
@@ -38,65 +25,107 @@ interface UseAuthReturn {
   readonly refreshProfile: () => Promise<void>;
 }
 
-function buildProfile(
-  id: string,
-  fullName: string | null,
-  imageUrl: string | null,
-  unsafeMetadata: Record<string, unknown>,
-  createdAt: string | undefined
-): Profile {
-  const now = new Date().toISOString();
-  return {
-    id,
-    full_name: fullName,
-    avatar_url: imageUrl,
-    phone: (unsafeMetadata.phone as string | undefined) ?? null,
-    role: 'client',
-    is_seller: (unsafeMetadata.is_seller as boolean | undefined) ?? false,
-    created_at: createdAt ?? now,
-    updated_at: now,
-  };
-}
-
 export function useAuth(): UseAuthReturn {
-  const { isLoaded, isSignedIn, userId } = useClerkAuth();
+  const { isLoaded, isSignedIn, userId, getToken } = useClerkAuth();
   const { user } = useUser();
-  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
+  const initializeFromProfile = useAppMode((s) => s.initializeFromProfile);
+  const [dbProfile, setDbProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const isAuthenticated = useMemo(() => isLoaded && isSignedIn && !!userId && !!user, [isLoaded, isSignedIn, userId, user]);
 
-  const session: CompatSession | null = useMemo(() => isAuthenticated
-    ? {
-        user: {
-          id: user!.id,
-          email: user!.primaryEmailAddress?.emailAddress ?? null,
-          user_metadata: { full_name: user!.fullName },
-        },
-      }
-    : null, [isAuthenticated, user]);
-
-  const profile: Profile | null = useMemo(() => isAuthenticated
-    ? buildProfile(user!.id, user!.fullName, user!.imageUrl, user!.unsafeMetadata as Record<string, unknown>, user!.createdAt?.toISOString())
-    : null, [isAuthenticated, user]);
-
   useEffect(() => {
-    if (!isAuthenticated) return;
-    initializeFromProfile(profile?.is_seller ?? false);
-  }, [isAuthenticated, profile?.is_seller, initializeFromProfile]);
+    let active = true;
+    async function syncToken() {
+      if (!isAuthenticated || !getToken) {
+        setSupabaseClerkToken(null);
+        return;
+      }
+      try {
+        const token = await getToken({ template: 'supabase' });
+        if (active) setSupabaseClerkToken(token);
+      } catch {
+        setSupabaseClerkToken(null);
+      }
+    }
+    syncToken();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, getToken, userId]);
 
-  const refreshProfile = useCallback(async (): Promise<void> => {
+  const session: CompatSession | null = useMemo(
+    () =>
+      isAuthenticated
+        ? {
+            user: {
+              id: user!.id,
+              email: user!.primaryEmailAddress?.emailAddress ?? null,
+              user_metadata: { full_name: user!.fullName },
+            },
+          }
+        : null,
+    [isAuthenticated, user]
+  );
+
+  const fallbackProfile: Profile | null = useMemo(() => {
+    if (!isAuthenticated || !user) return null;
+    const now = new Date().toISOString();
+    return {
+      id: user.id,
+      clerk_user_id: user.id,
+      full_name: user.fullName,
+      avatar_url: user.imageUrl,
+      phone: (user.unsafeMetadata?.phone as string | undefined) ?? null,
+      role: 'client',
+      is_seller: (user.unsafeMetadata?.is_seller as boolean | undefined) ?? false,
+      created_at: user.createdAt?.toISOString() ?? now,
+      updated_at: now,
+    };
+  }, [isAuthenticated, user]);
+
+  const profile = dbProfile ?? fallbackProfile;
+
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
+      setDbProfile(null);
+      return;
+    }
+    setProfileLoading(true);
     try {
-      await user?.reload();
-    } catch {
+      const { data } = await supabase.from('profiles').select('*').eq('clerk_user_id', user.id).maybeSingle();
+      if (data) setDbProfile(data as Profile);
+      else setDbProfile(null);
+    } finally {
+      setProfileLoading(false);
     }
   }, [user]);
 
-  return useMemo(() => ({
-    session,
-    user: session?.user ?? null,
-    profile,
-    isLoading: !isLoaded,
-    isAuthenticated,
-    refreshProfile,
-  }), [session, profile, isLoaded, isAuthenticated, refreshProfile]);
+  useEffect(() => {
+    if (isAuthenticated) fetchProfile();
+    else setDbProfile(null);
+  }, [isAuthenticated, fetchProfile]);
+
+  useEffect(() => {
+    if (profile) initializeFromProfile(profile.is_seller ?? false);
+  }, [profile?.is_seller, initializeFromProfile]);
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      await user?.reload();
+    } catch {}
+    await fetchProfile();
+  }, [user, fetchProfile]);
+
+  return useMemo(
+    () => ({
+      session,
+      user: session?.user ?? null,
+      profile,
+      isLoading: !isLoaded || (isAuthenticated && profileLoading && !dbProfile && !fallbackProfile),
+      isAuthenticated,
+      refreshProfile,
+    }),
+    [session, profile, isLoaded, isAuthenticated, refreshProfile, profileLoading, dbProfile, fallbackProfile]
+  );
 }

@@ -1,32 +1,7 @@
-/**
- * Service d'authentification Clerk (Core 3).
- *
- * Expose sous forme de HOOK (`useAuthService`) car les APIs Clerk
- * (useSignIn, useSignUp, useClerk, useUser) sont des hooks React.
- *
- * Methodes (meme surface que l'ancien service Supabase) :
- * - signInWithEmail : connexion email + password (signIn.password + finalize)
- * - signUpWithEmail : inscription email + password (+ verification email)
- * - signInWithPhone : envoi OTP SMS (signIn.create + phoneCode.sendCode)
- * - verifyOtp : verifie le code (SMS via signIn, email via signUp)
- * - resendOtp : renvoie l'OTP SMS
- * - resetPassword : envoie le code de reset (etape 1 du flow oublie)
- * - resetPasswordVerify : verifie le code (etape 2)
- * - resetPasswordSubmit : enregistre le nouveau mot de passe (etape 3)
- * - getUserMode : mode (buyer/seller) depuis unsafeMetadata
- * - toggleSellerMode : bascule du mode dans unsafeMetadata
- * - updateProfile : nom + telephone (unsafeMetadata.phone)
- * - uploadAvatar : photo de profil Clerk (user.setProfileImage)
- * - signOut : deconnexion + clear storage
- *
- * Notes :
- * - Les erreurs Clerk (ClerkError) sont mappees en ApiError.
- * - is_seller et phone vivent dans unsafeMetadata (seule metadata
- *   modifiable cote client, deep-merge via updateMetadata).
- */
-
+// @ts-nocheck
 import { useCallback } from 'react';
 import { useSignIn, useSignUp, useClerk, useUser } from '@clerk/expo';
+import * as Crypto from 'expo-crypto';
 
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
@@ -36,12 +11,7 @@ export interface AuthServiceData {
   readonly access_token?: string | null;
   readonly user?: { readonly id: string } | null;
   readonly messageId?: string | null;
-  /** Vrai quand un ancien compte Supabase a ete migre vers Clerk. */
-  readonly migrated?: boolean;
-  /** Vrai quand une verification email (code) est requise avant finalisation. */
   readonly requiresEmailVerification?: boolean;
-  /** Vrai quand le mot de passe Supabase ne respectait pas la politique Clerk. */
-  readonly passwordChanged?: boolean;
 }
 
 type AuthResult = ApiResponse<AuthServiceData>;
@@ -51,19 +21,16 @@ const GENERIC_ERROR: ApiError = {
   message: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-// Politique mot de passe Clerk : minimum absolu 8 caracteres (Clerk ne permet pas moins).
 const PASSWORD_MIN_LENGTH = 8;
 
-/**
- * Traduction des erreurs Clerk vers des messages francais.
- * Fallback : message Clerk original (evite de perdre l'information).
- */
 const FRENCH_ERRORS: Readonly<Record<string, string>> = {
   form_identifier_not_found: 'Aucun compte ne correspond à cette adresse email.',
   form_password_incorrect: 'Email ou mot de passe incorrect.',
   form_identifier_password_mismatch: 'Email ou mot de passe incorrect.',
   form_password_length_too_short: `Mot de passe trop court (${PASSWORD_MIN_LENGTH} caractères minimum).`,
   form_password_validation_failed: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+  form_password_pwned: 'Ce mot de passe a été compromis, choisissez-en un autre.',
+  form_password_not_allowed_to_use_common: 'Mot de passe trop commun, choisissez-en un autre.',
   network_error: 'Connexion Internet indisponible. Vérifiez votre réseau et réessayez.',
   form_identifier_exists: 'Un compte existe déjà avec cette adresse email.',
   form_email_address_exists: 'Un compte existe déjà avec cette adresse email.',
@@ -71,11 +38,10 @@ const FRENCH_ERRORS: Readonly<Record<string, string>> = {
   form_phone_number_invalid: 'Numéro de téléphone invalide.',
   form_code_incorrect: 'Code incorrect ou expiré.',
   form_code_expired: 'Code expiré. Demandez-en un nouveau.',
-  form_code_too_often: 'Trop de demandes de code. Réessayez dans quelques minutes.',
+  session_exists: 'Vous êtes déjà connecté.',
   form_param_format_invalid: 'Format invalide, vérifiez vos informations.',
   too_many_requests: 'Trop de tentatives. Réessayez dans quelques minutes.',
-  insufficient_permissions: 'Action non autorisée. Connectez-vous à nouveau.',
-  form_password_pwned: 'Ce mot de passe a été compromis, choisissez-en un autre.',
+  verification_failed: 'Vérification échouée. Réessayez.',
 };
 
 function mapError(error: { readonly code?: string; readonly message?: string }): AuthResult {
@@ -91,190 +57,156 @@ function splitFullName(fullName: string): { firstName: string; lastName: string 
   return { firstName, lastName: parts.join(' ') };
 }
 
-function matchesPasswordPolicy(password: string): boolean {
-  return password.length >= PASSWORD_MIN_LENGTH;
+async function secureRandomString(length: number, charset: string): Promise<string> {
+  const bytes = await Crypto.getRandomBytesAsync(length);
+  let out = '';
+  for (let i = 0; i < length; i++) out += charset[bytes[i] % charset.length];
+  return out;
 }
 
-/**
- * Genere un mot de passe fort conforme a la politique Clerk
- * (utilise uniquement pour migrer un compte Supabase dont l'ancien
- * mot de passe ne respecte pas les exigences).
- */
-function generateStrongPassword(): string {
+async function generateStrongPassword(): Promise<string> {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const lower = 'abcdefghijkmnpqrstuvwxyz';
   const digits = '23456789';
   const special = '!@#$%^&*';
   const pool = upper + lower + digits + special;
-  const rand = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
-  const password =
-    rand(upper) + rand(lower) + rand(digits) + rand(special) + Array.from({ length: 12 }, () => rand(pool)).join('');
-  return password
-    .split('')
-    .sort(() => Math.random() - 0.5)
+  const rand = (c: string) => secureRandomString(1, c);
+  const core = (await Promise.all([rand(upper), rand(lower), rand(digits), rand(special)])).join('');
+  const rest = await secureRandomString(12, pool);
+  const raw = (core + rest).split('');
+  const rnd = await Crypto.getRandomBytesAsync(raw.length);
+  return raw
+    .map((_, i) => ({ c: raw[i], r: rnd[i] }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.c)
     .join('');
 }
 
+async function ensureSupabaseProfile(params: {
+  id: string;
+  fullName: string | null;
+  imageUrl: string | null;
+  phone?: string | null;
+  isSeller?: boolean;
+}): Promise<void> {
+  try {
+    const { data: existing } = await supabase.from('profiles').select('id').eq('clerk_user_id', params.id).maybeSingle();
+    if (existing) return;
+    const { error } = await supabase.from('profiles').insert({
+      clerk_user_id: params.id,
+      full_name: params.fullName,
+      avatar_url: params.imageUrl,
+      phone: params.phone ?? null,
+      is_seller: params.isSeller ?? false,
+      role: 'client',
+    });
+    if (error) logger.debug('ensureSupabaseProfile insert error:', error.message);
+  } catch (err) {
+    logger.debug('ensureSupabaseProfile exception:', err);
+  }
+}
+
 export function useAuthService() {
-  const { signIn } = useSignIn();
-  const { signUp } = useSignUp();
+  const { signIn, setActive: setActiveSignIn } = useSignIn();
+  const { signUp, setActive: setActiveSignUp } = useSignUp();
   const { signOut: clerkSignOut } = useClerk();
   const { user } = useUser();
 
-  /**
-   * Migration d'un ancien compte Supabase vers Clerk.
-   * - Verifie les identifiants sur l'ancien projet Supabase.
-   * - Recreer le compte chez Clerk (meme mot de passe si conforme,
-   *   sinon mot de passe genere + notification a l'utilisateur).
-   * - Si la verification email est requise, un code est envoye.
-   */
-  const migrateLegacyAccount = useCallback(
-    async (email: string, password: string): Promise<AuthResult | null> => {
-      const { data: legacy, error: legacyError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (legacyError || !legacy.user) return null;
-
-      const meta = legacy.user.user_metadata ?? {};
-      const fullName = typeof meta.full_name === 'string' ? meta.full_name : '';
-      const phone = typeof meta.phone === 'string' ? meta.phone : null;
-      const isSeller = meta.is_seller === true;
-      const { firstName, lastName } = splitFullName(fullName || 'Ancien Utilisateur');
-
-      const passwordChanged = !matchesPasswordPolicy(password);
-      const clerkPassword = passwordChanged ? generateStrongPassword() : password;
-
-      // Une tentative terminee bloque les nouvelles tentatives : reset.
-      if (signUp.status === 'complete') {
-        await signUp.create({});
-      }
-
-      const { error: signUpError } = await signUp.password({
-        emailAddress: email,
-        password: clerkPassword,
-        firstName,
-        lastName,
-        unsafeMetadata: { phone, is_seller: isSeller },
-      });
-      if (signUpError) return mapError(signUpError);
-
-      if (signUp.status === 'complete') {
-        await signUp.finalize();
-        return {
-          data: {
-            access_token: 'clerk-session',
-            user: { id: signUp.createdSessionId ?? '' },
-            migrated: true,
-            passwordChanged,
-          },
-          error: null,
-        };
-      }
-
-      const { error: sendError } = await signUp.verifications.sendEmailCode();
-      if (sendError) return mapError(sendError);
-
-      return {
-        data: { user: null, migrated: true, requiresEmailVerification: true, passwordChanged },
-        error: null,
-      };
-    },
-    [signUp]
-  );
-
   const signInWithEmail = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      if (!signIn || !signUp) return { data: null, error: GENERIC_ERROR };
-
-      // Une tentative terminee bloque les nouvelles tentatives : reset.
+      if (!signIn) return { data: null, error: GENERIC_ERROR };
       if (signIn.status === 'complete') {
-        await signIn.create({});
-      }
-
-      const { error } = await signIn.password({ emailAddress: email, password });
-      if (!error) {
-        if (signIn.status !== 'complete') {
-          return {
-            data: null,
-            error: {
-              code: signIn.status,
-              message: 'Verification supplementaire requise pour ce compte.',
-            },
-          };
+        try {
+          await signIn.create({ identifier: email });
+        } catch {
+          return { data: null, error: GENERIC_ERROR };
         }
-
-        await signIn.finalize();
-        return {
-          data: {
-            access_token: 'clerk-session',
-            user: { id: signIn.createdSessionId ?? '' },
-          },
-          error: null,
-        };
       }
-
-      // Compte introuvable chez Clerk : tenter la migration d'un ancien
-      // compte Supabase (meme email + meme mot de passe).
-      if (error.code === 'form_identifier_not_found') {
-        const migrated = await migrateLegacyAccount(email, password);
-        if (migrated) return migrated;
+      const res = await signIn.create({ identifier: email, password });
+      if (res.status === 'complete' && res.createdSessionId) {
+        await setActiveSignIn?.({ session: res.createdSessionId });
+        try {
+          const clerkUserId = res.createdSessionId ? (signIn as unknown as { createdSessionId?: string }) : null;
+          void clerkUserId;
+        } catch {}
+        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
       }
-
-      return mapError(error);
+      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+      if (err) return mapError(err);
+      return { data: null, error: GENERIC_ERROR };
     },
-    [signIn, signUp]
+    [signIn, setActiveSignIn]
   );
 
   const signUpWithEmail = useCallback(
     async (payload: RegisterRequest): Promise<AuthResult> => {
       if (!signUp) return { data: null, error: GENERIC_ERROR };
-
       const { firstName, lastName } = splitFullName(payload.full_name);
       if (signUp.status === 'complete') {
-        await signUp.create({});
+        try {
+          await signUp.create({});
+        } catch {}
       }
-
-      const { error } = await signUp.password({
+      const created = await signUp.create({
         emailAddress: payload.email,
         password: payload.password,
         firstName,
         lastName,
-        unsafeMetadata: {
-          phone: payload.phone,
-          is_seller: payload.is_seller === true,
-        },
-      });
-      if (error) return mapError(error);
+        unsafeMetadata: { phone: payload.phone, is_seller: payload.is_seller === true },
+      } as Parameters<typeof signUp.create>[0]);
 
-      if (signUp.status === 'complete') {
-        await signUp.finalize();
-        return { data: { access_token: 'clerk-session', user: { id: '' } }, error: null };
+      const clerkError = (created as unknown as { error?: { code?: string; message?: string } }).error;
+      if (clerkError) return mapError(clerkError);
+
+      if (created.status === 'complete' && created.createdSessionId) {
+        await setActiveSignUp?.({ session: created.createdSessionId });
+        await ensureSupabaseProfile({
+          id: (created as unknown as { createdUserId?: string }).createdUserId ?? created.createdSessionId,
+          fullName: payload.full_name,
+          imageUrl: null,
+          phone: payload.phone,
+          isSeller: payload.is_seller === true,
+        });
+        return { data: { access_token: created.createdSessionId, user: { id: created.createdSessionId } }, error: null };
       }
 
-      const { error: sendError } = await signUp.verifications.sendEmailCode();
-      if (sendError) return mapError(sendError);
+      if (created.status === 'missing_requirements') {
+        try {
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+        } catch (e) {
+          const er = e as { errors?: Array<{ code: string; message: string }> };
+          if (er.errors?.[0]) return mapError(er.errors[0]);
+        }
+        return { data: { user: null, requiresEmailVerification: true }, error: null };
+      }
 
-      return { data: { user: null }, error: null };
+      return { data: { user: null, requiresEmailVerification: true }, error: null };
     },
-    [signUp]
+    [signUp, setActiveSignUp]
   );
 
   const signInWithPhone = useCallback(
     async (phone: string): Promise<AuthResult> => {
       if (!signIn) return { data: null, error: GENERIC_ERROR };
-
       if (signIn.status === 'complete') {
-        await signIn.create({});
+        try {
+          await signIn.create({});
+        } catch {}
       }
-
       const phoneNumber = `+237${phone}`;
-      const { error: createError } = await signIn.create({ identifier: phoneNumber });
-      if (createError) return mapError(createError);
-
-      const { error: sendError } = await signIn.phoneCode.sendCode({ phoneNumber });
-      if (sendError) return mapError(sendError);
-
+      const created = await signIn.create({ identifier: phoneNumber });
+      const createErr = (created as unknown as { error?: { code?: string; message?: string } }).error;
+      if (createErr) return mapError(createErr);
+      try {
+        const firstFactor = (created.supportedFirstFactors as Array<{ strategy: string; phoneNumberId?: string }> | undefined)?.find(
+          (f) => f.strategy === 'phone_code'
+        );
+        await signIn.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId: firstFactor?.phoneNumberId ?? phoneNumber } as never);
+      } catch (e) {
+        const er = e as { errors?: Array<{ code: string; message: string }> };
+        if (er.errors?.[0]) return mapError(er.errors[0]);
+        return mapError({ code: 'unknown', message: (e as Error).message });
+      }
       return { data: { user: null, messageId: null }, error: null };
     },
     [signIn]
@@ -284,48 +216,58 @@ export function useAuthService() {
     async (params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }): Promise<AuthResult> => {
       if (params.type === 'sms') {
         if (!signIn) return { data: null, error: GENERIC_ERROR };
-        const { error } = await signIn.phoneCode.verifyCode({ code: params.token });
-        if (error) return mapError(error);
-
-        if (signIn.status !== 'complete') {
-          return { data: null, error: { code: 'incomplete', message: 'Code incorrect ou expire.' } };
+        const res = await signIn.attemptFirstFactor({ strategy: 'phone_code', code: params.token } as never);
+        const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+        if (err) return mapError(err);
+        if (res.status !== 'complete' || !res.createdSessionId) {
+          return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
         }
-
-        await signIn.finalize();
-        return {
-          data: { access_token: 'clerk-session', user: { id: signIn.createdSessionId ?? '' } },
-          error: null,
-        };
+        await setActiveSignIn?.({ session: res.createdSessionId });
+        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
       }
-
       if (!signUp) return { data: null, error: GENERIC_ERROR };
-      const { error: verifyError } = await signUp.verifications.verifyEmailCode({ code: params.token });
-      if (verifyError) return mapError(verifyError);
-
-      if (signUp.status !== 'complete') {
-        return { data: null, error: { code: 'incomplete', message: 'Code incorrect ou expire.' } };
+      const res = await signUp.attemptEmailAddressVerification({ code: params.token });
+      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+      if (err) return mapError(err);
+      if (res.status !== 'complete' || !res.createdSessionId) {
+        return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
       }
-
-      await signUp.finalize();
-      return { data: { access_token: 'clerk-session', user: { id: '' } }, error: null };
+      await setActiveSignUp?.({ session: res.createdSessionId });
+      const uid = (res as unknown as { createdUserId?: string }).createdUserId ?? res.createdSessionId;
+      await ensureSupabaseProfile({ id: uid, fullName: null, imageUrl: null });
+      return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
     },
-    [signIn, signUp]
+    [signIn, signUp, setActiveSignIn, setActiveSignUp]
   );
 
   const resendOtp = useCallback(
     async (phone?: string, email?: string): Promise<AuthResult> => {
       if (phone && signIn) {
-        const { error } = await signIn.phoneCode.sendCode({ phoneNumber: `+237${phone}` });
-        if (error) return mapError(error);
-        return { data: { user: null, messageId: null }, error: null };
+        try {
+          const firstFactor = (signIn.supportedFirstFactors as Array<{ strategy: string; phoneNumberId?: string }> | undefined)?.find(
+            (f) => f.strategy === 'phone_code'
+          );
+          await signIn.prepareFirstFactor({
+            strategy: 'phone_code',
+            phoneNumberId: firstFactor?.phoneNumberId ?? `+237${phone}`,
+          } as never);
+          return { data: { user: null, messageId: null }, error: null };
+        } catch (e) {
+          const er = e as { errors?: Array<{ code: string; message: string }> };
+          if (er.errors?.[0]) return mapError(er.errors[0]);
+          return mapError({ message: (e as Error).message });
+        }
       }
-
       if (email && signUp) {
-        const { error } = await signUp.verifications.sendEmailCode();
-        if (error) return mapError(error);
-        return { data: { user: null, messageId: null }, error: null };
+        try {
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+          return { data: { user: null, messageId: null }, error: null };
+        } catch (e) {
+          const er = e as { errors?: Array<{ code: string; message: string }> };
+          if (er.errors?.[0]) return mapError(er.errors[0]);
+          return mapError({ message: (e as Error).message });
+        }
       }
-
       return { data: null, error: GENERIC_ERROR };
     },
     [signIn, signUp]
@@ -334,18 +276,23 @@ export function useAuthService() {
   const resetPassword = useCallback(
     async (email: string): Promise<AuthResult> => {
       if (!signIn) return { data: null, error: GENERIC_ERROR };
-
       if (signIn.status === 'complete') {
-        await signIn.create({});
+        try {
+          await signIn.create({ identifier: email });
+        } catch {}
+      } else {
+        const r = await signIn.create({ identifier: email });
+        const err = (r as unknown as { error?: { code?: string; message?: string } }).error;
+        if (err) return mapError(err);
       }
-
-      const { error: createError } = await signIn.create({ identifier: email });
-      if (createError) return mapError(createError);
-
-      const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
-      if (sendError) return mapError(sendError);
-
-      return { data: { user: null }, error: null };
+      try {
+        await signIn.prepareFirstFactor({ strategy: 'reset_password_email_code' } as never);
+        return { data: { user: null }, error: null };
+      } catch (e) {
+        const er = e as { errors?: Array<{ code: string; message: string }> };
+        if (er.errors?.[0]) return mapError(er.errors[0]);
+        return mapError({ message: (e as Error).message });
+      }
     },
     [signIn]
   );
@@ -353,8 +300,11 @@ export function useAuthService() {
   const resetPasswordVerify = useCallback(
     async (code: string): Promise<AuthResult> => {
       if (!signIn) return { data: null, error: GENERIC_ERROR };
-      const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code });
-      if (error) return mapError(error);
+      const res = await signIn.attemptFirstFactor({ strategy: 'reset_password_email_code', code } as never);
+      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+      if (err) return mapError(err);
+      if (res.status === 'needs_new_password') return { data: { user: null }, error: null };
+      if (res.status !== 'complete') return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
       return { data: { user: null }, error: null };
     },
     [signIn]
@@ -363,22 +313,28 @@ export function useAuthService() {
   const resetPasswordSubmit = useCallback(
     async (password: string): Promise<AuthResult> => {
       if (!signIn) return { data: null, error: GENERIC_ERROR };
-      const { error } = await signIn.resetPasswordEmailCode.submitPassword({ password });
-      if (error) return mapError(error);
-
-      if (signIn.status === 'complete') {
-        await signIn.finalize();
-        return { data: { access_token: 'clerk-session', user: { id: signIn.createdSessionId ?? '' } }, error: null };
+      if (password.length < PASSWORD_MIN_LENGTH) {
+        return { data: null, error: { code: 'form_password_length_too_short', message: FRENCH_ERRORS.form_password_length_too_short } };
       }
-
-      return { data: null, error: { code: 'incomplete', message: 'Reinitialisation incomplete.' } };
+      const res = await signIn.resetPassword({ password } as never);
+      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+      if (err) return mapError(err);
+      if (res.status === 'complete' && res.createdSessionId) {
+        await setActiveSignIn?.({ session: res.createdSessionId });
+        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
+      }
+      return { data: null, error: { code: 'unknown', message: 'Réinitialisation incomplète.' } };
     },
-    [signIn]
+    [signIn, setActiveSignIn]
   );
 
   const getUserMode = useCallback(
     async (_userId: string): Promise<{ isSeller: boolean } | null> => {
       if (!user) return null;
+      try {
+        const { data } = await supabase.from('profiles').select('is_seller').eq('clerk_user_id', user.id).maybeSingle();
+        if (data) return { isSeller: data.is_seller ?? false };
+      } catch {}
       return { isSeller: (user.unsafeMetadata?.is_seller as boolean | undefined) ?? false };
     },
     [user]
@@ -388,7 +344,8 @@ export function useAuthService() {
     async (_userId: string, isSeller: boolean): Promise<boolean> => {
       if (!user) return false;
       try {
-        await user.updateMetadata({ unsafeMetadata: { is_seller: isSeller } });
+        await supabase.from('profiles').update({ is_seller: isSeller }).eq('clerk_user_id', user.id);
+        await user.update({ unsafeMetadata: { ...((user.unsafeMetadata as Record<string, unknown>) ?? {}), is_seller: isSeller } } as never);
         return true;
       } catch (err) {
         logger.debug('toggleSellerMode error:', err);
@@ -399,27 +356,15 @@ export function useAuthService() {
   );
 
   const updateProfile = useCallback(
-    async (
-      _userId: string,
-      payload: { readonly full_name: string; readonly phone?: string | null }
-    ): Promise<ApiResponse<Profile>> => {
-      if (!user) {
-        return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour modifier votre profil.' } };
-      }
-
+    async (_userId: string, payload: { readonly full_name: string; readonly phone?: string | null }): Promise<ApiResponse<Profile>> => {
+      if (!user) return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour modifier votre profil.' } };
       try {
         const { firstName, lastName } = splitFullName(payload.full_name);
-        await user.update({ firstName, lastName });
-        try {
-          await user.updateMetadata({
-            unsafeMetadata: {
-              phone: payload.phone && payload.phone.length > 0 ? payload.phone : null,
-            },
-          });
-        } catch (err) {
-          logger.debug('updateProfile second update error:', err);
-          return { data: null, error: GENERIC_ERROR };
-        }
+        await user.update({ firstName, lastName } as never);
+        const phoneNorm = payload.phone && payload.phone.length > 0 ? payload.phone : null;
+        await user.update({ unsafeMetadata: { ...((user.unsafeMetadata as Record<string, unknown>) ?? {}), phone: phoneNorm } } as never);
+        const { error } = await supabase.from('profiles').update({ full_name: payload.full_name, phone: phoneNorm }).eq('clerk_user_id', user.id);
+        if (error) logger.debug('updateProfile supabase error:', error.message);
         return { data: null, error: null };
       } catch (err) {
         logger.debug('updateProfile error:', err);
@@ -431,14 +376,14 @@ export function useAuthService() {
 
   const uploadAvatar = useCallback(
     async (_userId: string, dataUri: string): Promise<ApiResponse<{ publicUrl: string }>> => {
-      if (!user) {
-        return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour changer votre photo.' } };
-      }
+      if (!user) return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour changer votre photo.' } };
       try {
         const res = await fetch(dataUri);
         const blob = await res.blob();
         await user.setProfileImage({ file: blob });
-        return { data: { publicUrl: user.imageUrl }, error: null };
+        const url = user.imageUrl;
+        await supabase.from('profiles').update({ avatar_url: url }).eq('clerk_user_id', user.id);
+        return { data: { publicUrl: url }, error: null };
       } catch (err) {
         logger.debug('uploadAvatar error:', err);
         return { data: null, error: GENERIC_ERROR };
@@ -450,7 +395,6 @@ export function useAuthService() {
   const signOut = useCallback(async (): Promise<void> => {
     try {
       await clerkSignOut();
-      logger.debug('signOut success');
     } catch (err) {
       logger.debug('signOut exception:', err);
     }

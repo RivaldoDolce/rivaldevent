@@ -46,7 +46,6 @@ import {
   type ForgotPasswordCodeInput,
   type NewPasswordInput,
 } from '@/lib/validation';
-import { useAppMode } from '@/stores/app-mode';
 
 type Step = 'email' | 'code' | 'password' | 'success';
 
@@ -55,7 +54,6 @@ export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const { impact, notification } = useHaptics();
   const authService = useAuthService();
-  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
   const [step, setStep] = useState<Step>('email');
   const [isLoading, setIsLoading] = useState(false);
@@ -140,21 +138,17 @@ export default function ForgotPasswordScreen() {
       setIsLoading(true);
       setAuthError(null);
       impact('light');
-
       const result = await authService.resetPasswordSubmit(data.password);
-
       if (result.error) {
         setAuthError(result.error.message);
         notification('error');
       } else {
         notification('success');
-        initializeFromProfile(false);
         router.replace('/(client)/home');
       }
-
       setIsLoading(false);
     },
-    [impact, notification, authService, router, initializeFromProfile]
+    [impact, notification, authService, router]
   );
 
   const renderStepTitle = () => {

@@ -9,14 +9,13 @@
  *   <Avatar source={avatarUrl} fallback={name} />
  */
 
+import { useShallow } from 'zustand/react/shallow';
 import { useAvatarStore } from '@/stores/avatar-store';
 
 export function useAvatarUrl(
   userId: string | undefined,
   profileUrl: string | null | undefined
 ): string | null {
-  const localUri = useAvatarStore((state) =>
-    userId ? state.avatars[userId]?.uri ?? null : null
-  );
+  const localUri = useAvatarStore(useShallow((state) => userId ? state.avatars[userId]?.uri ?? null : null));
   return localUri ?? profileUrl ?? null;
 }

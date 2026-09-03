@@ -43,7 +43,6 @@ import { authBackgrounds } from '@/lib/images';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAuthService } from '@/services/auth.service';
 import { registerSchema, type RegisterInput } from '@/lib/validation';
-import { useAppMode } from '@/stores/app-mode';
 import { logger } from '@/lib/logger';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -54,7 +53,6 @@ export default function RegisterScreen() {
   const { impact, notification } = useHaptics();
   const authService = useAuthService();
   const { startSSOFlow } = useSSO();
-  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
 
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
@@ -63,10 +61,13 @@ export default function RegisterScreen() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isOrganizer, setIsOrganizer] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<RegisterInput>({
     mode: 'onChange',
@@ -88,35 +89,27 @@ export default function RegisterScreen() {
         setAuthError('Vous devez accepter les conditions générales.');
         return;
       }
-
       const { birth_date: _birth_date, ...payload } = data;
-
       setIsLoading(true);
       setAuthError(null);
       impact('light');
-
       const result = await authService.signUpWithEmail({ ...payload, is_seller: isOrganizer });
-
       if (result.error) {
         setAuthError(result.error.message);
         notification('error');
-      } else if (result.data && 'access_token' in result.data) {
-        // Session obtenue directement (confirm email desactive)
+      } else if (result.data?.access_token) {
         notification('success');
-        initializeFromProfile(isOrganizer);
         router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
-      } else {
-        // Pas de session (confirm email active) → OTP
+      } else if (result.data?.requiresEmailVerification) {
         notification('success');
-        router.push({
-          pathname: ROUTES.OTP,
-          params: { email: data.email },
-        });
+        router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
+      } else {
+        notification('success');
+        router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
       }
-
       setIsLoading(false);
     },
-    [acceptTerms, impact, notification, router, isOrganizer, initializeFromProfile, authService]
+    [acceptTerms, impact, notification, router, isOrganizer, authService]
   );
 
   const goToLogin = useCallback(() => {
@@ -170,12 +163,12 @@ export default function RegisterScreen() {
       />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { flexGrow: 1, paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}
+        contentContainerStyle={[styles.content, { flexGrow: 1, paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
@@ -201,48 +194,39 @@ export default function RegisterScreen() {
 
         {/* Formulaire */}
         <View style={styles.form}>
-          <View style={styles.row}>
-            <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
-              <Controller
-                control={control}
-                name="full_name"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    placeholder="Prénom"
-                    value={value.split(' ')[0] || ''}
-                    onChangeText={(text) => {
-                      const parts = value.split(' ');
-                      onChange(`${text} ${parts[1] || ''}`.trim());
-                    }}
-                    onBlur={onBlur}
-                    error={errors.full_name?.message}
-                    isValid={!errors.full_name?.message && value.trim().length > 0}
-                    autoCapitalize="words"
-                    iconLeft={<User color={colors.goldMuted} size={20} strokeWidth={1.5} />}
-                  />
-                )}
-              />
+          <View>
+            <View style={styles.row}>
+              <View style={{ flex: 1, minWidth: 0, marginRight: spacing.sm }}>
+                <Input
+                  placeholder="Prénom"
+                  value={firstName}
+                  onChangeText={(text) => {
+                    setFirstName(text);
+                    setValue('full_name', `${text} ${lastName}`.trim(), { shouldValidate: true });
+                  }}
+                  isValid={!errors.full_name?.message && firstName.trim().length > 0}
+                  autoCapitalize="words"
+                  iconLeft={<User color={colors.goldMuted} size={20} strokeWidth={1.5} />}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Input
+                  placeholder="Nom"
+                  value={lastName}
+                  onChangeText={(text) => {
+                    setLastName(text);
+                    setValue('full_name', `${firstName} ${text}`.trim(), { shouldValidate: true });
+                  }}
+                  isValid={!errors.full_name?.message && lastName.trim().length > 0}
+                  autoCapitalize="words"
+                />
+              </View>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Controller
-                control={control}
-                name="full_name"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    placeholder="Nom"
-                    value={value.split(' ')[1] || ''}
-                    onChangeText={(text) => {
-                      const parts = value.split(' ');
-                      onChange(`${parts[0] || ''} ${text}`.trim());
-                    }}
-                    onBlur={onBlur}
-                    error={errors.full_name?.message}
-                    isValid={!errors.full_name?.message && value.trim().length > 0}
-                    autoCapitalize="words"
-                  />
-                )}
-              />
-            </View>
+            {errors.full_name?.message && (
+              <Text style={[typography.caption, { color: colors.danger, marginTop: -spacing.sm, marginBottom: spacing.xs, marginLeft: spacing.xs }]}>
+                {errors.full_name.message}
+              </Text>
+            )}
           </View>
 
           <Controller
@@ -363,10 +347,10 @@ export default function RegisterScreen() {
           accessibilityState={{ checked: isOrganizer }}
         >
           <View style={[styles.checkbox, isOrganizer && styles.checkboxOrganizerChecked]}>
-            {isOrganizer && <Check color={colors.onyx} size={14} strokeWidth={3} />}
+            {isOrganizer && <Check color={colors.white} size={14} strokeWidth={3} />}
           </View>
           <Text style={styles.checkboxLabel}>
-            Je souhaite creer et vendre{'\n'}des evenements sur Rivald'event
+            Je souhaite créer et vendre{'\n'}des événements sur Rivald'event
           </Text>
         </Pressable>
 
@@ -453,7 +437,7 @@ const styles = StyleSheet.create({
   },
   logoWrapper: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     ...shadows.goldGlowSoft,
   },
   title: {
@@ -466,7 +450,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     letterSpacing: 0.2,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   errorBanner: {
     backgroundColor: colors.glass,
@@ -496,7 +480,7 @@ const styles = StyleSheet.create({
   checkboxWrapper: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
     paddingRight: spacing.md,
   },
   checkbox: {

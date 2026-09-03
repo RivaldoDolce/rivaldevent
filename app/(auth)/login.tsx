@@ -61,7 +61,6 @@ export default function LoginScreen() {
   const { isAuthenticated: isAuth } = useAuth();
   const { startSSOFlow } = useSSO();
   const mode = useAppMode((state: { mode: string }) => state.mode);
-  const initializeFromProfile = useAppMode((state: { initializeFromProfile: (v: boolean) => void }) => state.initializeFromProfile);
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -117,44 +116,32 @@ export default function LoginScreen() {
       setIsLoading(true);
       setAuthError(null);
       impact('light');
-
       const result = await authService.signInWithEmail(data.email, data.password);
-
       if (result.error) {
         setAuthError(result.error.message);
         notification('error');
         setIsLoading(false);
         return;
       }
-
-      // Migration d'ancien compte : verification email requise
       if (result.data?.requiresEmailVerification) {
         rememberEmail(data.email);
         notification('success');
-        router.push({
-          pathname: ROUTES.OTP,
-          params: { email: data.email, migrate: '1' },
-        });
+        router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
         setIsLoading(false);
         return;
       }
-
       if (!result.data?.user?.id) {
         setAuthError('Une erreur est survenue. Veuillez reessayer.');
         notification('error');
         setIsLoading(false);
         return;
       }
-
       rememberEmail(data.email);
       notification('success');
-      const mode = await authService.getUserMode(result.data.user.id);
-      const isSeller = mode?.isSeller ?? false;
-      initializeFromProfile(isSeller);
-      router.replace(isSeller ? '/(seller)/home' : '/(client)/home');
+      router.replace('/(client)/home');
       setIsLoading(false);
     },
-    [impact, notification, router, initializeFromProfile, authService, rememberEmail]
+    [impact, notification, router, authService, rememberEmail]
   );
 
   const goToRegister = useCallback(() => {
@@ -360,7 +347,9 @@ export default function LoginScreen() {
           <View style={styles.iconSlot} pointerEvents="none">
             <Phone color={colors.goldBright} size={20} strokeWidth={1.75} />
           </View>
-          <Text style={styles.alternativeText}>Utiliser mon numéro de téléphone</Text>
+          <Text style={styles.alternativeText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+            Utiliser mon numéro de téléphone
+          </Text>
         </Pressable>
 
         {/* Lien inscription */}
@@ -415,7 +404,7 @@ const styles = StyleSheet.create({
   },
   logoWrapper: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     ...shadows.goldGlowSoft,
   },
   title: {
@@ -428,7 +417,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   errorBanner: {
     backgroundColor: colors.glass,
@@ -456,6 +445,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: spacing.sm,
+    flexShrink: 1,
   },
   checkbox: {
     width: 20,
@@ -475,6 +465,7 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
     marginLeft: spacing.sm,
+    flexShrink: 1,
   },
   forgotPasswordText: {
     ...typography.bodySmallMedium,
@@ -524,7 +515,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     letterSpacing: 0.2,
-    paddingHorizontal: spacing.xl,
+    paddingLeft: spacing.xxl,
+    paddingRight: spacing.md,
   },
   signUpWrapper: {
     flexDirection: 'row',
