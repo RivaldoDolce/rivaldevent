@@ -252,9 +252,10 @@ export default function VenuesScreen() {
   const displayVenues = useMemo(() => filteredVenues.slice(0, visibleCount), [filteredVenues, visibleCount]);
 
   const keyExtractorVenues = useCallback((item: MockVenue) => item.id, []);
-  const handleEndReachedVenues = useCallback(() => {
-    if (displayVenues.length < filteredVenues.length) setVisibleCount((c) => Math.min(c + 20, filteredVenues.length));
-  }, [displayVenues.length, filteredVenues.length]);
+
+  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    scrollY.setValue(e.nativeEvent.contentOffset.y);
+  }, [scrollY]);
 
   const renderVenueGridItem = useCallback(({ item }: { item: MockVenue }) => (
     <View style={FLASH_VENUE_ITEM_WRAPPER}>
@@ -393,39 +394,37 @@ export default function VenuesScreen() {
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(10,9,8,0.55)' }]} pointerEvents="none" />
       <View style={screenStyle}>
         {viewMode === 'grid' ? (
-          <AnimatedFlashList
+          <FlashList
             key="venues-grid"
             data={displayVenues}
             keyExtractor={keyExtractorVenues}
             renderItem={renderVenueGridItem}
             numColumns={2}
             extraData={viewMode}
+            estimatedItemSize={220}
             ListHeaderComponent={renderVenuesHeader}
             ListEmptyComponent={renderVenuesEmpty}
             ListFooterComponent={renderVenuesFooter}
             contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: spacing.lg - spacing.md / 2 }}
             showsVerticalScrollIndicator={false}
-            onEndReached={handleEndReachedVenues}
-            onEndReachedThreshold={0.5}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            onScroll={handleScroll}
             scrollEventThrottle={16}
           />
         ) : (
-          <AnimatedFlashList
+          <FlashList
             key="venues-list"
             data={displayVenues}
             keyExtractor={keyExtractorVenues}
             renderItem={renderVenueListItem}
             numColumns={1}
             extraData={viewMode}
+            estimatedItemSize={130}
             ListHeaderComponent={renderVenuesHeader}
             ListEmptyComponent={renderVenuesEmpty}
             ListFooterComponent={renderVenuesFooter}
             contentContainerStyle={{ paddingBottom: 100 }}
             showsVerticalScrollIndicator={false}
-            onEndReached={handleEndReachedVenues}
-            onEndReachedThreshold={0.5}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            onScroll={handleScroll}
             scrollEventThrottle={16}
           />
         )}
@@ -433,12 +432,6 @@ export default function VenuesScreen() {
     </ImageBackground>
   );
 }
-
-// ============================================================
-// Animated FlashList
-// ============================================================
-
-const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as unknown as typeof FlashList;
 
 // ============================================================
 // Styles

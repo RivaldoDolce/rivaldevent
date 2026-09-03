@@ -84,8 +84,6 @@ const EXPLORE_HEADER_BODY_HEIGHT =
 // Prix range labels (doit correspondre aux filtres du modal)
 // ============================================================
 
-const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as unknown as typeof FlashList;
-
 const FLASH_GRID_ITEM_WRAPPER: ViewStyle = { flex: 1, paddingHorizontal: spacing.md / 2 };
 
 const PRICE_RANGES = [
@@ -478,11 +476,9 @@ export default function ExploreScreen() {
   const displayEvents = useMemo(() => filteredEvents.slice(0, visibleCount), [filteredEvents, visibleCount]);
 
   const keyExtractor = useCallback((item: MockEvent) => item.id, []);
-  const handleEndReached = useCallback(() => {
-    if (displayEvents.length < filteredEvents.length) {
-      setVisibleCount((c) => Math.min(c + 20, filteredEvents.length));
-    }
-  }, [displayEvents.length, filteredEvents.length]);
+  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    scrollY.setValue(e.nativeEvent.contentOffset.y);
+  }, [scrollY]);
   const renderGridItem = useCallback(({ item }: { item: MockEvent }) => (
     <View style={FLASH_GRID_ITEM_WRAPPER}>
       <GridCard event={item} onPress={() => handleEventPress(item.id)} onReserve={() => handleReserve(item.id)} />
@@ -702,36 +698,34 @@ export default function ExploreScreen() {
 
       <View style={{ flex: 1 }}>
         {viewMode === 'grid' ? (
-          <AnimatedFlashList
+          <FlashList
             key="explore-grid"
             data={displayEvents}
             keyExtractor={keyExtractor}
             renderItem={renderGridItem}
             numColumns={2}
             extraData={viewMode}
+            estimatedItemSize={GRID_IMAGE_HEIGHT + 140}
             contentContainerStyle={{ paddingTop: headerExpandedHeight + spacing.md, paddingBottom: 120, paddingHorizontal: spacing.lg - spacing.md / 2 }}
             showsVerticalScrollIndicator={false}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            onScroll={handleScroll}
             scrollEventThrottle={16}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
             ListEmptyComponent={renderEmpty}
             ListFooterComponent={renderFooter}
           />
         ) : (
-          <AnimatedFlashList
+          <FlashList
             key="explore-list"
             data={displayEvents}
             keyExtractor={keyExtractor}
             renderItem={renderListItem}
             numColumns={1}
             extraData={viewMode}
+            estimatedItemSize={LIST_IMAGE_HEIGHT + 80}
             contentContainerStyle={{ paddingTop: headerExpandedHeight + spacing.md, paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+            onScroll={handleScroll}
             scrollEventThrottle={16}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
             ListEmptyComponent={renderEmpty}
             ListFooterComponent={renderFooter}
           />
