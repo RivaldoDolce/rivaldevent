@@ -19,7 +19,8 @@ export default function PurchaseLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
+        animation: 'none',
+        gestureEnabled: false,
       }}
     >
       <Stack.Screen name="event/[id]/tickets" />
