@@ -329,16 +329,7 @@ export default function SellerSellScreen() {
               })}
             </View>
 
-            <Input
-              label="Description"
-              placeholder="Programme, artistes, informations pratiques..."
-              value={description}
-              onChangeText={setDescription}
-              autoCapitalize="sentences"
-              autoCorrect={false}
-              maxLength={220}
-            />
-
+            <Text style={styles.fieldLabel}>Image de l'evenement</Text>
             {pickedImage ? (
               <View style={styles.pickedImageWrap}>
                 <Image source={{ uri: pickedImage }} style={styles.pickedImage} contentFit="cover" transition={200} cachePolicy="memory-disk" />
@@ -368,6 +359,16 @@ export default function SellerSellScreen() {
               autoCorrect={false}
               iconLeft={<ImagePlus color={colors.goldMuted} size={20} strokeWidth={1.5} />}
               helperText="URL ou photo de l'appareil — laissez vide pour image par defaut"
+            />
+
+            <Input
+              label="Description"
+              placeholder="Programme, artistes, informations pratiques..."
+              value={description}
+              onChangeText={setDescription}
+              autoCapitalize="sentences"
+              autoCorrect={false}
+              maxLength={220}
             />
 
             <Button

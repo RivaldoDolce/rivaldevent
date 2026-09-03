@@ -27,7 +27,7 @@ import Constants from 'expo-constants';
 import {
   Bell,
   CalendarClock,
-  Sparkles,
+  Gift,
   KeyRound,
   ShieldCheck,
   Info,
@@ -74,7 +74,7 @@ const NOTIFICATION_SETTINGS: readonly SettingToggle[] = [
     id: 'offers',
     label: 'Offres et nouveautes',
     helper: 'Recommandations et avant-premieres',
-    icon: <Sparkles size={19} color={colors.gold} strokeWidth={1.75} />,
+    icon: <Gift size={19} color={colors.gold} strokeWidth={1.75} />,
     defaultValue: false,
   },
 ];
