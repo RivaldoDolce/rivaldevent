@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.jpg",
+      "image": "./assets/images/splash.png",
       "resizeMode": "cover",
       "backgroundColor": "#0A0908"
     },
@@ -32,6 +32,14 @@
       "favicon": "./assets/images/app-icon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#0A0908"
+        }
+      ],
       "expo-router",
       "expo-font",
       "expo-secure-store",
@@ -45,12 +53,18 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "c97cf7df-f657-4049-a03a-edf166f41f2e"
       },
       "router": {
         "origin": false
       }
     },
-    "owner": "rivaldevent"
+    "owner": "riousbrel",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c97cf7df-f657-4049-a03a-edf166f41f2e"
+    }
   }
 }

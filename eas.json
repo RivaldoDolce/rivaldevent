@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 12.0.0",
-    "promptToInstallPackage": false
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
