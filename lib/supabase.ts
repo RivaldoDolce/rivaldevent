@@ -1,43 +1,32 @@
-/**
- * Client Supabase singleton, typé et sécurisé.
- *
- * - JWT stocké dans SecureStore (pas AsyncStorage)
- * - autoRefreshToken activé (rotation automatique)
- * - detectSessionInUrl désactivé (pas pertinent sur mobile)
- * - fetch personnalisé : capture les erreurs réseau hors ligne
- *   et retourne une réponse 503 au lieu de propager l'erreur
- *   (évite les unhandled rejections dans la console)
- */
-
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 
-import { SecureStoreAdapter } from './secure-storage-adapter';
 import type { Database } from '@/types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl) {
-  throw new Error(
-    '[supabase] EXPO_PUBLIC_SUPABASE_URL is missing. ' +
-      'Check your .env file (see .env.example).'
-  );
-}
+if (!supabaseUrl) throw new Error('[supabase] EXPO_PUBLIC_SUPABASE_URL manquant (.env)');
+if (!supabaseAnonKey) throw new Error('[supabase] EXPO_PUBLIC_SUPABASE_ANON_KEY manquant (.env)');
 
-if (!supabaseAnonKey) {
-  throw new Error(
-    '[supabase] EXPO_PUBLIC_SUPABASE_ANON_KEY is missing. ' +
-      'Check your .env file (see .env.example).'
-  );
+let clerkToken: string | null = null;
+
+export function setSupabaseClerkToken(token: string | null) {
+  clerkToken = token;
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: SecureStoreAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
+    persistSession: false,
+    autoRefreshToken: false,
     detectSessionInUrl: false,
+  },
+  global: {
+    fetch: async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const headers = new Headers(init.headers);
+      if (clerkToken) headers.set('Authorization', `Bearer ${clerkToken}`);
+      return fetch(input as Request, { ...init, headers });
+    },
   },
 });
 

@@ -1,0 +1,11 @@
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[functions.clerk-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "functions/clerk-webhook/index.ts"
