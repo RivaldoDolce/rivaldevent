@@ -16,6 +16,7 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
+          clerk_user_id: string | null;
           full_name: string | null;
           avatar_url: string | null;
           phone: string | null;
@@ -25,7 +26,8 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
-          id: string;
+          id?: string;
+          clerk_user_id: string;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;
@@ -33,6 +35,7 @@ export type Database = {
           is_seller?: boolean;
         };
         Update: {
+          clerk_user_id?: string;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;

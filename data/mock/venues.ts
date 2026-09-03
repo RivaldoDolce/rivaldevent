@@ -249,7 +249,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "13",
-    "name": "Lieu d'Exception Sports Bafoussam #13",
+    "name": "Prestige Hall Yaoundé",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -267,7 +267,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "14",
-    "name": "Lieu d'Exception Spectacle Garoua #14",
+    "name": "Grand Amphithéâtre Douala",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -285,7 +285,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "15",
-    "name": "Lieu d'Exception Lounge Bamenda #15",
+    "name": "Salle des Congrès Buea",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -303,7 +303,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "16",
-    "name": "Lieu d'Exception Reception Yaoundé #16",
+    "name": "Palais des Princes Bafoussam",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -321,7 +321,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "17",
-    "name": "Lieu d'Exception Conference Douala #17",
+    "name": "Villa Royale Garoua",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -339,7 +339,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "18",
-    "name": "Lieu d'Exception Sports Kribi #18",
+    "name": "Club Premium Limbé",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -357,7 +357,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "19",
-    "name": "Lieu d'Exception Spectacle Limbé #19",
+    "name": "Arena Kribi Beach",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -375,7 +375,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "20",
-    "name": "Lieu d'Exception Lounge Buea #20",
+    "name": "Salle de Gala Bamenda",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -393,7 +393,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "21",
-    "name": "Lieu d'Exception Reception Bafoussam #21",
+    "name": "Espace Prestige Nkongsamba",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -411,7 +411,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "22",
-    "name": "Lieu d'Exception Conference Garoua #22",
+    "name": "Théâtre Damas Yaoundé",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -429,7 +429,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "23",
-    "name": "Lieu d'Exception Sports Bamenda #23",
+    "name": "Akonolinga Cultural Center",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -447,7 +447,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "24",
-    "name": "Lieu d'Exception Spectacle Yaoundé #24",
+    "name": "Ebolowa Grand Hall",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -465,7 +465,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "25",
-    "name": "Lieu d'Exception Lounge Douala #25",
+    "name": "Bertoua Convention Center",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -483,7 +483,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "26",
-    "name": "Lieu d'Exception Reception Kribi #26",
+    "name": "Maroua Prestige Arena",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -501,7 +501,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "27",
-    "name": "Lieu d'Exception Conference Limbé #27",
+    "name": "Foumban Royal Ballroom",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -519,7 +519,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "28",
-    "name": "Lieu d'Exception Sports Buea #28",
+    "name": "Dschang Summit Hall",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -537,7 +537,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "29",
-    "name": "Lieu d'Exception Spectacle Bafoussam #29",
+    "name": "Kumba Beachfront Resort",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -555,7 +555,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "30",
-    "name": "Lieu d'Exception Lounge Garoua #30",
+    "name": "Tiko Harbor Club",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -573,7 +573,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "31",
-    "name": "Lieu d'Exception Reception Bamenda #31",
+    "name": "Edea Riverside Venue",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -591,7 +591,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "32",
-    "name": "Lieu d'Exception Conference Yaoundé #32",
+    "name": "Batouri Event Center",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -609,7 +609,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "33",
-    "name": "Lieu d'Exception Sports Douala #33",
+    "name": "Yokadouma Paradise Lodge",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -627,7 +627,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "34",
-    "name": "Lieu d'Exception Spectacle Kribi #34",
+    "name": "Loum Convention Hall",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -645,7 +645,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "35",
-    "name": "Lieu d'Exception Lounge Limbé #35",
+    "name": "Dibamba Entertainment Hub",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -663,7 +663,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "36",
-    "name": "Lieu d'Exception Reception Buea #36",
+    "name": "Mbalmayo Plaza",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -681,7 +681,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "37",
-    "name": "Lieu d'Exception Conference Bafoussam #37",
+    "name": "Akono Cultural Garden",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -699,7 +699,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "38",
-    "name": "Lieu d'Exception Sports Garoua #38",
+    "name": "Sangmelima Business Center",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -717,7 +717,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "39",
-    "name": "Lieu d'Exception Spectacle Bamenda #39",
+    "name": "Lomié Eco Resort",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -735,7 +735,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "40",
-    "name": "Lieu d'Exception Lounge Yaoundé #40",
+    "name": "Abong-Mbang Heritage Hall",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -753,7 +753,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "41",
-    "name": "Lieu d'Exception Reception Douala #41",
+    "name": "Batouri Convention",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -771,7 +771,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "42",
-    "name": "Lieu d'Exception Conference Kribi #42",
+    "name": "Kékem Plaza Events",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -789,7 +789,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "43",
-    "name": "Lieu d'Exception Sports Limbé #43",
+    "name": "Penja Coffee Hall",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -807,7 +807,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "44",
-    "name": "Lieu d'Exception Spectacle Buea #44",
+    "name": "Muyuka Summit Center",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -825,7 +825,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "45",
-    "name": "Lieu d'Exception Lounge Bafoussam #45",
+    "name": "Idenau Beach Pavilion",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -843,7 +843,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "46",
-    "name": "Lieu d'Exception Reception Garoua #46",
+    "name": "Mamfe Riverfront Venue",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -861,7 +861,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "47",
-    "name": "Lieu d'Exception Conference Bamenda #47",
+    "name": "Kumbo Royal Resort",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -879,7 +879,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "48",
-    "name": "Lieu d'Exception Sports Yaoundé #48",
+    "name": "Menchum Valley Hall",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -897,7 +897,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "49",
-    "name": "Lieu d'Exception Spectacle Douala #49",
+    "name": "Wum Community Center",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -915,7 +915,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "50",
-    "name": "Lieu d'Exception Lounge Kribi #50",
+    "name": "Nso Palace Events",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -933,7 +933,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "51",
-    "name": "Lieu d'Exception Reception Limbé #51",
+    "name": "Bambui Grand Hall",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -951,7 +951,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "52",
-    "name": "Lieu d'Exception Conference Buea #52",
+    "name": "Elak Prestige Lounge",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -969,7 +969,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "53",
-    "name": "Lieu d'Exception Sports Bafoussam #53",
+    "name": "Njinikom Eco Venue",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -987,7 +987,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "54",
-    "name": "Lieu d'Exception Spectacle Garoua #54",
+    "name": "Kom Cultural Space",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1005,7 +1005,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "55",
-    "name": "Lieu d'Exception Lounge Bamenda #55",
+    "name": "Mbot Heritage Center",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1023,7 +1023,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "56",
-    "name": "Lieu d'Exception Reception Yaoundé #56",
+    "name": "Bangwa Royal Hall",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1041,7 +1041,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "57",
-    "name": "Lieu d'Exception Conference Douala #57",
+    "name": "Mankon Business Hub",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1059,7 +1059,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "58",
-    "name": "Lieu d'Exception Sports Kribi #58",
+    "name": "Tubah Grand Arena",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1077,7 +1077,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "59",
-    "name": "Lieu d'Exception Spectacle Limbé #59",
+    "name": "Bafut Castle Events",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1095,7 +1095,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "60",
-    "name": "Lieu d'Exception Lounge Buea #60",
+    "name": "Belo Heritage Lounge",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1113,7 +1113,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "61",
-    "name": "Lieu d'Exception Reception Bafoussam #61",
+    "name": "Foung'a Event Center",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1131,7 +1131,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "62",
-    "name": "Lieu d'Exception Conference Garoua #62",
+    "name": "Oku Summit Hall",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1149,7 +1149,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "63",
-    "name": "Lieu d'Exception Sports Bamenda #63",
+    "name": "Buruntum Prestige Venue",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1167,7 +1167,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "64",
-    "name": "Lieu d'Exception Spectacle Yaoundé #64",
+    "name": "Kom-Muanenguba Resort",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1185,7 +1185,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "65",
-    "name": "Lieu d'Exception Lounge Douala #65",
+    "name": "Manenguba Lakes Hall",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1203,7 +1203,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "66",
-    "name": "Lieu d'Exception Reception Kribi #66",
+    "name": "Balihaghwé Convention",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1221,7 +1221,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "67",
-    "name": "Lieu d'Exception Conference Limbé #67",
+    "name": "Balimbirira Heritage Hall",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1239,7 +1239,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "68",
-    "name": "Lieu d'Exception Sports Buea #68",
+    "name": "Balissofin Events",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1257,7 +1257,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "69",
-    "name": "Lieu d'Exception Spectacle Bafoussam #69",
+    "name": "Bamendjim Summit Center",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1275,7 +1275,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "70",
-    "name": "Lieu d'Exception Lounge Garoua #70",
+    "name": "Bamenda Grand Ballroom",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1293,7 +1293,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "71",
-    "name": "Lieu d'Exception Reception Bamenda #71",
+    "name": "Bamessieuk Hall",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1311,7 +1311,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "72",
-    "name": "Lieu d'Exception Conference Yaoundé #72",
+    "name": "Bamessing Prestige",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1329,7 +1329,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "73",
-    "name": "Lieu d'Exception Sports Douala #73",
+    "name": "Bameta Event Lounge",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1347,7 +1347,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "74",
-    "name": "Lieu d'Exception Spectacle Kribi #74",
+    "name": "Bamilike Heritage Center",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1365,7 +1365,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "75",
-    "name": "Lieu d'Exception Lounge Limbé #75",
+    "name": "Banso Royal Palace",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1383,7 +1383,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "76",
-    "name": "Lieu d'Exception Reception Buea #76",
+    "name": "Bansoa Grand Hall",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1401,7 +1401,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "77",
-    "name": "Lieu d'Exception Conference Bafoussam #77",
+    "name": "Banten Cultural Hub",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1419,7 +1419,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "78",
-    "name": "Lieu d'Exception Sports Garoua #78",
+    "name": "Bantoum Event Center",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1437,7 +1437,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "79",
-    "name": "Lieu d'Exception Spectacle Bamenda #79",
+    "name": "Banyangfanglak Summit",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1455,7 +1455,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "80",
-    "name": "Lieu d'Exception Lounge Yaoundé #80",
+    "name": "Banyou Heritage Lounge",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1473,7 +1473,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "81",
-    "name": "Lieu d'Exception Reception Douala #81",
+    "name": "Bapel Grand Arena",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1491,7 +1491,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "82",
-    "name": "Lieu d'Exception Conference Kribi #82",
+    "name": "Bapenda Palace Events",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1509,7 +1509,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "83",
-    "name": "Lieu d'Exception Sports Limbé #83",
+    "name": "Baptjoa Hall",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1527,7 +1527,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "84",
-    "name": "Lieu d'Exception Spectacle Buea #84",
+    "name": "Babanki Summit Center",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1545,7 +1545,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "85",
-    "name": "Lieu d'Exception Lounge Bafoussam #85",
+    "name": "Babet Heritage Venue",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1563,7 +1563,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "86",
-    "name": "Lieu d'Exception Reception Garoua #86",
+    "name": "Babimbi Event Space",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1581,7 +1581,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "87",
-    "name": "Lieu d'Exception Conference Bamenda #87",
+    "name": "Babissi Grand Hall",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1599,7 +1599,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "88",
-    "name": "Lieu d'Exception Sports Yaoundé #88",
+    "name": "Bacham Prestige Lounge",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1617,7 +1617,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "89",
-    "name": "Lieu d'Exception Spectacle Douala #89",
+    "name": "Bachuo Community Center",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1635,7 +1635,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "90",
-    "name": "Lieu d'Exception Lounge Kribi #90",
+    "name": "Badmen Heritage Hall",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1653,7 +1653,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "91",
-    "name": "Lieu d'Exception Reception Limbé #91",
+    "name": "Bafia Festival Hall",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1671,7 +1671,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "92",
-    "name": "Lieu d'Exception Conference Buea #92",
+    "name": "Bafmen Prestige Venue",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1689,7 +1689,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "93",
-    "name": "Lieu d'Exception Sports Bafoussam #93",
+    "name": "Bafum Royal Hall",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1707,7 +1707,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "94",
-    "name": "Lieu d'Exception Spectacle Garoua #94",
+    "name": "Bagassao Cultural Center",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1725,7 +1725,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "95",
-    "name": "Lieu d'Exception Lounge Bamenda #95",
+    "name": "Bagente Event Hub",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1743,7 +1743,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "96",
-    "name": "Lieu d'Exception Reception Yaoundé #96",
+    "name": "Baham Grand Ballroom",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1761,7 +1761,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "97",
-    "name": "Lieu d'Exception Conference Douala #97",
+    "name": "Bahias Heritage Venue",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1779,7 +1779,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "98",
-    "name": "Lieu d'Exception Sports Kribi #98",
+    "name": "Baibara Festival Center",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1797,7 +1797,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "99",
-    "name": "Lieu d'Exception Spectacle Limbé #99",
+    "name": "Bajag Premium Lounge",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1815,7 +1815,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "100",
-    "name": "Lieu d'Exception Lounge Buea #100",
+    "name": "Bajenja Event Space",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1833,7 +1833,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "101",
-    "name": "Lieu d'Exception Reception Bafoussam #101",
+    "name": "Bakari Grand Hall",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1851,7 +1851,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "102",
-    "name": "Lieu d'Exception Conference Garoua #102",
+    "name": "Bakassa Prestige Center",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -1869,7 +1869,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "103",
-    "name": "Lieu d'Exception Sports Bamenda #103",
+    "name": "Bakebali Festival Venue",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -1887,7 +1887,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "104",
-    "name": "Lieu d'Exception Spectacle Yaoundé #104",
+    "name": "Bakemen Heritage Hall",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -1905,7 +1905,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "105",
-    "name": "Lieu d'Exception Lounge Douala #105",
+    "name": "Bakhuen Grand Arena",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -1923,7 +1923,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "106",
-    "name": "Lieu d'Exception Reception Kribi #106",
+    "name": "Bakoke Event Lounge",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -1941,7 +1941,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "107",
-    "name": "Lieu d'Exception Conference Limbé #107",
+    "name": "Bakouma Convention",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -1959,7 +1959,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "108",
-    "name": "Lieu d'Exception Sports Buea #108",
+    "name": "Bakouissa Heritage Center",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -1977,7 +1977,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "109",
-    "name": "Lieu d'Exception Spectacle Bafoussam #109",
+    "name": "Bakubang Summit Hall",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -1995,7 +1995,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "110",
-    "name": "Lieu d'Exception Lounge Garoua #110",
+    "name": "Bakundu Prestige Venue",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -2013,7 +2013,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "111",
-    "name": "Lieu d'Exception Reception Bamenda #111",
+    "name": "Bakyelem Event Space",
     "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -2031,7 +2031,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "112",
-    "name": "Lieu d'Exception Conference Yaoundé #112",
+    "name": "Balabot Grand Hall",
     "image": "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
@@ -2049,7 +2049,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "113",
-    "name": "Lieu d'Exception Sports Douala #113",
+    "name": "Balakossa Heritage Venue",
     "image": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Douala",
     "rating": 4.3,
@@ -2067,7 +2067,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "114",
-    "name": "Lieu d'Exception Spectacle Kribi #114",
+    "name": "Balambié Festival Center",
     "image": "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Kribi",
     "rating": 4.4,
@@ -2085,7 +2085,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "115",
-    "name": "Lieu d'Exception Lounge Limbé #115",
+    "name": "Balapondo Event Hub",
     "image": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Limbé",
     "rating": 4.5,
@@ -2103,7 +2103,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "116",
-    "name": "Lieu d'Exception Reception Buea #116",
+    "name": "Balaré Grand Ballroom",
     "image": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Buea",
     "rating": 4.6,
@@ -2121,7 +2121,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "117",
-    "name": "Lieu d'Exception Conference Bafoussam #117",
+    "name": "Balauga Premium Lounge",
     "image": "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bafoussam",
     "rating": 4.7,
@@ -2139,7 +2139,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "118",
-    "name": "Lieu d'Exception Sports Garoua #118",
+    "name": "Balau Heritage Hall",
     "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Garoua",
     "rating": 4.8,
@@ -2157,7 +2157,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "119",
-    "name": "Lieu d'Exception Spectacle Bamenda #119",
+    "name": "Balawat Prestige Center",
     "image": "https://images.unsplash.com/photo-1459865264687-595d652de67e?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Bamenda",
     "rating": 4.9,
@@ -2175,7 +2175,7 @@ export const MOCK_VENUES: readonly MockVenue[] = [
   },
   {
     "id": "120",
-    "name": "Lieu d'Exception Lounge Yaoundé #120",
+    "name": "Balayague Event Hub",
     "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&auto=format&fit=crop&q=65",
     "location": "Quartier Résidentiel, Yaoundé",
     "rating": 4.2,
