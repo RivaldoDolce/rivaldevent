@@ -158,7 +158,12 @@ export function RouteTransitionLoader() {
   useEffect(() => {
     if (previousPathname.current === pathname) return;
 
+    const from = previousPathname.current;
     previousPathname.current = pathname;
+    // Les ecrans d'attente (splash anime, retour OAuth) ne doivent jamais
+    // etre recouverts : ils sont eux-memes des loaders plein ecran.
+    if (from.includes('splash') || pathname.includes('splash') || pathname.includes('oauth-callback')) return;
+
     const token = startLoading();
     finishLoadingWhenReady(token);
   }, [finishLoadingWhenReady, pathname, startLoading]);

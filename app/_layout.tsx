@@ -22,7 +22,7 @@ import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { useFonts } from 'expo-font';
 import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
-import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { Asset } from 'expo-asset';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
@@ -57,6 +57,7 @@ export default function RootLayout() {
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_700Bold,
     Inter_400Regular,
+    Inter_500Medium,
     Inter_600SemiBold,
   });
 

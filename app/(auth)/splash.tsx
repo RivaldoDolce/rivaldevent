@@ -19,7 +19,6 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 
 import { Image } from 'expo-image';
 
@@ -201,7 +200,10 @@ export default function SplashScreen() {
     };
   }, [isLoading, isAuthenticated, mode, router]);
 
-  if (redirected) return null;
+  if (redirected) {
+    // La navigation est en cours : on garde le splash affiche jusqu'au
+    // remplacement effectif pour eviter un trou noir intermediaire.
+  }
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,
@@ -231,7 +233,6 @@ export default function SplashScreen() {
         pointerEvents="none"
       />
       <View style={styles.container}>
-        <StatusBar style="light" />
 
         {/* Halos dorés pulsés */}
         <Animated.View pointerEvents="none" style={[styles.glowTop, { opacity: haloTopOpacity }]} />
