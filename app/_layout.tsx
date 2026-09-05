@@ -12,7 +12,7 @@
  */
 
 import { LogBox } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -23,14 +23,13 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { useFonts } from 'expo-font';
 import { PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { Inter_400Regular, Inter_600SemiBold } from '@expo-google-fonts/inter';
-// @ts-ignore
 import { Asset } from 'expo-asset';
 
 import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
 import { colors } from '@/lib/constants';
 import { RouteTransitionLoader, RouteTransitionProvider } from '@/components/ui/RouteTransitionLoader';
-import { clientBackgrounds } from '@/lib/images';
+import { clientBackgrounds, authBackgrounds } from '@/lib/images';
 
 // ============================================================
 // Configuration & Initialisation
@@ -54,7 +53,6 @@ preventAutoHideAsync().catch(() => {
 // ============================================================
 
 export default function RootLayout() {
-  const [isQueryClientReady, setQueryClientReady] = useState(false);
   const [fontsLoaded] = useFonts({
     PlayfairDisplay_600SemiBold,
     PlayfairDisplay_700Bold,
@@ -62,35 +60,29 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
+  // Masque le splash natif des que le JS est pret : l'ecran anime
+  // /(auth)/splash prend le relais immediatement. On ne bloque PLUS
+  // sur les polices ni sur la persistance SQLite (chargees en fond),
+  // sinon l'APK autonome reste fige plusieurs secondes sur l'image
+  // statique pendant qu'Expo Go (Metro, cache chaud) parait instantane.
   useEffect(() => {
-    const init = async () => {
-      try {
-        await initQueryClientPersistence();
-      } catch (err) {
-        logger.debug('[RootLayout] init error:', err);
-      } finally {
-        setQueryClientReady(true);
-      }
-    };
-    init();
+    hideAsync().catch(() => {
+      /* le splash natif est deja masque */
+    });
+  }, []);
+
+  // Persistance TanStack Query en arriere-plan (non bloquant).
+  useEffect(() => {
+    initQueryClientPersistence().catch((err) => {
+      logger.debug('[RootLayout] init error:', err);
+    });
   }, []);
 
   useEffect(() => {
-    Asset.loadAsync(Object.values(clientBackgrounds)).catch(() => {});
+    Asset.loadAsync([...Object.values(authBackgrounds), ...Object.values(clientBackgrounds)]).catch(() => {});
   }, []);
 
-  const isAppReady = fontsLoaded && isQueryClientReady;
-
-  // Cache le splash screen une fois que l'app est prête
-  useEffect(() => {
-    if (isAppReady) {
-      hideAsync();
-    }
-  }, [isAppReady]);
-
-  if (!isAppReady) {
-    return null; // Affiche le splash screen natif
-  }
+  void fontsLoaded;
 
   return (
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>

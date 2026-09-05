@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/splash-native.jpg",
       "resizeMode": "cover",
       "backgroundColor": "#0A0908"
     },
@@ -35,7 +35,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
+          "image": "./assets/images/splash-native.jpg",
           "resizeMode": "cover",
           "backgroundColor": "#0A0908"
         }
@@ -46,7 +46,8 @@
       "expo-sqlite",
       "@react-native-community/datetimepicker",
       "@clerk/expo",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "experiments": {
       "tsconfigPaths": true
