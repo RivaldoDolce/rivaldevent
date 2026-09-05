@@ -108,6 +108,7 @@ export default function RootLayout() {
               }}
             >
               <Stack.Screen name="(auth)" />
+              <Stack.Screen name="oauth-callback" />
               <Stack.Screen name="(client)" />
               <Stack.Screen name="(seller)" />
               <Stack.Screen name="(shared)" options={{ headerShown: false, animation: 'slide_from_right' }} />

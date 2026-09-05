@@ -29,8 +29,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { useSSO } from '@clerk/expo/experimental';
+import * as AuthSession from 'expo-auth-session';
+import { useSSO } from '@clerk/expo';
 import { Mail, Lock, User, ArrowRight, Check, Eye, EyeOff } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -93,21 +93,28 @@ export default function RegisterScreen() {
       setIsLoading(true);
       setAuthError(null);
       impact('light');
-      const result = await authService.signUpWithEmail({ ...payload, is_seller: isOrganizer });
-      if (result.error) {
-        setAuthError(result.error.message);
+      try {
+        const result = await authService.signUpWithEmail({ ...payload, is_seller: isOrganizer });
+        if (result.error) {
+          setAuthError(result.error.message);
+          notification('error');
+        } else if (result.data?.access_token) {
+          notification('success');
+          router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
+        } else if (result.data?.requiresEmailVerification) {
+          notification('success');
+          router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
+        } else {
+          setAuthError('Inscription incomplète. Veuillez réessayer.');
+          notification('error');
+        }
+      } catch (err) {
+        logger.debug('Register submit error:', err);
+        setAuthError('Une erreur est survenue. Veuillez réessayer.');
         notification('error');
-      } else if (result.data?.access_token) {
-        notification('success');
-        router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
-      } else if (result.data?.requiresEmailVerification) {
-        notification('success');
-        router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
-      } else {
-        notification('success');
-        router.push({ pathname: ROUTES.OTP, params: { email: data.email } });
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     },
     [acceptTerms, impact, notification, router, isOrganizer, authService]
   );
@@ -125,26 +132,44 @@ export default function RegisterScreen() {
       setSocialLoading(provider);
 
       try {
-        const { createdSessionId } = await startSSOFlow({
+        if (Platform.OS === 'android') {
+          try {
+            await WebBrowser.warmUpAsync();
+          } catch {}
+        }
+        const redirectUrl = AuthSession.makeRedirectUri({
+          scheme: 'rivaldevent',
+          path: '/oauth-callback',
+        });
+        const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
           strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
-          redirectUrl: Linking.createURL('/oauth-callback'),
+          redirectUrl,
         });
 
-        if (!createdSessionId) {
-          setAuthError('Inscription annulée.');
-          notification('error');
+        if (createdSessionId && setActive) {
+          await setActive({ session: createdSessionId });
+          notification('success');
+          router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
+          return;
         }
-        // Session active automatiquement : la route /oauth-callback
-        // redirige vers l'accueil.
+        if (signIn?.status === 'complete' || signUp?.status === 'complete') {
+          router.push('/oauth-callback');
+          return;
+        }
+        setAuthError('Inscription annulée.');
+        notification('error');
       } catch (err) {
         logger.debug('Social signup error:', err);
         setAuthError('Inscription impossible avec ce fournisseur. Réessayez.');
         notification('error');
       } finally {
+        try {
+          if (Platform.OS === 'android') await WebBrowser.coolDownAsync();
+        } catch {}
         setSocialLoading(null);
       }
     },
-    [socialLoading, startSSOFlow, impact, notification]
+    [socialLoading, startSSOFlow, impact, notification, router, isOrganizer]
   );
 
   return (

@@ -142,45 +142,51 @@ export function useAuthService() {
     async (payload: RegisterRequest): Promise<AuthResult> => {
       if (!signUp) return { data: null, error: GENERIC_ERROR };
       const { firstName, lastName } = splitFullName(payload.full_name);
-      if (signUp.status === 'complete') {
-        try {
-          await signUp.create({});
-        } catch {}
-      }
-      const created = await signUp.create({
-        emailAddress: payload.email,
-        password: payload.password,
-        firstName,
-        lastName,
-        unsafeMetadata: { phone: payload.phone, is_seller: payload.is_seller === true },
-      } as Parameters<typeof signUp.create>[0]);
+      try {
+        if (signUp.status === 'complete') {
+          try {
+            await signUp.create({});
+          } catch {}
+        }
+        const created = await signUp.create({
+          emailAddress: payload.email,
+          password: payload.password,
+          firstName,
+          lastName,
+          unsafeMetadata: { phone: payload.phone, is_seller: payload.is_seller === true },
+        } as Parameters<typeof signUp.create>[0]);
 
-      const clerkError = (created as unknown as { error?: { code?: string; message?: string } }).error;
-      if (clerkError) return mapError(clerkError);
+        const clerkError = (created as unknown as { error?: { code?: string; message?: string } }).error;
+        if (clerkError) return mapError(clerkError);
 
-      if (created.status === 'complete' && created.createdSessionId) {
-        await setActiveSignUp?.({ session: created.createdSessionId });
-        await ensureSupabaseProfile({
-          id: (created as unknown as { createdUserId?: string }).createdUserId ?? created.createdSessionId,
-          fullName: payload.full_name,
-          imageUrl: null,
-          phone: payload.phone,
-          isSeller: payload.is_seller === true,
-        });
-        return { data: { access_token: created.createdSessionId, user: { id: created.createdSessionId } }, error: null };
-      }
+        if (created.status === 'complete' && created.createdSessionId) {
+          await setActiveSignUp?.({ session: created.createdSessionId });
+          await ensureSupabaseProfile({
+            id: (created as unknown as { createdUserId?: string }).createdUserId ?? created.createdSessionId,
+            fullName: payload.full_name,
+            imageUrl: null,
+            phone: payload.phone,
+            isSeller: payload.is_seller === true,
+          });
+          return { data: { access_token: created.createdSessionId, user: { id: created.createdSessionId } }, error: null };
+        }
 
-      if (created.status === 'missing_requirements') {
+        // Verification email requise : l'envoi du code DOIT reussir avant
+        // de rediriger vers l'ecran OTP, sinon l'utilisateur attend un code
+        // qui n'est jamais parti.
         try {
           await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
         } catch (e) {
           const er = e as { errors?: Array<{ code: string; message: string }> };
           if (er.errors?.[0]) return mapError(er.errors[0]);
+          return mapError({ code: 'network_error', message: (e as Error)?.message });
         }
         return { data: { user: null, requiresEmailVerification: true }, error: null };
+      } catch (e) {
+        const er = e as { errors?: Array<{ code: string; message: string }> };
+        if (er.errors?.[0]) return mapError(er.errors[0]);
+        return mapError({ code: 'unknown', message: (e as Error)?.message });
       }
-
-      return { data: { user: null, requiresEmailVerification: true }, error: null };
     },
     [signUp, setActiveSignUp]
   );
@@ -216,26 +222,38 @@ export function useAuthService() {
     async (params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }): Promise<AuthResult> => {
       if (params.type === 'sms') {
         if (!signIn) return { data: null, error: GENERIC_ERROR };
-        const res = await signIn.attemptFirstFactor({ strategy: 'phone_code', code: params.token } as never);
+        try {
+          const res = await signIn.attemptFirstFactor({ strategy: 'phone_code', code: params.token } as never);
+          const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
+          if (err) return mapError(err);
+          if (res.status !== 'complete' || !res.createdSessionId) {
+            return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
+          }
+          await setActiveSignIn?.({ session: res.createdSessionId });
+          return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
+        } catch (e) {
+          const er = e as { errors?: Array<{ code: string; message: string }> };
+          if (er.errors?.[0]) return mapError(er.errors[0]);
+          return mapError({ code: 'unknown', message: (e as Error)?.message });
+        }
+      }
+      if (!signUp) return { data: null, error: GENERIC_ERROR };
+      try {
+        const res = await signUp.attemptEmailAddressVerification({ code: params.token });
         const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
         if (err) return mapError(err);
         if (res.status !== 'complete' || !res.createdSessionId) {
           return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
         }
-        await setActiveSignIn?.({ session: res.createdSessionId });
+        await setActiveSignUp?.({ session: res.createdSessionId });
+        const uid = (res as unknown as { createdUserId?: string }).createdUserId ?? res.createdSessionId;
+        await ensureSupabaseProfile({ id: uid, fullName: null, imageUrl: null });
         return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
+      } catch (e) {
+        const er = e as { errors?: Array<{ code: string; message: string }> };
+        if (er.errors?.[0]) return mapError(er.errors[0]);
+        return mapError({ code: 'unknown', message: (e as Error)?.message });
       }
-      if (!signUp) return { data: null, error: GENERIC_ERROR };
-      const res = await signUp.attemptEmailAddressVerification({ code: params.token });
-      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-      if (err) return mapError(err);
-      if (res.status !== 'complete' || !res.createdSessionId) {
-        return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
-      }
-      await setActiveSignUp?.({ session: res.createdSessionId });
-      const uid = (res as unknown as { createdUserId?: string }).createdUserId ?? res.createdSessionId;
-      await ensureSupabaseProfile({ id: uid, fullName: null, imageUrl: null });
-      return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
     },
     [signIn, signUp, setActiveSignIn, setActiveSignUp]
   );

@@ -32,8 +32,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { useSSO } from '@clerk/expo/experimental';
+import * as AuthSession from 'expo-auth-session';
+import { useSSO } from '@clerk/expo';
 import { Eye, EyeOff, Mail, Lock, Phone, Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -162,26 +162,46 @@ export default function LoginScreen() {
       setSocialLoading(provider);
 
       try {
-        const { createdSessionId } = await startSSOFlow({
+        if (Platform.OS === 'android') {
+          try {
+            await WebBrowser.warmUpAsync();
+          } catch {}
+        }
+        const redirectUrl = AuthSession.makeRedirectUri({
+          scheme: 'rivaldevent',
+          path: '/oauth-callback',
+        });
+        const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
           strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
-          redirectUrl: Linking.createURL('/oauth-callback'),
+          redirectUrl,
         });
 
-        if (!createdSessionId) {
-          setAuthError('Connexion annulée.');
-          notification('error');
+        if (createdSessionId && setActive) {
+          await setActive({ session: createdSessionId });
+          notification('success');
+          router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
+          return;
         }
-        // Session active automatiquement : la route /oauth-callback
-        // redirige vers l'accueil (acheteur ou vendeur).
+        // Compte existant / transfert ou 2e facteur : la session se finalise
+        // via /oauth-callback qui redirige des qu'isAuthenticated devient vrai.
+        if (signIn?.status === 'complete' || signUp?.status === 'complete') {
+          router.push('/oauth-callback');
+          return;
+        }
+        setAuthError('Connexion annulée.');
+        notification('error');
       } catch (err) {
         logger.debug('Social login error:', err);
         setAuthError('Connexion impossible avec ce fournisseur. Réessayez.');
         notification('error');
       } finally {
+        try {
+          if (Platform.OS === 'android') await WebBrowser.coolDownAsync();
+        } catch {}
         setSocialLoading(null);
       }
     },
-    [socialLoading, startSSOFlow, impact, notification]
+    [socialLoading, startSSOFlow, impact, notification, router, mode]
   );
 
   return (

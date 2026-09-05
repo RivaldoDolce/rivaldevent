@@ -55,6 +55,7 @@ export default function OtpScreen() {
   const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   const { width: windowWidth } = useWindowDimensions();
@@ -84,14 +85,23 @@ export default function OtpScreen() {
 
       setIsLoading(true);
       setError(null);
+      setInfo(null);
       impact('light');
 
-      const result = await authService.verifyOtp({
-        phone: params.phone,
-        email: params.email,
-        token: fullCode,
-        type: params.phone ? 'sms' : 'email',
-      });
+      let result;
+      try {
+        result = await authService.verifyOtp({
+          phone: params.phone,
+          email: params.email,
+          token: fullCode,
+          type: params.phone ? 'sms' : 'email',
+        });
+      } catch {
+        setError('Une erreur est survenue. Veuillez réessayer.');
+        notification('error');
+        setIsLoading(false);
+        return;
+      }
 
       if (result.error) {
         setError(result.error.message);
@@ -162,13 +172,22 @@ export default function OtpScreen() {
     if (countdown > 0) return;
 
     impact('light');
-    const result = await authService.resendOtp(params.phone, params.email);
+    setError(null);
+    setInfo(null);
+    let result;
+    try {
+      result = await authService.resendOtp(params.phone, params.email);
+    } catch {
+      setError('Renvoi impossible. Vérifiez votre connexion puis réessayez.');
+      return;
+    }
 
     if (result.error) {
       setError(result.error.message);
     } else {
       setCountdown(COUNTDOWN_SECONDS);
       setCode(Array(OTP_LENGTH).fill(''));
+      setInfo(params.email ? `Un nouveau code a été envoyé à ${params.email}.` : 'Un nouveau code a été envoyé.');
       inputRefs.current[0]?.focus();
     }
   }, [countdown, params.phone, params.email, impact, authService]);
@@ -255,6 +274,13 @@ export default function OtpScreen() {
           {error && (
             <View style={styles.errorBanner}>
               <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Confirmation renvoi */}
+          {info && !error && (
+            <View style={styles.infoBanner}>
+              <Text style={styles.infoText}>{info}</Text>
             </View>
           )}
 
@@ -457,6 +483,22 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.bodySmallMedium,
     color: colors.danger,
+    textAlign: 'center',
+  },
+
+  // Confirmation (code renvoye)
+  infoBanner: {
+    backgroundColor: colors.glass,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: `${colors.gold}40`,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.sm,
+  },
+  infoText: {
+    ...typography.bodySmallMedium,
+    color: colors.goldBright,
     textAlign: 'center',
   },
 

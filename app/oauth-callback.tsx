@@ -4,18 +4,19 @@
  * Design « Noir & Or » : ecran d'attente premium — fond noir profond,
  * medaillon or, anneau de chargement dore, message tamisé.
  *
- * Logique (inchangée) :
- * - complete la session navigateur (WebBrowser.maybeCompleteAuthSession)
- * - finalise elle-meme le flux SSO a partir du rotating_token_nonce
- * - redirige vers l'accueil (acheteur ou vendeur) une fois connecte
- * - n'abandonne jamais silencieusement : erreur claire + bouton reessayer
+ * Logique :
+ * - l'activation de session est faite par startSSOFlow (login/register)
+ *   via setActive({ session: createdSessionId }).
+ * - cet ecran est une simple salle d'attente : il redirige vers l'accueil
+ *   des que useAuth signale isAuthenticated.
+ * - timeout de securite (25s) : erreur claire + bouton reessayer, jamais
+ *   d'attente infinie sur "Finalisation de l'authentification".
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useClerk, useSignUp } from '@clerk/expo';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { CircleAlert, WifiOff } from 'lucide-react-native';
 import { Image } from 'expo-image';
@@ -27,80 +28,28 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppMode } from '@/stores/app-mode';
 import { colors, spacing, typography } from '@/lib/constants';
 import { authBackgrounds } from '@/lib/images';
-import { logger } from '@/lib/logger';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Messages reseau — l'utilisateur n'est jamais laisse dans une attente muette.
 const OFFLINE_MESSAGE = 'Pas de connexion Internet. Vérifiez votre réseau puis réessayez.';
 const WEAK_NETWORK_MESSAGE = 'Votre connexion est instable. Rapprochez-vous de votre box ou de votre opérateur, puis réessayez.';
-const SLOW_MESSAGE = 'La connexion au serveur est lente. Patientez quelques instants\u2026';
+const SLOW_MESSAGE = 'La connexion au serveur est lente. Patientez quelques instants…';
+const TIMEOUT_MESSAGE = 'La session n’a pas pu être activée. Retournez à la connexion puis réessayez.';
+const TIMEOUT_MS = 25000;
+const SLOW_MS = 12000;
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ rotating_token_nonce?: string }>();
   const { isAuthenticated, isLoading } = useAuth();
   const mode = useAppMode((state: { mode: string }) => state.mode);
-  const { client } = useClerk();
-  const { signUp } = useSignUp();
 
-  const nonce = typeof params.rotating_token_nonce === 'string' ? params.rotating_token_nonce : null;
-  const hasAttempted = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
   const [slow, setSlow] = useState(false);
 
-  // Etat reseau : hors ligne / instable / fonctionnel.
   const { isConnected, isInternetReachable } = useNetworkStatus();
   const offline = !isConnected;
   const weakNetwork = isConnected && isInternetReachable === false;
-  const offlineRef = useRef(offline);
-  offlineRef.current = offline;
-  const prevConnected = useRef(isConnected);
-  const busy = isLoading || completing;
-
-  // Finalise le flux SSO directement (meme logique que useSSO experimental)
-  const completeSso = useCallback(async () => {
-    if (!nonce || hasAttempted.current) return;
-    hasAttempted.current = true;
-    setCompleting(true);
-    setError(null);
-
-    try {
-      const currentSignIn = (await client.signIn.reload({ rotatingTokenNonce: nonce }))
-        .__internal_future;
-
-      if (currentSignIn.firstFactorVerification.status === 'transferable') {
-        await signUp.create({ transfer: true });
-      }
-
-      const resource = currentSignIn.firstFactorVerification.status === 'transferable'
-        ? signUp
-        : currentSignIn;
-
-      if (resource.createdSessionId) {
-        await resource.finalize();
-        // La session est active : useAuth va rediriger vers l'accueil.
-        return;
-      }
-
-      if (resource.existingSession) {
-        // Session existante : rien a finaliser, la redirection se fera.
-        return;
-      }
-
-      setError('La connexion sociale n\u2019a pas pu aboutir. Réessayez.');
-    } catch (err) {
-      logger.debug('SSO callback error:', err);
-      setError(
-        offlineRef.current
-          ? OFFLINE_MESSAGE
-          : 'La connexion sociale n\u2019a pas pu aboutir. Réessayez.'
-      );
-    } finally {
-      setCompleting(false);
-    }
-  }, [nonce, client, signUp]);
+  const busy = isLoading && !error && !offline;
 
   // Redirection des que la session est active
   useEffect(() => {
@@ -110,29 +59,22 @@ export default function OAuthCallbackScreen() {
     }
   }, [isLoading, isAuthenticated, mode, router]);
 
-  // Tentative de finalisation autonome (une seule fois, si nonce present)
+  // Timeout de securite : jamais d'attente infinie
   useEffect(() => {
-    if (isLoading || isAuthenticated || !nonce) return;
-    completeSso();
-  }, [isLoading, isAuthenticated, nonce, completeSso]);
+    if (isLoading || isAuthenticated) return;
+    const timer = setTimeout(() => {
+      setError((prev) => prev ?? TIMEOUT_MESSAGE);
+    }, TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isLoading, isAuthenticated]);
 
-  // Retente automatiquement des que le reseau revient apres un echec.
-  useEffect(() => {
-    const justReconnected = prevConnected.current === false && isConnected && error !== null;
-    prevConnected.current = isConnected;
-    if (justReconnected) {
-      hasAttempted.current = false;
-      completeSso();
-    }
-  }, [isConnected, error, completeSso]);
-
-  // Si la finalisation depasse 12s, on informe l'utilisateur de la lenteur.
+  // Message de lenteur apres 12s d'attente
   useEffect(() => {
     if (!busy || error) {
       setSlow(false);
       return;
     }
-    const timer = setTimeout(() => setSlow(true), 12000);
+    const timer = setTimeout(() => setSlow(true), SLOW_MS);
     return () => clearTimeout(timer);
   }, [busy, error]);
 
@@ -164,10 +106,10 @@ export default function OAuthCallbackScreen() {
   const dot3 = dotAnim.interpolate({ inputRange: [0, 0.33, 0.66, 1], outputRange: [0.3, 0.3, 0.3, 1] });
 
   const retry = useCallback(() => {
-    hasAttempted.current = false;
+    setError(null);
     setSlow(false);
-    completeSso();
-  }, [completeSso]);
+    goToLogin();
+  }, [goToLogin]);
 
   return (
     <View style={styles.bgScreen}>
@@ -212,10 +154,10 @@ export default function OAuthCallbackScreen() {
         {error ? (
           <>
             <View style={styles.actionWrap}>
-              <Button variant="primary" size="lg" fullWidth onPress={retry}>Réessayer</Button>
+              <Button variant="primary" size="lg" fullWidth onPress={retry}>Retour à la connexion</Button>
             </View>
             <Pressable onPress={goToLogin} hitSlop={12} style={styles.backLink}>
-              <Text style={styles.backLinkText}>Retour à la connexion</Text>
+              <Text style={styles.backLinkText}>Réessayer plus tard</Text>
             </Pressable>
           </>
         ) : offline ? (
