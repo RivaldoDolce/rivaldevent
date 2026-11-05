@@ -1,0 +1,232 @@
+profile_id,event_id,relevance,annotator,notes
+music_fan_douala,evt_001,3,author_rubric_v1,Afrobeat a Douala dans le budget
+music_fan_douala,evt_002,3,author_rubric_v1,Festival musical a Douala entree libre
+music_fan_douala,evt_003,3,author_rubric_v1,"Makossa a Douala, haut de budget depasse mais coherent"
+music_fan_douala,evt_010,2,author_rubric_v1,Soiree danse et musique a Douala
+music_fan_douala,evt_017,2,author_rubric_v1,"Jazz a Douala, prix eleve mais dans la fourchette haute"
+music_fan_douala,evt_020,2,author_rubric_v1,"Danse urbaine et musique, sortie locale"
+music_fan_douala,evt_006,1,author_rubric_v1,Sortie locale mais humour et non musique
+music_fan_douala,evt_011,1,author_rubric_v1,Concert gospel gratuit a Douala
+music_fan_douala,evt_050,1,author_rubric_v1,Musique live mais a Limbe
+music_fan_douala,evt_054,1,author_rubric_v1,Reggae mais a Limbe
+music_fan_douala,evt_059,1,author_rubric_v1,Festival musique mais week-end a Kribi
+music_fan_douala,evt_049,1,author_rubric_v1,Festival de plage avec musique a Limbe
+music_fan_douala,evt_039,1,author_rubric_v1,Jazz et poesie mais a Yaounde
+music_fan_douala,evt_055,1,author_rubric_v1,Festival musical mais a Bafoussam
+music_fan_douala,evt_026,0,author_rubric_v1,"Gospel a Yaounde, hors contexte"
+music_fan_douala,evt_057,0,author_rubric_v1,Concert traditionnel hors ville
+music_fan_douala,evt_024,0,author_rubric_v1,Concert patrimonial hors ville
+music_fan_douala,evt_016,0,author_rubric_v1,"E-sport, pas de musique"
+music_fan_douala,evt_041,0,author_rubric_v1,Festival de cinema
+music_fan_douala,evt_008,0,author_rubric_v1,Marche de createurs
+music_fan_douala,evt_062,0,author_rubric_v1,"Festival du Nord, eloigne"
+music_fan_douala,evt_060,0,author_rubric_v1,"Diner-dj a Kribi, hors budget"
+music_fan_douala,evt_012,0,author_rubric_v1,Startup pitch
+music_fan_douala,evt_004,0,author_rubric_v1,Conference tech
+music_fan_douala,evt_019,0,author_rubric_v1,Gala hors budget
+music_fan_douala,evt_013,0,author_rubric_v1,Theatre
+music_fan_douala,evt_031,0,author_rubric_v1,Masterclass cinema
+music_fan_douala,evt_067,3,author_rubric_v1,Concert afrobeat a Douala mais evenement termine
+tech_enthusiast_yaounde,evt_021,3,author_rubric_v1,IA et data a Yaounde dans le budget
+tech_enthusiast_yaounde,evt_022,3,author_rubric_v1,Hackathon gratuit a Yaounde
+tech_enthusiast_yaounde,evt_034,3,author_rubric_v1,Meetup Python gratuit a Yaounde
+tech_enthusiast_yaounde,evt_023,3,author_rubric_v1,"IA responsable a Yaounde, budget respecte"
+tech_enthusiast_yaounde,evt_040,2,author_rubric_v1,"Cybersecurite pertinente, prix au-dessus du budget"
+tech_enthusiast_yaounde,evt_004,2,author_rubric_v1,Sommet tech majeur mais a Douala
+tech_enthusiast_yaounde,evt_046,2,author_rubric_v1,Atelier data mais a Buea et legerement hors budget
+tech_enthusiast_yaounde,evt_005,1,author_rubric_v1,"Atelier design a Douala, thematique proche"
+tech_enthusiast_yaounde,evt_012,1,author_rubric_v1,Pitch startup a Douala
+tech_enthusiast_yaounde,evt_027,1,author_rubric_v1,Formation marketing hors budget
+tech_enthusiast_yaounde,evt_043,1,author_rubric_v1,Bootcamp Web3 a Buea
+tech_enthusiast_yaounde,evt_042,1,author_rubric_v1,Meetup fondateurs a Buea
+tech_enthusiast_yaounde,evt_009,1,author_rubric_v1,Financement PME a Douala
+tech_enthusiast_yaounde,evt_028,1,author_rubric_v1,"Salon emploi gratuit a Yaounde, peu technique"
+tech_enthusiast_yaounde,evt_038,1,author_rubric_v1,Forum entrepreneuriat a Yaounde
+tech_enthusiast_yaounde,evt_065,0,author_rubric_v1,Forum business anglophone eloigne
+tech_enthusiast_yaounde,evt_031,0,author_rubric_v1,Masterclass cinema
+tech_enthusiast_yaounde,evt_058,0,author_rubric_v1,Agrobusiness
+tech_enthusiast_yaounde,evt_002,0,author_rubric_v1,Festival musical
+tech_enthusiast_yaounde,evt_029,0,author_rubric_v1,Football
+tech_enthusiast_yaounde,evt_053,0,author_rubric_v1,Trail
+tech_enthusiast_yaounde,evt_030,0,author_rubric_v1,Exposition d'art
+tech_enthusiast_yaounde,evt_061,0,author_rubric_v1,Retraite yoga
+tech_enthusiast_yaounde,evt_014,0,author_rubric_v1,Basketball
+tech_enthusiast_yaounde,evt_025,0,author_rubric_v1,Festival de masques
+tech_enthusiast_yaounde,evt_068,3,author_rubric_v1,Semaine numerique a Douala mais evenement termine
+culture_lover_douala,evt_007,3,author_rubric_v1,Exposition photo et patrimoine a Douala
+culture_lover_douala,evt_013,3,author_rubric_v1,Theatre contemporain a Douala
+culture_lover_douala,evt_020,2,author_rubric_v1,Danse urbaine a Douala
+culture_lover_douala,evt_024,2,author_rubric_v1,Concert patrimonial mais a Yaounde
+culture_lover_douala,evt_030,2,author_rubric_v1,Exposition d'art contemporain mais a Yaounde
+culture_lover_douala,evt_002,2,author_rubric_v1,Festival culturel et musical a Douala
+culture_lover_douala,evt_025,2,author_rubric_v1,Festival de masques mais a Yaounde
+culture_lover_douala,evt_055,2,author_rubric_v1,Festival traditionnel mais a Bafoussam
+culture_lover_douala,evt_006,1,author_rubric_v1,"Stand-up a Douala, divertissement"
+culture_lover_douala,evt_010,1,author_rubric_v1,Soiree dansante a Douala
+culture_lover_douala,evt_017,1,author_rubric_v1,Jazz a Douala
+culture_lover_douala,evt_056,1,author_rubric_v1,Marche artisanal hors ville
+culture_lover_douala,evt_064,1,author_rubric_v1,Semaine des arts a Bamenda
+culture_lover_douala,evt_047,1,author_rubric_v1,Defile mode a Buea
+culture_lover_douala,evt_051,1,author_rubric_v1,Exposition photo a Limbe
+culture_lover_douala,evt_041,1,author_rubric_v1,Festival de cinema a Buea
+culture_lover_douala,evt_032,1,author_rubric_v1,Gala culturel hors budget
+culture_lover_douala,evt_021,0,author_rubric_v1,Conference IA
+culture_lover_douala,evt_029,0,author_rubric_v1,Football
+culture_lover_douala,evt_036,0,author_rubric_v1,Marathon
+culture_lover_douala,evt_061,0,author_rubric_v1,Retraite yoga
+culture_lover_douala,evt_060,0,author_rubric_v1,Diner sur la plage
+culture_lover_douala,evt_012,0,author_rubric_v1,Startup pitch
+culture_lover_douala,evt_019,0,author_rubric_v1,Gala entrepreneurial hors budget
+culture_lover_douala,evt_069,3,author_rubric_v1,Festival culturel de l'Ouest mais evenement termine
+student_buea,evt_042,3,author_rubric_v1,Meetup gratuit a Buea
+student_buea,evt_048,2,author_rubric_v1,Stand-up a Buea dans le budget
+student_buea,evt_041,2,author_rubric_v1,Festival de cinema a Buea
+student_buea,evt_045,1,author_rubric_v1,"Course familiale a Buea, peu centrale"
+student_buea,evt_044,1,author_rubric_v1,Concert gospel gratuit a Buea
+student_buea,evt_046,1,author_rubric_v1,Atelier data a Buea mais hors budget
+student_buea,evt_043,1,author_rubric_v1,"Bootcamp Web3 a Buea, partiellement hors budget"
+student_buea,evt_021,2,author_rubric_v1,Sommet IA gratuit mais a Yaounde
+student_buea,evt_022,1,author_rubric_v1,Hackathon gratuit mais deplacement a Yaounde
+student_buea,evt_034,1,author_rubric_v1,Meetup Python a Yaounde
+student_buea,evt_028,1,author_rubric_v1,Salon emploi a Yaounde
+student_buea,evt_047,1,author_rubric_v1,Defile mode a Buea
+student_buea,evt_049,1,author_rubric_v1,Festival de plage a Limbe
+student_buea,evt_001,0,author_rubric_v1,Afrobeat a Douala hors budget
+student_buea,evt_003,0,author_rubric_v1,Concert premium a Douala
+student_buea,evt_014,0,author_rubric_v1,Basketball a Douala
+student_buea,evt_027,0,author_rubric_v1,Formation marketing hors budget
+student_buea,evt_019,0,author_rubric_v1,Gala hors budget
+student_buea,evt_030,0,author_rubric_v1,Exposition a Yaounde
+student_buea,evt_013,0,author_rubric_v1,Theatre a Douala
+student_buea,evt_025,0,author_rubric_v1,Festival de masques a Yaounde
+student_buea,evt_070,3,author_rubric_v1,Journee de l'innovation a Buea mais evenement termine
+family_bafoussam,evt_055,3,author_rubric_v1,Festival familial a Bafoussam
+family_bafoussam,evt_056,2,author_rubric_v1,Marche artisanal gratuit a Bafoussam
+family_bafoussam,evt_057,2,author_rubric_v1,Concert traditionnel a Bafoussam
+family_bafoussam,evt_062,1,author_rubric_v1,Festival familial mais au Nord
+family_bafoussam,evt_037,2,author_rubric_v1,Festival pour enfants mais a Yaounde
+family_bafoussam,evt_025,2,author_rubric_v1,Festival de masques familial a Yaounde
+family_bafoussam,evt_002,1,author_rubric_v1,Festival familial a Douala
+family_bafoussam,evt_049,1,author_rubric_v1,Festival de plage a Limbe
+family_bafoussam,evt_059,1,author_rubric_v1,"Festival a Kribi, deplacement couteux"
+family_bafoussam,evt_036,1,author_rubric_v1,Marathon familial a Yaounde
+family_bafoussam,evt_066,1,author_rubric_v1,Salon de l'elevage au Nord
+family_bafoussam,evt_064,1,author_rubric_v1,Semaine des arts a Bamenda
+family_bafoussam,evt_014,0,author_rubric_v1,Basketball a Douala
+family_bafoussam,evt_029,0,author_rubric_v1,Football a Yaounde
+family_bafoussam,evt_021,0,author_rubric_v1,Conference IA
+family_bafoussam,evt_005,0,author_rubric_v1,Atelier design
+family_bafoussam,evt_013,0,author_rubric_v1,Theatre a Douala
+family_bafoussam,evt_060,0,author_rubric_v1,Diner-dj a Kribi hors budget
+family_bafoussam,evt_009,0,author_rubric_v1,Financement PME
+family_bafoussam,evt_038,0,author_rubric_v1,Forum entrepreneuriat
+family_bafoussam,evt_069,3,author_rubric_v1,Festival culturel de l'Ouest mais evenement termine
+entrepreneur_douala,evt_009,3,author_rubric_v1,Financement PME a Douala
+entrepreneur_douala,evt_012,3,author_rubric_v1,Pitch startup a Douala
+entrepreneur_douala,evt_019,3,author_rubric_v1,Gala de reseau entrepreneurial a Douala
+entrepreneur_douala,evt_004,2,author_rubric_v1,Sommet tech a Douala
+entrepreneur_douala,evt_005,2,author_rubric_v1,Atelier produit a Douala
+entrepreneur_douala,evt_027,2,author_rubric_v1,"Formation growth a Yaounde, dans le budget"
+entrepreneur_douala,evt_038,1,author_rubric_v1,Forum entrepreneurial a Yaounde
+entrepreneur_douala,evt_065,1,author_rubric_v1,Forum business a Bamenda
+entrepreneur_douala,evt_021,2,author_rubric_v1,"Sommet IA a Yaounde, dans le budget"
+entrepreneur_douala,evt_023,1,author_rubric_v1,IA responsable a Yaounde
+entrepreneur_douala,evt_040,1,author_rubric_v1,Cybersecurite a Yaounde
+entrepreneur_douala,evt_058,1,author_rubric_v1,Agrobusiness a Bafoussam
+entrepreneur_douala,evt_032,1,author_rubric_v1,Gala culturel premium
+entrepreneur_douala,evt_043,1,author_rubric_v1,Bootcamp Web3 a Buea
+entrepreneur_douala,evt_001,0,author_rubric_v1,Concert afrobeat
+entrepreneur_douala,evt_002,0,author_rubric_v1,Festival grand public
+entrepreneur_douala,evt_029,0,author_rubric_v1,Football
+entrepreneur_douala,evt_013,0,author_rubric_v1,Theatre
+entrepreneur_douala,evt_061,0,author_rubric_v1,Retraite yoga
+entrepreneur_douala,evt_060,0,author_rubric_v1,Diner sur la plage
+entrepreneur_douala,evt_047,0,author_rubric_v1,Defile mode
+entrepreneur_douala,evt_014,0,author_rubric_v1,Basketball
+entrepreneur_douala,evt_036,0,author_rubric_v1,Marathon
+entrepreneur_douala,evt_068,3,author_rubric_v1,Semaine numerique a Douala mais evenement termine
+sport_fan_yaounde,evt_029,3,author_rubric_v1,Match des Lions a Yaounde
+sport_fan_yaounde,evt_036,3,author_rubric_v1,Marathon a Yaounde dans le budget
+sport_fan_yaounde,evt_016,2,author_rubric_v1,"Tournoi e-sport a Douala, competition"
+sport_fan_yaounde,evt_014,1,author_rubric_v1,Basketball mais a Douala
+sport_fan_yaounde,evt_045,1,author_rubric_v1,Course a Buea
+sport_fan_yaounde,evt_053,1,author_rubric_v1,Trail a Limbe
+sport_fan_yaounde,evt_049,1,author_rubric_v1,Festival de plage avec activites sportives
+sport_fan_yaounde,evt_006,1,author_rubric_v1,Stand-up a Douala
+sport_fan_yaounde,evt_020,1,author_rubric_v1,Danse urbaine a Douala
+sport_fan_yaounde,evt_060,1,author_rubric_v1,Sortie detente a Kribi
+sport_fan_yaounde,evt_048,0,author_rubric_v1,Comedy club a Buea
+sport_fan_yaounde,evt_010,0,author_rubric_v1,Soiree salsa
+sport_fan_yaounde,evt_001,0,author_rubric_v1,Concert afrobeat
+sport_fan_yaounde,evt_021,0,author_rubric_v1,Conference IA
+sport_fan_yaounde,evt_013,0,author_rubric_v1,Theatre
+sport_fan_yaounde,evt_059,0,author_rubric_v1,Festival a Kribi
+sport_fan_yaounde,evt_037,0,author_rubric_v1,Festival enfants
+sport_fan_yaounde,evt_002,0,author_rubric_v1,Festival musical
+sport_fan_yaounde,evt_031,0,author_rubric_v1,Masterclass cinema
+sport_fan_yaounde,evt_032,0,author_rubric_v1,Gala premium
+sport_fan_yaounde,evt_026,0,author_rubric_v1,Concert gospel
+english_arts_limbe,evt_049,3,author_rubric_v1,Festival de plage a Limbe
+english_arts_limbe,evt_051,3,author_rubric_v1,Exposition photo a Limbe
+english_arts_limbe,evt_052,2,author_rubric_v1,"Atelier environnemental a Limbe, prix inconnu"
+english_arts_limbe,evt_064,2,author_rubric_v1,Semaine des arts a Bamenda
+english_arts_limbe,evt_041,2,author_rubric_v1,Festival de cinema a Buea
+english_arts_limbe,evt_050,2,author_rubric_v1,Musique live a Limbe
+english_arts_limbe,evt_054,2,author_rubric_v1,Reggae a Limbe
+english_arts_limbe,evt_047,2,author_rubric_v1,Defile mode a Buea
+english_arts_limbe,evt_053,1,author_rubric_v1,Trail a Limbe
+english_arts_limbe,evt_046,1,author_rubric_v1,Atelier data a Buea
+english_arts_limbe,evt_048,1,author_rubric_v1,Comedy a Buea
+english_arts_limbe,evt_045,1,author_rubric_v1,Course a Buea
+english_arts_limbe,evt_061,1,author_rubric_v1,Retraite yoga a Kribi
+english_arts_limbe,evt_030,1,author_rubric_v1,Exposition a Yaounde
+english_arts_limbe,evt_007,1,author_rubric_v1,Exposition a Douala
+english_arts_limbe,evt_013,1,author_rubric_v1,Theatre a Douala
+english_arts_limbe,evt_002,1,author_rubric_v1,Festival a Douala
+english_arts_limbe,evt_059,1,author_rubric_v1,Festival a Kribi
+english_arts_limbe,evt_043,0,author_rubric_v1,Bootcamp Web3
+english_arts_limbe,evt_042,0,author_rubric_v1,Meetup fondateurs
+english_arts_limbe,evt_025,0,author_rubric_v1,Festival de masques
+english_arts_limbe,evt_019,0,author_rubric_v1,Gala entrepreneurial
+english_arts_limbe,evt_072,2,author_rubric_v1,Festival gastronomique a Kribi mais evenement termine
+gala_professional_yaounde,evt_032,3,author_rubric_v1,Gala culturel premium a Yaounde
+gala_professional_yaounde,evt_019,2,author_rubric_v1,Gala entrepreneurial a Douala
+gala_professional_yaounde,evt_023,2,author_rubric_v1,Conference IA a Yaounde
+gala_professional_yaounde,evt_024,2,author_rubric_v1,Concert patrimonial a Yaounde
+gala_professional_yaounde,evt_039,2,author_rubric_v1,Jazz et poesie a Yaounde
+gala_professional_yaounde,evt_030,1,author_rubric_v1,Exposition d'art contemporain
+gala_professional_yaounde,evt_025,1,author_rubric_v1,Festival de masques
+gala_professional_yaounde,evt_013,1,author_rubric_v1,Theatre a Douala
+gala_professional_yaounde,evt_017,1,author_rubric_v1,Jazz premium a Douala
+gala_professional_yaounde,evt_021,1,author_rubric_v1,Sommet IA
+gala_professional_yaounde,evt_040,2,author_rubric_v1,Cybersecurite a Yaounde
+gala_professional_yaounde,evt_009,1,author_rubric_v1,Financement PME
+gala_professional_yaounde,evt_061,1,author_rubric_v1,Retraite yoga premium
+gala_professional_yaounde,evt_060,1,author_rubric_v1,Diner premium a Kribi
+gala_professional_yaounde,evt_059,1,author_rubric_v1,Festival premium a Kribi
+gala_professional_yaounde,evt_047,1,author_rubric_v1,Defile mode a Buea
+gala_professional_yaounde,evt_029,0,author_rubric_v1,Football
+gala_professional_yaounde,evt_036,0,author_rubric_v1,Marathon
+gala_professional_yaounde,evt_001,0,author_rubric_v1,Concert afrobeat
+gala_professional_yaounde,evt_010,0,author_rubric_v1,Soiree salsa
+gala_professional_yaounde,evt_016,0,author_rubric_v1,Tournoi e-sport
+weekend_kribi,evt_059,3,author_rubric_v1,Festival a Kribi dans le budget
+weekend_kribi,evt_060,3,author_rubric_v1,Diner-dj a Kribi
+weekend_kribi,evt_061,3,author_rubric_v1,Retraite yoga a Kribi
+weekend_kribi,evt_054,1,author_rubric_v1,Reggae a Limbe
+weekend_kribi,evt_049,1,author_rubric_v1,Festival de plage a Limbe
+weekend_kribi,evt_050,1,author_rubric_v1,Musique live a Limbe
+weekend_kribi,evt_002,1,author_rubric_v1,Festival a Douala
+weekend_kribi,evt_003,1,author_rubric_v1,Concert premium a Douala
+weekend_kribi,evt_001,0,author_rubric_v1,Concert afrobeat a Douala
+weekend_kribi,evt_010,0,author_rubric_v1,Soiree salsa a Douala
+weekend_kribi,evt_017,0,author_rubric_v1,Jazz a Douala
+weekend_kribi,evt_036,0,author_rubric_v1,Marathon a Yaounde
+weekend_kribi,evt_037,0,author_rubric_v1,Festival enfants a Yaounde
+weekend_kribi,evt_055,0,author_rubric_v1,Festival a Bafoussam
+weekend_kribi,evt_025,0,author_rubric_v1,Festival de masques a Yaounde
+weekend_kribi,evt_019,0,author_rubric_v1,Gala a Douala
+weekend_kribi,evt_021,0,author_rubric_v1,Sommet IA a Yaounde
+weekend_kribi,evt_013,0,author_rubric_v1,Theatre a Douala
+weekend_kribi,evt_047,0,author_rubric_v1,Defile mode a Buea
+weekend_kribi,evt_072,3,author_rubric_v1,Festival gastronomique a Kribi mais evenement termine

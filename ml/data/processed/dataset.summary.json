@@ -1,0 +1,42 @@
+{
+  "datasetVersion": "dataset-20261105-c8c944d938",
+  "textTemplateVersion": 1,
+  "events": 72,
+  "profiles": 10,
+  "judgements": 231,
+  "eventsByCategory": {
+    "arts": 8,
+    "conference": 2,
+    "culture": 4,
+    "education": 6,
+    "entertainment": 4,
+    "entrepreneurship": 9,
+    "festival": 8,
+    "gala": 2,
+    "music": 14,
+    "sport": 5,
+    "technology": 8,
+    "theatre": 2
+  },
+  "eventsByCity": {
+    "Bafoussam": 5,
+    "Bamenda": 2,
+    "Buea": 9,
+    "Douala": 22,
+    "Garoua": 2,
+    "Kribi": 4,
+    "Limbe": 6,
+    "Ngaoundere": 1,
+    "Yaounde": 21
+  },
+  "eventsByLanguage": {
+    "en": 14,
+    "fr": 58
+  },
+  "demoFixtures": 72,
+  "expiredAtReference": 6,
+  "profilesBySplit": {
+    "dev": 6,
+    "test": 4
+  }
+}

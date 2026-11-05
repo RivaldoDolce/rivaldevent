@@ -1,0 +1,11 @@
+profile_id,city,budget_min,budget_max,preferred_categories,seed_event_ids,split
+music_fan_douala,Douala,5000,25000,music|festival|entertainment,evt_001|evt_003|evt_010|evt_017|evt_002,dev
+tech_enthusiast_yaounde,Yaounde,0,15000,technology|conference|entrepreneurship,evt_021|evt_022|evt_034|evt_023|evt_040,dev
+culture_lover_douala,Douala,0,15000,culture|arts|theatre|festival,evt_007|evt_013|evt_020|evt_024|evt_030,dev
+student_buea,Buea,0,5000,education|technology|entertainment,evt_042|evt_046|evt_048|evt_041,dev
+family_bafoussam,Bafoussam,0,15000,festival|culture|arts|sport,evt_055|evt_056|evt_062|evt_037,dev
+entrepreneur_douala,Douala,10000,50000,entrepreneurship|conference|technology,evt_009|evt_012|evt_019|evt_004|evt_027,dev
+sport_fan_yaounde,Yaounde,2000,25000,sport|entertainment,evt_029|evt_036|evt_014|evt_045,test
+english_arts_limbe,Limbe,0,15000,arts|festival|music|education,evt_049|evt_051|evt_052|evt_064|evt_047,test
+gala_professional_yaounde,Yaounde,50000,150000,gala|culture|conference,evt_032|evt_019|evt_023|evt_024|evt_039,test
+weekend_kribi,Kribi,5000,40000,festival|entertainment|education|music,evt_059|evt_060|evt_061|evt_054,test

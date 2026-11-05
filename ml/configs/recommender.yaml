@@ -1,0 +1,61 @@
+# Rivald'event — configuration du pipeline de recommandation
+# Source unique des poids utilises par le benchmark Python et le runtime TS.
+# Les poids sont selectionnes sur le split `dev` (voir run_benchmark.py) ;
+# le split `test` ne sert jamais au reglage.
+
+dataset:
+  events: data/raw/events.csv
+  profiles: data/raw/profiles.csv
+  relevance: data/annotations/relevance.csv
+  processed_dir: data/processed
+
+model:
+  id: intfloat/multilingual-e5-small
+  revision: main
+  device: cpu
+  batch_size: 16
+  normalize: true
+  # E5 attend le prefixe `passage:` pour les documents (applique par dataset.py).
+
+evaluation:
+  evaluation_version: v1
+  reference_date: "2026-11-05T00:00:00+01:00"
+  relevance_threshold: 2
+  k_values: [5, 10]
+  diversity_k: 10
+  exclude_expired: true
+
+ranking:
+  weights:
+    semantic: 0.60
+    category: 0.16
+    location: 0.10
+    budget: 0.09
+    temporal: 0.05
+  temporal:
+    near_days: 45
+    mid_days: 120
+    near_score: 1.0
+    mid_score: 0.6
+    far_score: 0.3
+  mmr:
+    enabled: true
+    lambda: 0.7
+    pool_size: 30
+
+tuning:
+  enabled: true
+  objective: ndcg@10
+  semantic_weights: [0.50, 0.60, 0.70]
+  category_weights: [0.10, 0.15, 0.20]
+  location_weights: [0.05, 0.10, 0.15]
+  budget_weights: [0.05, 0.10]
+  temporal_weights: [0.0, 0.05]
+  mmr_lambdas: [0.5, 0.6, 0.7, 0.8, 0.9]
+
+outputs:
+  embeddings: data/processed/embeddings.npz
+  embeddings_meta: data/processed/embeddings.meta.json
+  benchmark_json: reports/benchmark.json
+  benchmark_md: reports/benchmark.md
+  runtime_dir: ../data/recommendations/generated
