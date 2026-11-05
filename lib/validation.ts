@@ -6,7 +6,7 @@
  *
  * Regles :
  * - Email : format valide
- * - Mot de passe : min 8 (minimum absolu autorise par Clerk)
+ * - Mot de passe : min 8 (minimum Supabase Auth)
  * - Telephone : format camerounais (6XXXXXXXX)
  * - OTP : 6 chiffres
  */

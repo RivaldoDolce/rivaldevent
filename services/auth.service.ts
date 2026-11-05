@@ -1,9 +1,20 @@
 // @ts-nocheck
-import { useCallback } from 'react';
-import { useSignIn, useSignUp, useClerk, useUser } from '@clerk/expo';
-import * as Crypto from 'expo-crypto';
+/**
+ * Service d'authentification — Supabase en priorite, Clerk reserve a Apple.
+ *
+ * - Email/password, Google OAuth, OTP email/SMS, reset password : Supabase Auth.
+ * - Apple : Clerk SSO (useSSO `oauth_apple`, voir login/register).
+ * - Chaque methode retourne `{ data, error }` et ne leve JAMAIS
+ *   (les ecrans n'ont pas de try/catch global : un throw = spinner infini).
+ */
 
-import { supabase } from '@/lib/supabase';
+import { useCallback } from 'react';
+import { Platform } from 'react-native';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import { useClerk, useUser as useClerkUser } from '@clerk/expo';
+
+import { supabase, setSupabaseClerkToken } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import type { ApiResponse, ApiError, RegisterRequest, Profile } from '@/types';
 
@@ -24,62 +35,52 @@ const GENERIC_ERROR: ApiError = {
 const PASSWORD_MIN_LENGTH = 8;
 
 const FRENCH_ERRORS: Readonly<Record<string, string>> = {
-  form_identifier_not_found: 'Aucun compte ne correspond à cette adresse email.',
-  form_password_incorrect: 'Email ou mot de passe incorrect.',
-  form_identifier_password_mismatch: 'Email ou mot de passe incorrect.',
-  form_password_length_too_short: `Mot de passe trop court (${PASSWORD_MIN_LENGTH} caractères minimum).`,
-  form_password_validation_failed: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
-  form_password_pwned: 'Ce mot de passe a été compromis, choisissez-en un autre.',
-  form_password_not_allowed_to_use_common: 'Mot de passe trop commun, choisissez-en un autre.',
+  invalid_credentials: 'Email ou mot de passe incorrect.',
+  invalid_login_credentials: 'Email ou mot de passe incorrect.',
+  email_not_confirmed: 'Vérifiez votre email : un code de confirmation vous a été envoyé.',
+  user_already_exists: 'Un compte existe déjà avec cette adresse email.',
+  user_already_registered: 'Un compte existe déjà avec cette adresse email.',
+  email_exists: 'Un compte existe déjà avec cette adresse email.',
+  otp_expired: 'Code expiré. Demandez-en un nouveau.',
+  otp_disabled: 'Vérification par code indisponible. Réessayez.',
+  over_email_send_rate_limit: 'Trop de tentatives. Réessayez dans quelques minutes.',
+  over_request_rate_limit: 'Trop de tentatives. Réessayez dans quelques minutes.',
+  over_sms_send_rate_limit: 'Trop de SMS envoyés. Réessayez dans quelques minutes.',
+  phone_exists: 'Un compte existe déjà avec ce numéro.',
+  validation_failed: 'Vérifiez vos informations et réessayez.',
+  weak_password: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+  same_password: 'Choisissez un mot de passe différent de l’ancien.',
   network_error: 'Connexion Internet indisponible. Vérifiez votre réseau et réessayez.',
-  form_identifier_exists: 'Un compte existe déjà avec cette adresse email.',
-  form_email_address_exists: 'Un compte existe déjà avec cette adresse email.',
-  form_email_address_invalid: 'Adresse email invalide.',
-  form_phone_number_invalid: 'Numéro de téléphone invalide.',
-  form_code_incorrect: 'Code incorrect ou expiré.',
-  form_code_expired: 'Code expiré. Demandez-en un nouveau.',
   session_exists: 'Vous êtes déjà connecté.',
-  form_param_format_invalid: 'Format invalide, vérifiez vos informations.',
   too_many_requests: 'Trop de tentatives. Réessayez dans quelques minutes.',
-  verification_failed: 'Vérification échouée. Réessayez.',
 };
 
-function mapError(error: { readonly code?: string; readonly message?: string }): AuthResult {
-  const code = error.code ?? 'unknown';
-  const message = FRENCH_ERRORS[code] ?? error.message ?? GENERIC_ERROR.message;
-  logger.debug('Clerk error:', code, error.message);
+function mapSupabaseError(err: unknown): AuthResult {
+  if (!err || typeof err !== 'object') return { data: null, error: GENERIC_ERROR };
+  const maybe = err as { readonly code?: string; readonly message?: string; readonly status?: number };
+  const rawCode = (maybe.code ?? '').toLowerCase().replace(/-/g, '_');
+  const rawMessage = (maybe.message ?? '').toLowerCase();
+  let code = rawCode || 'unknown';
+  if (rawMessage.includes('invalid login credentials') || rawMessage.includes('invalid credentials')) {
+    code = 'invalid_credentials';
+  } else if (rawMessage.includes('email not confirmed')) {
+    code = 'email_not_confirmed';
+  } else if (rawMessage.includes('user already registered') || rawMessage.includes('already exists')) {
+    code = 'user_already_exists';
+  } else if (rawMessage.includes('otp') && rawMessage.includes('expired')) {
+    code = 'otp_expired';
+  } else if (rawMessage.includes('rate limit') || rawMessage.includes('too many')) {
+    code = 'too_many_requests';
+  }
+  const message = FRENCH_ERRORS[code] ?? maybe.message ?? GENERIC_ERROR.message;
+  logger.debug('Supabase auth error:', code, maybe.message);
   return { data: null, error: { code, message } };
 }
 
-function splitFullName(fullName: string): { firstName: string; lastName: string } {
-  const parts = fullName.trim().split(/\s+/);
-  const firstName = parts.shift() ?? '';
-  return { firstName, lastName: parts.join(' ') };
-}
-
-async function secureRandomString(length: number, charset: string): Promise<string> {
-  const bytes = await Crypto.getRandomBytesAsync(length);
-  let out = '';
-  for (let i = 0; i < length; i++) out += charset[bytes[i] % charset.length];
-  return out;
-}
-
-async function generateStrongPassword(): Promise<string> {
-  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lower = 'abcdefghijkmnpqrstuvwxyz';
-  const digits = '23456789';
-  const special = '!@#$%^&*';
-  const pool = upper + lower + digits + special;
-  const rand = (c: string) => secureRandomString(1, c);
-  const core = (await Promise.all([rand(upper), rand(lower), rand(digits), rand(special)])).join('');
-  const rest = await secureRandomString(12, pool);
-  const raw = (core + rest).split('');
-  const rnd = await Crypto.getRandomBytesAsync(raw.length);
-  return raw
-    .map((_, i) => ({ c: raw[i], r: rnd[i] }))
-    .sort((a, b) => a.r - b.r)
-    .map((x) => x.c)
-    .join('');
+function toE164Cameroon(phone: string): string {
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (digits.startsWith('237')) return `+${digits}`;
+  return `+237${digits}`;
 }
 
 async function ensureSupabaseProfile(params: {
@@ -90,10 +91,10 @@ async function ensureSupabaseProfile(params: {
   isSeller?: boolean;
 }): Promise<void> {
   try {
-    const { data: existing } = await supabase.from('profiles').select('id').eq('clerk_user_id', params.id).maybeSingle();
+    const { data: existing } = await supabase.from('profiles').select('id').eq('id', params.id).maybeSingle();
     if (existing) return;
     const { error } = await supabase.from('profiles').insert({
-      clerk_user_id: params.id,
+      id: params.id,
       full_name: params.fullName,
       avatar_url: params.imageUrl,
       phone: params.phone ?? null,
@@ -106,324 +107,520 @@ async function ensureSupabaseProfile(params: {
   }
 }
 
-export function useAuthService() {
-  const { signIn, setActive: setActiveSignIn } = useSignIn();
-  const { signUp, setActive: setActiveSignUp } = useSignUp();
-  const { signOut: clerkSignOut } = useClerk();
-  const { user } = useUser();
+function extractOAuthCode(callbackUrl: string): string | null {
+  try {
+    const url = new URL(callbackUrl);
+    const fromSearch = url.searchParams.get('code');
+    if (fromSearch) return fromSearch;
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+    if (hash) {
+      const hParams = new URLSearchParams(hash);
+      const c = hParams.get('code');
+      if (c) return c;
+    }
+    if (callbackUrl.includes('code=')) {
+      const m = callbackUrl.match(/[?&#]code=([^&#]+)/);
+      if (m?.[1]) return decodeURIComponent(m[1]);
+    }
+    return null;
+  } catch {
+    const m = callbackUrl.match(/[?&#]code=([^&#]+)/);
+    return m?.[1] ? decodeURIComponent(m[1]) : null;
+  }
+}
 
-  const signInWithEmail = useCallback(
-    async (email: string, password: string): Promise<AuthResult> => {
-      if (!signIn) return { data: null, error: GENERIC_ERROR };
-      if (signIn.status === 'complete') {
-        try {
-          await signIn.create({ identifier: email });
-        } catch {
-          return { data: null, error: GENERIC_ERROR };
+const lastCallAt = new Map<string, number>();
+function rateLimitOk(key: string, minMs: number): boolean {
+  const now = Date.now();
+  const last = lastCallAt.get(key) ?? 0;
+  if (now - last < minMs) return false;
+  lastCallAt.set(key, now);
+  return true;
+}
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
+
+export function useAuthService() {
+  const { signOut: clerkSignOut } = useClerk();
+  const { user: clerkUser } = useClerkUser();
+
+  const signInWithEmail = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    if (!rateLimitOk(`signin:${email.trim().toLowerCase()}`, 1500)) {
+      return { data: null, error: { code: 'too_many_requests', message: FRENCH_ERRORS.too_many_requests } };
+    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        const mapped = mapSupabaseError(error);
+        if (mapped.error?.code === 'email_not_confirmed') {
+          try {
+            await supabase.auth.resend({ type: 'signup', email: email.trim() });
+          } catch {}
+          return { data: { user: null, requiresEmailVerification: true }, error: null };
         }
+        return mapped;
       }
-      const res = await signIn.create({ identifier: email, password });
-      if (res.status === 'complete' && res.createdSessionId) {
-        await setActiveSignIn?.({ session: res.createdSessionId });
-        try {
-          const clerkUserId = res.createdSessionId ? (signIn as unknown as { createdSessionId?: string }) : null;
-          void clerkUserId;
-        } catch {}
-        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
+      if (!data.session || !data.user) {
+        return { data: null, error: GENERIC_ERROR };
       }
-      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-      if (err) return mapError(err);
-      return { data: null, error: GENERIC_ERROR };
-    },
-    [signIn, setActiveSignIn]
-  );
+      setSupabaseClerkToken(null);
+      await ensureSupabaseProfile({
+        id: data.user.id,
+        fullName:
+          (data.user.user_metadata as { full_name?: string } | undefined)?.full_name ??
+          data.user.email ??
+          null,
+        imageUrl: null,
+      });
+      return {
+        data: { access_token: data.session.access_token, user: { id: data.user.id } },
+        error: null,
+      };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
 
   const signUpWithEmail = useCallback(
-    async (payload: RegisterRequest): Promise<AuthResult> => {
-      if (!signUp) return { data: null, error: GENERIC_ERROR };
-      const { firstName, lastName } = splitFullName(payload.full_name);
+    async (payload: RegisterRequest & { birth_date?: string }): Promise<AuthResult> => {
+      if (!rateLimitOk(`signup:${payload.email.trim().toLowerCase()}`, 2000)) {
+        return { data: null, error: { code: 'too_many_requests', message: FRENCH_ERRORS.too_many_requests } };
+      }
       try {
-        if (signUp.status === 'complete') {
-          try {
-            await signUp.create({});
-          } catch {}
-        }
-        const created = await signUp.create({
-          emailAddress: payload.email,
+        const { data, error } = await supabase.auth.signUp({
+          email: payload.email.trim(),
           password: payload.password,
-          firstName,
-          lastName,
-          unsafeMetadata: { phone: payload.phone, is_seller: payload.is_seller === true },
-        } as Parameters<typeof signUp.create>[0]);
-
-        const clerkError = (created as unknown as { error?: { code?: string; message?: string } }).error;
-        if (clerkError) return mapError(clerkError);
-
-        if (created.status === 'complete' && created.createdSessionId) {
-          await setActiveSignUp?.({ session: created.createdSessionId });
+          options: {
+            data: {
+              full_name: payload.full_name,
+              phone: payload.phone,
+              birth_date: payload.birth_date ?? null,
+              is_seller: payload.is_seller === true,
+            },
+          },
+        });
+        if (error) return mapSupabaseError(error);
+        if (data.session && data.user) {
+          setSupabaseClerkToken(null);
           await ensureSupabaseProfile({
-            id: (created as unknown as { createdUserId?: string }).createdUserId ?? created.createdSessionId,
+            id: data.user.id,
             fullName: payload.full_name,
             imageUrl: null,
             phone: payload.phone,
             isSeller: payload.is_seller === true,
           });
-          return { data: { access_token: created.createdSessionId, user: { id: created.createdSessionId } }, error: null };
-        }
-
-        // Verification email requise : l'envoi du code DOIT reussir avant
-        // de rediriger vers l'ecran OTP, sinon l'utilisateur attend un code
-        // qui n'est jamais parti.
-        try {
-          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-        } catch (e) {
-          const er = e as { errors?: Array<{ code: string; message: string }> };
-          if (er.errors?.[0]) return mapError(er.errors[0]);
-          return mapError({ code: 'network_error', message: (e as Error)?.message });
+          return {
+            data: { access_token: data.session.access_token, user: { id: data.user.id } },
+            error: null,
+          };
         }
         return { data: { user: null, requiresEmailVerification: true }, error: null };
       } catch (e) {
-        const er = e as { errors?: Array<{ code: string; message: string }> };
-        if (er.errors?.[0]) return mapError(er.errors[0]);
-        return mapError({ code: 'unknown', message: (e as Error)?.message });
+        return mapSupabaseError(e);
       }
     },
-    [signUp, setActiveSignUp]
+    []
   );
 
-  const signInWithPhone = useCallback(
-    async (phone: string): Promise<AuthResult> => {
-      if (!signIn) return { data: null, error: GENERIC_ERROR };
-      if (signIn.status === 'complete') {
-        try {
-          await signIn.create({});
-        } catch {}
+  const verifyEmailOtp = useCallback(async (email: string, token: string): Promise<AuthResult> => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type: 'signup',
+      });
+      if (error) return mapSupabaseError(error);
+      if (!data.session || !data.user) {
+        return { data: null, error: { code: 'form_code_incorrect', message: 'Code incorrect ou expiré.' } };
       }
-      const phoneNumber = `+237${phone}`;
-      const created = await signIn.create({ identifier: phoneNumber });
-      const createErr = (created as unknown as { error?: { code?: string; message?: string } }).error;
-      if (createErr) return mapError(createErr);
-      try {
-        const firstFactor = (created.supportedFirstFactors as Array<{ strategy: string; phoneNumberId?: string }> | undefined)?.find(
-          (f) => f.strategy === 'phone_code'
-        );
-        await signIn.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId: firstFactor?.phoneNumberId ?? phoneNumber } as never);
-      } catch (e) {
-        const er = e as { errors?: Array<{ code: string; message: string }> };
-        if (er.errors?.[0]) return mapError(er.errors[0]);
-        return mapError({ code: 'unknown', message: (e as Error).message });
-      }
+      setSupabaseClerkToken(null);
+      await ensureSupabaseProfile({
+        id: data.user.id,
+        fullName:
+          (data.user.user_metadata as { full_name?: string } | undefined)?.full_name ??
+          data.user.email ??
+          null,
+        imageUrl: null,
+        phone: (data.user.user_metadata as { phone?: string } | undefined)?.phone ?? null,
+        isSeller: (data.user.user_metadata as { is_seller?: boolean } | undefined)?.is_seller ?? false,
+      });
+      return {
+        data: { access_token: data.session.access_token, user: { id: data.user.id } },
+        error: null,
+      };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
+
+  const resendEmailOtp = useCallback(async (email: string): Promise<AuthResult> => {
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      if (error) return mapSupabaseError(error);
       return { data: { user: null, messageId: null }, error: null };
-    },
-    [signIn]
-  );
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
+
+  const signInWithPhone = useCallback(async (phone: string): Promise<AuthResult> => {
+    if (!rateLimitOk(`phone:${toE164Cameroon(phone)}`, 30000)) {
+      return { data: null, error: { code: 'too_many_requests', message: FRENCH_ERRORS.too_many_requests } };
+    }
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone: toE164Cameroon(phone) });
+      if (error) return mapSupabaseError(error);
+      return { data: { user: null, messageId: null }, error: null };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
+
+  const verifyPhoneOtp = useCallback(async (phone: string, token: string): Promise<AuthResult> => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: toE164Cameroon(phone),
+        token: token.trim(),
+        type: 'sms',
+      });
+      if (error) return mapSupabaseError(error);
+      if (!data.session || !data.user) {
+        return { data: null, error: { code: 'form_code_incorrect', message: 'Code incorrect ou expiré.' } };
+      }
+      setSupabaseClerkToken(null);
+      await ensureSupabaseProfile({ id: data.user.id, fullName: null, imageUrl: null, phone });
+      return {
+        data: { access_token: data.session.access_token, user: { id: data.user.id } },
+        error: null,
+      };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
 
   const verifyOtp = useCallback(
     async (params: { phone?: string; email?: string; token: string; type: 'sms' | 'email' }): Promise<AuthResult> => {
-      if (params.type === 'sms') {
-        if (!signIn) return { data: null, error: GENERIC_ERROR };
-        try {
-          const res = await signIn.attemptFirstFactor({ strategy: 'phone_code', code: params.token } as never);
-          const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-          if (err) return mapError(err);
-          if (res.status !== 'complete' || !res.createdSessionId) {
-            return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
-          }
-          await setActiveSignIn?.({ session: res.createdSessionId });
-          return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
-        } catch (e) {
-          const er = e as { errors?: Array<{ code: string; message: string }> };
-          if (er.errors?.[0]) return mapError(er.errors[0]);
-          return mapError({ code: 'unknown', message: (e as Error)?.message });
-        }
+      if (params.type === 'sms' || params.phone) {
+        if (!params.phone) return { data: null, error: GENERIC_ERROR };
+        return verifyPhoneOtp(params.phone, params.token);
       }
-      if (!signUp) return { data: null, error: GENERIC_ERROR };
-      try {
-        const res = await signUp.attemptEmailAddressVerification({ code: params.token });
-        const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-        if (err) return mapError(err);
-        if (res.status !== 'complete' || !res.createdSessionId) {
-          return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
-        }
-        await setActiveSignUp?.({ session: res.createdSessionId });
-        const uid = (res as unknown as { createdUserId?: string }).createdUserId ?? res.createdSessionId;
-        await ensureSupabaseProfile({ id: uid, fullName: null, imageUrl: null });
-        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
-      } catch (e) {
-        const er = e as { errors?: Array<{ code: string; message: string }> };
-        if (er.errors?.[0]) return mapError(er.errors[0]);
-        return mapError({ code: 'unknown', message: (e as Error)?.message });
-      }
+      if (!params.email) return { data: null, error: GENERIC_ERROR };
+      return verifyEmailOtp(params.email, params.token);
     },
-    [signIn, signUp, setActiveSignIn, setActiveSignUp]
+    [verifyEmailOtp, verifyPhoneOtp]
   );
 
   const resendOtp = useCallback(
     async (phone?: string, email?: string): Promise<AuthResult> => {
-      if (phone && signIn) {
-        try {
-          const firstFactor = (signIn.supportedFirstFactors as Array<{ strategy: string; phoneNumberId?: string }> | undefined)?.find(
-            (f) => f.strategy === 'phone_code'
-          );
-          await signIn.prepareFirstFactor({
-            strategy: 'phone_code',
-            phoneNumberId: firstFactor?.phoneNumberId ?? `+237${phone}`,
-          } as never);
-          return { data: { user: null, messageId: null }, error: null };
-        } catch (e) {
-          const er = e as { errors?: Array<{ code: string; message: string }> };
-          if (er.errors?.[0]) return mapError(er.errors[0]);
-          return mapError({ message: (e as Error).message });
-        }
-      }
-      if (email && signUp) {
-        try {
-          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-          return { data: { user: null, messageId: null }, error: null };
-        } catch (e) {
-          const er = e as { errors?: Array<{ code: string; message: string }> };
-          if (er.errors?.[0]) return mapError(er.errors[0]);
-          return mapError({ message: (e as Error).message });
-        }
-      }
-      return { data: null, error: GENERIC_ERROR };
-    },
-    [signIn, signUp]
-  );
-
-  const resetPassword = useCallback(
-    async (email: string): Promise<AuthResult> => {
-      if (!signIn) return { data: null, error: GENERIC_ERROR };
-      if (signIn.status === 'complete') {
-        try {
-          await signIn.create({ identifier: email });
-        } catch {}
-      } else {
-        const r = await signIn.create({ identifier: email });
-        const err = (r as unknown as { error?: { code?: string; message?: string } }).error;
-        if (err) return mapError(err);
-      }
       try {
-        await signIn.prepareFirstFactor({ strategy: 'reset_password_email_code' } as never);
-        return { data: { user: null }, error: null };
+        if (phone) {
+          const { error } = await supabase.auth.signInWithOtp({ phone: toE164Cameroon(phone) });
+          if (error) return mapSupabaseError(error);
+          return { data: { user: null, messageId: null }, error: null };
+        }
+        if (email) return resendEmailOtp(email);
+        return { data: null, error: GENERIC_ERROR };
       } catch (e) {
-        const er = e as { errors?: Array<{ code: string; message: string }> };
-        if (er.errors?.[0]) return mapError(er.errors[0]);
-        return mapError({ message: (e as Error).message });
+        return mapSupabaseError(e);
       }
     },
-    [signIn]
+    [resendEmailOtp]
   );
 
-  const resetPasswordVerify = useCallback(
-    async (code: string): Promise<AuthResult> => {
-      if (!signIn) return { data: null, error: GENERIC_ERROR };
-      const res = await signIn.attemptFirstFactor({ strategy: 'reset_password_email_code', code } as never);
-      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-      if (err) return mapError(err);
-      if (res.status === 'needs_new_password') return { data: { user: null }, error: null };
-      if (res.status !== 'complete') return { data: null, error: { code: 'form_code_incorrect', message: FRENCH_ERRORS.form_code_incorrect } };
+  const signInWithGoogle = useCallback(async (): Promise<AuthResult> => {
+    try {
+      if (Platform.OS === 'android') {
+        try {
+          await WebBrowser.warmUpAsync();
+        } catch {}
+      }
+      const redirectTo = AuthSession.makeRedirectUri({ scheme: 'rivaldevent', path: 'oauth-callback' });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      });
+      if (error) return mapSupabaseError(error);
+      if (!data?.url) return { data: null, error: GENERIC_ERROR };
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (result.type !== 'success' || !('url' in result)) {
+        return { data: null, error: { code: 'cancelled', message: 'Connexion annulée.' } };
+      }
+      const code = extractOAuthCode(result.url);
+      if (!code) {
+        logger.debug('Google OAuth: aucun code dans le callback');
+        return { data: null, error: { code: 'unknown', message: 'Connexion incomplète. Réessayez.' } };
+      }
+      const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) return mapSupabaseError(exchangeError);
+      if (!exchanged.session || !exchanged.user) {
+        return { data: null, error: GENERIC_ERROR };
+      }
+      setSupabaseClerkToken(null);
+      await ensureSupabaseProfile({
+        id: exchanged.user.id,
+        fullName:
+          (exchanged.user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ??
+          (exchanged.user.user_metadata as { name?: string } | undefined)?.name ??
+          exchanged.user.email ??
+          null,
+        imageUrl:
+          (exchanged.user.user_metadata as { avatar_url?: string; picture?: string } | undefined)?.avatar_url ??
+          (exchanged.user.user_metadata as { picture?: string } | undefined)?.picture ??
+          null,
+      });
+      return {
+        data: { access_token: exchanged.session.access_token, user: { id: exchanged.user.id } },
+        error: null,
+      };
+    } catch (e) {
+      logger.debug('Google login error:', e);
+      return mapSupabaseError(e);
+    } finally {
+      try {
+        if (Platform.OS === 'android') await WebBrowser.coolDownAsync();
+      } catch {}
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string): Promise<AuthResult> => {
+    try {
+      const redirectTo = AuthSession.makeRedirectUri({ scheme: 'rivaldevent', path: 'oauth-callback' });
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+      if (error) return mapSupabaseError(error);
       return { data: { user: null }, error: null };
-    },
-    [signIn]
-  );
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
 
-  const resetPasswordSubmit = useCallback(
-    async (password: string): Promise<AuthResult> => {
-      if (!signIn) return { data: null, error: GENERIC_ERROR };
-      if (password.length < PASSWORD_MIN_LENGTH) {
-        return { data: null, error: { code: 'form_password_length_too_short', message: FRENCH_ERRORS.form_password_length_too_short } };
+  const resetPasswordVerify = useCallback(async (code: string, email?: string): Promise<AuthResult> => {
+    if (!email) {
+      return { data: null, error: { code: 'unknown', message: 'Adresse email manquante. Recommencez.' } };
+    }
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code.trim(),
+        type: 'recovery',
+      });
+      if (error) return mapSupabaseError(error);
+      if (!data.session) {
+        return { data: null, error: { code: 'form_code_incorrect', message: 'Code incorrect ou expiré.' } };
       }
-      const res = await signIn.resetPassword({ password } as never);
-      const err = (res as unknown as { error?: { code?: string; message?: string } }).error;
-      if (err) return mapError(err);
-      if (res.status === 'complete' && res.createdSessionId) {
-        await setActiveSignIn?.({ session: res.createdSessionId });
-        return { data: { access_token: res.createdSessionId, user: { id: res.createdSessionId } }, error: null };
-      }
-      return { data: null, error: { code: 'unknown', message: 'Réinitialisation incomplète.' } };
-    },
-    [signIn, setActiveSignIn]
-  );
+      return { data: { user: null }, error: null };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
+
+  const resetPasswordSubmit = useCallback(async (password: string): Promise<AuthResult> => {
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return {
+        data: null,
+        error: {
+          code: 'weak_password',
+          message: FRENCH_ERRORS.weak_password ?? GENERIC_ERROR.message,
+        },
+      };
+    }
+    try {
+      const { data, error } = await supabase.auth.updateUser({ password });
+      if (error) return mapSupabaseError(error);
+      const user = data.user;
+      if (!user) return { data: null, error: GENERIC_ERROR };
+      const { data: sessionData } = await supabase.auth.getSession();
+      return {
+        data: { access_token: sessionData.session?.access_token ?? null, user: { id: user.id } },
+        error: null,
+      };
+    } catch (e) {
+      return mapSupabaseError(e);
+    }
+  }, []);
 
   const getUserMode = useCallback(
     async (_userId: string): Promise<{ isSeller: boolean } | null> => {
-      if (!user) return null;
       try {
-        const { data } = await supabase.from('profiles').select('is_seller').eq('clerk_user_id', user.id).maybeSingle();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sbUser = sessionData.session?.user;
+        if (sbUser) {
+          const { data } = await supabase.from('profiles').select('is_seller').eq('id', sbUser.id).maybeSingle();
+          if (data) return { isSeller: data.is_seller ?? false };
+          return { isSeller: ((sbUser.user_metadata as { is_seller?: boolean } | undefined)?.is_seller ?? false) };
+        }
+      } catch {}
+      if (!clerkUser) return null;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_seller')
+          .eq('clerk_user_id', clerkUser.id)
+          .maybeSingle();
         if (data) return { isSeller: data.is_seller ?? false };
       } catch {}
-      return { isSeller: (user.unsafeMetadata?.is_seller as boolean | undefined) ?? false };
+      return { isSeller: (clerkUser.unsafeMetadata?.is_seller as boolean | undefined) ?? false };
     },
-    [user]
+    [clerkUser]
   );
 
   const toggleSellerMode = useCallback(
     async (_userId: string, isSeller: boolean): Promise<boolean> => {
-      if (!user) return false;
       try {
-        await supabase.from('profiles').update({ is_seller: isSeller }).eq('clerk_user_id', user.id);
-        await user.update({ unsafeMetadata: { ...((user.unsafeMetadata as Record<string, unknown>) ?? {}), is_seller: isSeller } } as never);
-        return true;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sbUser = sessionData.session?.user;
+        if (sbUser) {
+          const { error } = await supabase.from('profiles').update({ is_seller: isSeller }).eq('id', sbUser.id);
+          if (error) {
+            logger.debug('toggleSellerMode supabase error:', error.message);
+            return false;
+          }
+          try {
+            await supabase.auth.updateUser({ data: { is_seller: isSeller } });
+          } catch {}
+          return true;
+        }
       } catch (err) {
         logger.debug('toggleSellerMode error:', err);
+      }
+      if (!clerkUser) return false;
+      try {
+        await supabase.from('profiles').update({ is_seller: isSeller }).eq('clerk_user_id', clerkUser.id);
+        await clerkUser.update({
+          unsafeMetadata: { ...((clerkUser.unsafeMetadata as Record<string, unknown>) ?? {}), is_seller: isSeller },
+        } as never);
+        return true;
+      } catch (err) {
+        logger.debug('toggleSellerMode clerk error:', err);
         return false;
       }
     },
-    [user]
+    [clerkUser]
   );
 
   const updateProfile = useCallback(
-    async (_userId: string, payload: { readonly full_name: string; readonly phone?: string | null }): Promise<ApiResponse<Profile>> => {
-      if (!user) return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour modifier votre profil.' } };
+    async (
+      _userId: string,
+      payload: { readonly full_name: string; readonly phone?: string | null }
+    ): Promise<ApiResponse<Profile>> => {
       try {
-        const { firstName, lastName } = splitFullName(payload.full_name);
-        await user.update({ firstName, lastName } as never);
-        const phoneNorm = payload.phone && payload.phone.length > 0 ? payload.phone : null;
-        await user.update({ unsafeMetadata: { ...((user.unsafeMetadata as Record<string, unknown>) ?? {}), phone: phoneNorm } } as never);
-        const { error } = await supabase.from('profiles').update({ full_name: payload.full_name, phone: phoneNorm }).eq('clerk_user_id', user.id);
-        if (error) logger.debug('updateProfile supabase error:', error.message);
-        return { data: null, error: null };
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sbUser = sessionData.session?.user;
+        if (sbUser) {
+          const phoneNorm = payload.phone && payload.phone.length > 0 ? payload.phone : null;
+          try {
+            await supabase.auth.updateUser({ data: { full_name: payload.full_name, phone: phoneNorm } });
+          } catch {}
+          const { error } = await supabase
+            .from('profiles')
+            .update({ full_name: payload.full_name, phone: phoneNorm })
+            .eq('id', sbUser.id);
+          if (error) logger.debug('updateProfile supabase error:', error.message);
+          return { data: null, error: null };
+        }
       } catch (err) {
         logger.debug('updateProfile error:', err);
+      }
+      if (!clerkUser) {
+        return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour modifier votre profil.' } };
+      }
+      try {
+        const phoneNorm = payload.phone && payload.phone.length > 0 ? payload.phone : null;
+        const { error } = await supabase
+          .from('profiles')
+          .update({ full_name: payload.full_name, phone: phoneNorm })
+          .eq('clerk_user_id', clerkUser.id);
+        if (error) logger.debug('updateProfile clerk supabase error:', error.message);
+        return { data: null, error: null };
+      } catch (err) {
+        logger.debug('updateProfile clerk error:', err);
         return { data: null, error: GENERIC_ERROR };
       }
     },
-    [user]
+    [clerkUser]
   );
 
   const uploadAvatar = useCallback(
     async (_userId: string, dataUri: string): Promise<ApiResponse<{ publicUrl: string }>> => {
-      if (!user) return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour changer votre photo.' } };
       try {
-        const res = await fetch(dataUri);
-        const blob = await res.blob();
-        await user.setProfileImage({ file: blob });
-        const url = user.imageUrl;
-        await supabase.from('profiles').update({ avatar_url: url }).eq('clerk_user_id', user.id);
-        return { data: { publicUrl: url }, error: null };
+        const { data: sessionData } = await supabase.auth.getSession();
+        const sbUser = sessionData.session?.user;
+        const ownerId = sbUser?.id ?? clerkUser?.id;
+        if (!ownerId) {
+          return { data: null, error: { code: 'no_session', message: 'Connectez-vous pour changer votre photo.' } };
+        }
+        try {
+          const res = await fetch(dataUri);
+          const blob = await res.blob();
+          if (blob.size > MAX_AVATAR_BYTES) {
+            return { data: null, error: { code: 'validation_failed', message: 'Image trop volumineuse (max 5 Mo).' } };
+          }
+          const contentType = blob.type || 'image/jpeg';
+          if (!ALLOWED_AVATAR_TYPES.has(contentType)) {
+            return { data: null, error: { code: 'validation_failed', message: 'Format non supporté (jpeg/png/webp).' } };
+          }
+          const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+          const path = `${ownerId}/${Date.now()}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from('avatars').upload(path, blob, {
+            contentType,
+            upsert: true,
+          });
+          if (uploadError) throw uploadError;
+          const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
+          const publicUrl = publicData.publicUrl;
+          if (sbUser) {
+            await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', sbUser.id);
+          } else if (clerkUser) {
+            await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('clerk_user_id', clerkUser.id);
+          }
+          return { data: { publicUrl }, error: null };
+        } catch (storageErr) {
+          const msg = storageErr instanceof Error ? storageErr.message : String(storageErr);
+          if (msg.includes('Bucket not found') || msg.includes('not found')) {
+            logger.debug('uploadAvatar bucket manquant, fallback local');
+            return { data: { publicUrl: dataUri }, error: null };
+          }
+          throw storageErr;
+        }
       } catch (err) {
         logger.debug('uploadAvatar error:', err);
         return { data: null, error: GENERIC_ERROR };
       }
     },
-    [user]
+    [clerkUser]
   );
 
   const signOut = useCallback(async (): Promise<void> => {
     try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      logger.debug('signOut supabase exception:', err);
+    }
+    try {
       await clerkSignOut();
     } catch (err) {
-      logger.debug('signOut exception:', err);
+      logger.debug('signOut clerk exception:', err);
     }
+    setSupabaseClerkToken(null);
   }, [clerkSignOut]);
 
   return {
     signInWithEmail,
     signUpWithEmail,
+    verifyEmailOtp,
+    resendEmailOtp,
     signInWithPhone,
+    verifyPhoneOtp,
     verifyOtp,
     resendOtp,
+    signInWithGoogle,
     resetPassword,
     resetPasswordVerify,
     resetPasswordSubmit,
