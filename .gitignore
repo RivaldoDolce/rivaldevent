@@ -72,3 +72,14 @@ Skills/
 
 # Audit
 AUDIT_SECURITE.md
+# ML — environnement Python et caches (les artefacts générés sont versionnés)
+ml/.venv/
+ml/.cache/
+ml/**/__pycache__/
+ml/.pytest_cache/
+ml/.ruff_cache/
+*.egg-info/
+.uv-cache/
+
+# Suivi de progression (local, ignoré par git)
+progression/

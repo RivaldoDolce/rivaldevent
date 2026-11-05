@@ -274,6 +274,7 @@ export const ROUTES = {
   PAYMENT_MOOV: '/(purchase)/payment/moov' as const,
   FILTERS: '/(modal)/filters' as const,
   QR_FULLSCREEN: '/(modal)/qr-fullscreen' as const,
+  RECOMMENDATION_DEMO: '/recommendation-demo' as const,
 } as const;
 
 // ============================================================

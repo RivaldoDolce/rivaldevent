@@ -8,7 +8,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:recommendations": "tsc -p tsconfig.recommendations.json",
+    "test": "jest --config jest.config.js",
+    "test:recommendations": "jest --config jest.config.js services/recommendations"
   },
   "dependencies": {
     "@clerk/expo": "^4.2.5",
@@ -65,6 +68,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -72,8 +76,10 @@
     "eslint-config-expo": "~10.0.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "expo-module-scripts": "^56.0.3",
+    "jest": "^29.7.0",
     "prettier": "^3.3.3",
     "react-native-svg-transformer": "^1.5.0",
+    "ts-jest": "^29.4.11",
     "typescript": "~5.9.2"
   },
   "overrides": {
