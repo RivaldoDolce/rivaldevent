@@ -1,16 +1,15 @@
 /**
- * Mot de passe oublie — flow Clerk en 3 etapes.
+ * Mot de passe oublie — flow Supabase en 3 etapes (OTP email).
  *
- * 1. Email : envoi du code de reinitialisation (resetPasswordEmailCode)
- * 2. Code : saisie du code recu par email
- * 3. Nouveau mot de passe : reinitialisation + session active
+ * 1. Email : envoi du code de reinitialisation (resetPasswordForEmail)
+ * 2. Code : verification du code recu par email (verifyOtp `recovery`)
+ * 3. Nouveau mot de passe : updateUser({ password }) + session active
  *
  * Design « Noir & Or » aligne sur login.tsx :
  * - Fond noir profond + halo doré, logo medaillon or en haut
  * - Cartes verre fumé par etape, retour pastille verre
  *
- * Logique (inchangée) : useAuthService (Clerk Core 3), 3 formulaires
- * react-hook-form + zod.
+ * Logique : useAuthService (Supabase), 3 formulaires react-hook-form + zod.
  */
 
 import { useCallback, useState } from 'react';
@@ -119,7 +118,7 @@ export default function ForgotPasswordScreen() {
       setAuthError(null);
       impact('light');
 
-      const result = await authService.resetPasswordVerify(data.code);
+      const result = await authService.resetPasswordVerify(data.code, email);
 
       if (result.error) {
         setAuthError(result.error.message);
@@ -130,7 +129,7 @@ export default function ForgotPasswordScreen() {
 
       setIsLoading(false);
     },
-    [impact, notification, authService]
+    [impact, notification, authService, email]
   );
 
   const submitNewPassword = useCallback(

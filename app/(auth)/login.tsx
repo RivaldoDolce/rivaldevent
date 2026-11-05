@@ -8,9 +8,9 @@
  * - Boutons sociaux en cartes verre fumé
  * - Lien inscription doré
  *
- * Logique (inchangée) :
- * - OAuth (Google / Apple) : useSSO experimental (@clerk/expo/experimental)
- * - Migration Supabase via écran OTP
+ * Logique :
+ * - Email/password + Google : Supabase Auth (useAuthService)
+ * - Apple uniquement : Clerk SSO (useSSO `oauth_apple`) via /oauth-callback
  * - Formulaire react-hook-form + zod
  */
 
@@ -161,6 +161,22 @@ export default function LoginScreen() {
       setAuthError(null);
       setSocialLoading(provider);
 
+      if (provider === 'google') {
+        const result = await authService.signInWithGoogle();
+        if (result.error) {
+          setAuthError(result.error.message);
+          notification('error');
+        } else if (result.data?.user?.id) {
+          notification('success');
+          router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
+        } else {
+          setAuthError('Connexion annulée.');
+          notification('error');
+        }
+        setSocialLoading(null);
+        return;
+      }
+
       try {
         if (Platform.OS === 'android') {
           try {
@@ -172,7 +188,7 @@ export default function LoginScreen() {
           path: '/oauth-callback',
         });
         const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
-          strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
+          strategy: 'oauth_apple',
           redirectUrl,
         });
 
@@ -201,7 +217,7 @@ export default function LoginScreen() {
         setSocialLoading(null);
       }
     },
-    [socialLoading, startSSOFlow, impact, notification, router, mode]
+    [socialLoading, startSSOFlow, impact, notification, router, mode, authService]
   );
 
   return (

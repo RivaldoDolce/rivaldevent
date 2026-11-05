@@ -1,11 +1,14 @@
 /**
- * Retour OAuth (Google / Apple) — route `oauth-callback`.
+ * Retour OAuth Apple (Clerk) — route `oauth-callback`.
+ *
+ * Google passe par Supabase (openAuthSessionAsync + exchangeCodeForSession)
+ * directement dans login/register et n'utilise PAS cet ecran.
  *
  * Design « Noir & Or » : ecran d'attente premium — fond noir profond,
  * medaillon or, anneau de chargement dore, message tamisé.
  *
  * Logique :
- * - l'activation de session est faite par startSSOFlow (login/register)
+ * - l'activation de session Apple est faite par startSSOFlow (login/register)
  *   via setActive({ session: createdSessionId }).
  * - cet ecran est une simple salle d'attente : il redirige vers l'accueil
  *   des que useAuth signale isAuthenticated.

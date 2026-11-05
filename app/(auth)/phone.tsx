@@ -8,7 +8,7 @@
  * - Champ telephone avec badge pays "+237", CTA or champagne pleine largeur
  * - Notes d'information en texte tamisé
  *
- * Logique (inchangée) : envoi du code via signInWithPhone puis bascule OTP.
+ * Logique : envoi du code via Supabase (signInWithOtp) puis bascule OTP.
  */
 
 import { useCallback, useState } from 'react';

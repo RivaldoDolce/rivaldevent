@@ -1,5 +1,5 @@
 /**
- * Boutons de connexion sociale (Google + Apple).
+ * Boutons de connexion sociale (Google via Supabase + Apple via Clerk).
  *
  * Design « Noir & Or » :
  * - Rangée de cartes verre fumé (bg colors.glass, filet colors.border,

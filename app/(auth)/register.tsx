@@ -8,8 +8,8 @@
  * - Cases à cocher or (CGV) et forest (organisateur)
  * - CTA primary or champagne pleine largeur, boutons sociaux verre fumé
  *
- * Logique (inchangée) : react-hook-form + zod, signUpWithEmail,
- * OAuth useSSO experimental via la route /oauth-callback.
+ * Logique : email via Supabase (signUpWithEmail), Google via Supabase OAuth,
+ * Apple uniquement via Clerk SSO (`oauth_apple`) + route /oauth-callback.
  */
 
 import { useState, useCallback } from 'react';
@@ -31,7 +31,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { useSSO } from '@clerk/expo';
-import { Mail, Lock, User, ArrowRight, Check, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, ArrowRight, Check, Eye, EyeOff, Phone } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -76,7 +76,7 @@ export default function RegisterScreen() {
     defaultValues: {
       full_name: '',
       email: '',
-      phone: '600000000',
+      phone: '',
       birth_date: '',
       password: '',
       confirm_password: '',
@@ -89,12 +89,12 @@ export default function RegisterScreen() {
         setAuthError('Vous devez accepter les conditions générales.');
         return;
       }
-      const { birth_date: _birth_date, ...payload } = data;
+      const { birth_date, ...payload } = data;
       setIsLoading(true);
       setAuthError(null);
       impact('light');
       try {
-        const result = await authService.signUpWithEmail({ ...payload, is_seller: isOrganizer });
+        const result = await authService.signUpWithEmail({ ...payload, birth_date, is_seller: isOrganizer });
         if (result.error) {
           setAuthError(result.error.message);
           notification('error');
@@ -131,6 +131,22 @@ export default function RegisterScreen() {
       setAuthError(null);
       setSocialLoading(provider);
 
+      if (provider === 'google') {
+        const result = await authService.signInWithGoogle();
+        if (result.error) {
+          setAuthError(result.error.message);
+          notification('error');
+        } else if (result.data?.user?.id) {
+          notification('success');
+          router.replace(isOrganizer ? '/(seller)/home' : '/(client)/home');
+        } else {
+          setAuthError('Inscription annulée.');
+          notification('error');
+        }
+        setSocialLoading(null);
+        return;
+      }
+
       try {
         if (Platform.OS === 'android') {
           try {
@@ -142,8 +158,9 @@ export default function RegisterScreen() {
           path: '/oauth-callback',
         });
         const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
-          strategy: provider === 'google' ? 'oauth_google' : 'oauth_apple',
+          strategy: 'oauth_apple',
           redirectUrl,
+          unsafeMetadata: { is_seller: isOrganizer },
         });
 
         if (createdSessionId && setActive) {
@@ -169,7 +186,7 @@ export default function RegisterScreen() {
         setSocialLoading(null);
       }
     },
-    [socialLoading, startSSOFlow, impact, notification, router, isOrganizer]
+    [socialLoading, startSSOFlow, impact, notification, router, isOrganizer, authService]
   );
 
   return (
@@ -269,6 +286,24 @@ export default function RegisterScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 iconLeft={<Mail color={colors.goldMuted} size={20} strokeWidth={1.5} />}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="phone"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                placeholder="Téléphone (6XXXXXXXX)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.phone?.message}
+                isValid={!errors.phone?.message && value.length > 0}
+                keyboardType="phone-pad"
+                autoCorrect={false}
+                iconLeft={<Phone color={colors.goldMuted} size={20} strokeWidth={1.5} />}
               />
             )}
           />
