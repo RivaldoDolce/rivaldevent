@@ -258,11 +258,16 @@ export class RecommendationEngine {
         .map((interaction) => interaction.eventId),
     );
 
+    // Exclude seed events from candidate pool to avoid circularity:
+    // profile vector = mean of seed vectors → cos(profile, seed) ≈ 1
+    const seedEventIds = new Set(profile.seedEventIds);
+
     const weights: RankingWeights = this.runtime.weights;
     const temporalConfig: TemporalScoringConfig = this.runtime.temporal;
 
     let excludedExpired = 0;
     let excludedDisliked = 0;
+    let excludedSeeds = 0;
     let missingEmbeddings = 0;
 
     const scored: ScoredCandidate[] = [];
@@ -273,6 +278,10 @@ export class RecommendationEngine {
       }
       if (disliked.has(event.eventId)) {
         excludedDisliked += 1;
+        continue;
+      }
+      if (seedEventIds.has(event.eventId)) {
+        excludedSeeds += 1;
         continue;
       }
       const vector = this.embeddings[event.eventId];
@@ -340,6 +349,7 @@ export class RecommendationEngine {
       candidateCount: scored.length,
       excludedExpired,
       excludedDisliked,
+      excludedSeeds,
       missingEmbeddings,
       profileVectorAvailable: profileVectorResult.vector !== null,
       mmrApplied: mmrEnabled,

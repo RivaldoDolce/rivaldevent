@@ -71,13 +71,15 @@ describe('RecommendationEngine', () => {
       k: 10,
     });
     expect(result.excludedExpired).toBe(1);
-    expect(result.candidateCount).toBe(3);
+    expect(result.excludedSeeds).toBe(1);
+    expect(result.candidateCount).toBe(2);
     expect(result.recommendations.map((item) => item.event.eventId)).not.toContain('e3');
     expect(result.referenceDate).toBe(REFERENCE.toISOString());
   });
 
-  it('classe en tête l’événement le plus proche du profil', () => {
-    const engine = makeEngine();
+  it('classe en tu00eate lu2019u00e9vu00e9nement le plus proche du profil', () => {
+    // Use a seed that's not in the events to avoid exclusion
+    const engine = makeEngine({ profileSeeds: ['seed_not_in_events'] });
     const result = engine.recommend({
       profileId: 'profile_test',
       now: REFERENCE,
@@ -167,7 +169,8 @@ describe('RecommendationEngine', () => {
       k: 10,
     });
     expect(result.missingEmbeddings).toBe(1);
-    expect(result.candidateCount).toBe(2);
+    expect(result.excludedSeeds).toBe(1);
+    expect(result.candidateCount).toBe(1);
   });
 
   it('bascule en classement contextuel sans vecteur de profil', () => {

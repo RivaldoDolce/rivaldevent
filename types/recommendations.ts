@@ -278,6 +278,7 @@ export interface RecommendationResult {
   readonly candidateCount: number;
   readonly excludedExpired: number;
   readonly excludedDisliked: number;
+  readonly excludedSeeds: number;
   readonly missingEmbeddings: number;
   readonly profileVectorAvailable: boolean;
   readonly mmrApplied: boolean;

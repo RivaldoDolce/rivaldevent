@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "datasetVersion": "dataset-20261105-c8c944d938",
-  "generatedAt": "2026-11-05T16:19:13Z",
+  "generatedAt": "2026-11-05T18:13:23Z",
   "evaluationVersion": "v1",
-  "gitCommit": "d625c887528036df17b306c0c28cffe30281a349",
+  "gitCommit": "61b0e1014ceed01f9bbeca934257d9e55fc3deed",
   "model": {
     "id": "intfloat/multilingual-e5-small",
     "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
@@ -28,11 +28,11 @@
     "profiles": 10,
     "devProfiles": 6,
     "testProfiles": 4,
-    "events": 66,
+    "events": 23,
     "catalogEvents": 72,
     "judgments": 231,
-    "judgedProfileEventPairs": 223,
-    "expiredEvents": 6
+    "judgedProfileEventPairs": 46,
+    "expiredEvents": 49
   },
   "tuning": {
     "objective": "ndcg@10",
@@ -46,37 +46,37 @@
       "entrepreneur_douala"
     ],
     "selectedWeights": {
-      "semantic": 0.7,
+      "semantic": 0.5,
       "category": 0.1,
-      "location": 0.05,
-      "budget": 0.05,
-      "temporal": 0.05
+      "location": 0.1,
+      "budget": 0.1,
+      "temporal": 0.0
     },
     "selectedWeightsNormalized": {
-      "semantic": 0.7368421052631579,
-      "category": 0.10526315789473685,
-      "location": 0.052631578947368425,
-      "budget": 0.052631578947368425,
-      "temporal": 0.052631578947368425
+      "semantic": 0.625,
+      "category": 0.125,
+      "location": 0.125,
+      "budget": 0.125,
+      "temporal": 0.0
     },
-    "devScoreAtSelection": 0.860352,
+    "devScoreAtSelection": 0.849296,
     "lambdaCandidates": {
-      "0.5": 0.844077,
-      "0.6": 0.853019,
-      "0.7": 0.853019,
-      "0.8": 0.852568,
-      "0.9": 0.852568
+      "0.5": 0.840787,
+      "0.6": 0.844407,
+      "0.7": 0.844407,
+      "0.8": 0.841556,
+      "0.9": 0.840777
     },
     "selectedMmrLambda": 0.6,
-    "devScoreAtLambdaSelection": 0.853019
+    "devScoreAtLambdaSelection": 0.844407
   },
   "runtimeConfig": {
     "weights": {
-      "semantic": 0.7,
+      "semantic": 0.5,
       "category": 0.1,
-      "location": 0.05,
-      "budget": 0.05,
-      "temporal": 0.05
+      "location": 0.1,
+      "budget": 0.1,
+      "temporal": 0.0
     },
     "mmr": {
       "enabled": true,
@@ -97,47 +97,47 @@
       "label": "Metadata baseline",
       "split": "dev",
       "metrics": {
-        "diversity@10": 0.158906,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.771297,
-        "ndcg@5": 0.756512,
-        "precision@10": 0.483333,
-        "precision@5": 0.633333,
-        "recall@10": 0.75377,
-        "recall@5": 0.493254,
-        "coverage@5": 0.393939,
-        "coverage@10": 0.606061
+        "diversity@10": 0.172556,
+        "mrr@10": 0.305556,
+        "ndcg@10": 0.779216,
+        "ndcg@5": 0.767989,
+        "precision@10": 0.066667,
+        "precision@5": 0.133333,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.826087,
+        "coverage@10": 1.0
       },
       "perProfile": {
         "music_fan_douala": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.856127
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.967468
         },
         "tech_enthusiast_yaounde": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.962009
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.80481
         },
         "culture_lover_douala": {
-          "precision@10": 0.7,
-          "recall@10": 0.875,
-          "ndcg@10": 0.855916
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.519661
         },
         "student_buea": {
-          "precision@10": 0.2,
-          "recall@10": 0.5,
-          "ndcg@10": 0.448615
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.852928
         },
         "family_bafoussam": {
-          "precision@10": 0.3,
-          "recall@10": 0.6,
-          "ndcg@10": 0.70303
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "ndcg@10": 0.59057
         },
         "entrepreneur_douala": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.802088
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.939861
         }
       }
     },
@@ -146,47 +146,47 @@
       "label": "TF-IDF",
       "split": "dev",
       "metrics": {
-        "diversity@10": 0.156004,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.881517,
-        "ndcg@5": 0.921099,
-        "precision@10": 0.55,
-        "precision@5": 0.866667,
-        "recall@10": 0.90377,
-        "recall@5": 0.706151,
-        "coverage@5": 0.439394,
-        "coverage@10": 0.636364
+        "diversity@10": 0.166445,
+        "mrr@10": 0.227778,
+        "ndcg@10": 0.532287,
+        "ndcg@5": 0.445259,
+        "precision@10": 0.066667,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.333333,
+        "coverage@5": 0.782609,
+        "coverage@10": 0.956522
       },
       "perProfile": {
         "music_fan_douala": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.898761
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.463242
         },
         "tech_enthusiast_yaounde": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.926743
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.334246
         },
         "culture_lover_douala": {
-          "precision@10": 0.7,
-          "recall@10": 0.875,
-          "ndcg@10": 0.912023
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.319631
         },
         "student_buea": {
-          "precision@10": 0.4,
-          "recall@10": 1.0,
-          "ndcg@10": 0.813022
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.703918
         },
         "family_bafoussam": {
-          "precision@10": 0.5,
+          "precision@10": 0.2,
           "recall@10": 1.0,
-          "ndcg@10": 0.810621
+          "ndcg@10": 0.867618
         },
         "entrepreneur_douala": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.927935
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.505066
         }
       }
     },
@@ -195,47 +195,47 @@
       "label": "E5 semantic",
       "split": "dev",
       "metrics": {
-        "diversity@10": 0.145885,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.852959,
-        "ndcg@5": 0.907496,
-        "precision@10": 0.5,
-        "precision@5": 0.9,
-        "recall@10": 0.811905,
-        "recall@5": 0.739484,
-        "coverage@5": 0.454545,
-        "coverage@10": 0.636364
+        "diversity@10": 0.161079,
+        "mrr@10": 0.270833,
+        "ndcg@10": 0.744245,
+        "ndcg@5": 0.680543,
+        "precision@10": 0.066667,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.333333,
+        "coverage@5": 0.73913,
+        "coverage@10": 0.869565
       },
       "perProfile": {
         "music_fan_douala": {
-          "precision@10": 0.6,
-          "recall@10": 1.0,
-          "ndcg@10": 0.834646
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "tech_enthusiast_yaounde": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.93498
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.715697
         },
         "culture_lover_douala": {
-          "precision@10": 0.6,
-          "recall@10": 0.75,
-          "ndcg@10": 0.868346
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.796708
         },
         "student_buea": {
-          "precision@10": 0.3,
-          "recall@10": 0.75,
-          "ndcg@10": 0.761388
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.469279
         },
         "family_bafoussam": {
-          "precision@10": 0.4,
-          "recall@10": 0.8,
-          "ndcg@10": 0.847085
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "ndcg@10": 0.951443
         },
         "entrepreneur_douala": {
-          "precision@10": 0.5,
-          "recall@10": 0.714286,
-          "ndcg@10": 0.87131
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.532343
         }
       }
     },
@@ -244,47 +244,47 @@
       "label": "E5 + context",
       "split": "dev",
       "metrics": {
-        "diversity@10": 0.152135,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.860352,
-        "ndcg@5": 0.848253,
-        "precision@10": 0.533333,
-        "precision@5": 0.733333,
-        "recall@10": 0.849603,
-        "recall@5": 0.589087,
-        "coverage@5": 0.409091,
-        "coverage@10": 0.606061
+        "diversity@10": 0.171816,
+        "mrr@10": 0.305556,
+        "ndcg@10": 0.849296,
+        "ndcg@5": 0.807265,
+        "precision@10": 0.066667,
+        "precision@5": 0.133333,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.782609,
+        "coverage@10": 1.0
       },
       "perProfile": {
         "music_fan_douala": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.906607
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "tech_enthusiast_yaounde": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.951294
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.900547
         },
         "culture_lover_douala": {
-          "precision@10": 0.8,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.970745
+          "ndcg@10": 0.586883
         },
         "student_buea": {
-          "precision@10": 0.3,
-          "recall@10": 0.75,
-          "ndcg@10": 0.689661
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "family_bafoussam": {
-          "precision@10": 0.4,
-          "recall@10": 0.8,
-          "ndcg@10": 0.826665
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "ndcg@10": 0.907284
         },
         "entrepreneur_douala": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.817138
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.701063
         }
       }
     },
@@ -293,47 +293,47 @@
       "label": "E5 + context + MMR",
       "split": "dev",
       "metrics": {
-        "diversity@10": 0.153265,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.853019,
-        "ndcg@5": 0.853594,
-        "precision@10": 0.516667,
-        "precision@5": 0.733333,
-        "recall@10": 0.82877,
-        "recall@5": 0.589087,
-        "coverage@5": 0.409091,
-        "coverage@10": 0.621212
+        "diversity@10": 0.171816,
+        "mrr@10": 0.305556,
+        "ndcg@10": 0.844407,
+        "ndcg@5": 0.801597,
+        "precision@10": 0.066667,
+        "precision@5": 0.133333,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.782609,
+        "coverage@10": 1.0
       },
       "perProfile": {
         "music_fan_douala": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.906607
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "tech_enthusiast_yaounde": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.951294
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.871214
         },
         "culture_lover_douala": {
-          "precision@10": 0.7,
-          "recall@10": 0.875,
-          "ndcg@10": 0.926924
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.586883
         },
         "student_buea": {
-          "precision@10": 0.3,
-          "recall@10": 0.75,
-          "ndcg@10": 0.691903
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "family_bafoussam": {
-          "precision@10": 0.4,
-          "recall@10": 0.8,
-          "ndcg@10": 0.825665
+          "precision@10": 0.2,
+          "recall@10": 1.0,
+          "ndcg@10": 0.907284
         },
         "entrepreneur_douala": {
-          "precision@10": 0.6,
-          "recall@10": 0.857143,
-          "ndcg@10": 0.815719
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.701063
         }
       }
     },
@@ -342,37 +342,37 @@
       "label": "Metadata baseline",
       "split": "test",
       "metrics": {
-        "diversity@10": 0.168911,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.89305,
-        "ndcg@5": 0.928561,
-        "precision@10": 0.425,
-        "precision@5": 0.65,
-        "recall@10": 0.885417,
-        "recall@5": 0.697917,
-        "coverage@5": 0.30303,
-        "coverage@10": 0.515152
+        "diversity@10": 0.165689,
+        "mrr@10": 0.375,
+        "ndcg@10": 0.81962,
+        "ndcg@5": 0.81962,
+        "precision@10": 0.05,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.565217,
+        "coverage@10": 0.782609
       },
       "perProfile": {
         "sport_fan_yaounde": {
-          "precision@10": 0.3,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.914524
+          "ndcg@10": 0.821314
         },
         "english_arts_limbe": {
-          "precision@10": 0.7,
-          "recall@10": 0.875,
-          "ndcg@10": 0.919925
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.826235
         },
         "gala_professional_yaounde": {
-          "precision@10": 0.4,
-          "recall@10": 0.666667,
-          "ndcg@10": 0.804673
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "weekend_kribi": {
-          "precision@10": 0.3,
-          "recall@10": 1.0,
-          "ndcg@10": 0.933078
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.63093
         }
       }
     },
@@ -381,37 +381,37 @@
       "label": "TF-IDF",
       "split": "test",
       "metrics": {
-        "diversity@10": 0.169565,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.90187,
-        "ndcg@5": 0.959769,
-        "precision@10": 0.45,
-        "precision@5": 0.75,
-        "recall@10": 0.875,
-        "recall@5": 0.78125,
-        "coverage@5": 0.30303,
-        "coverage@10": 0.515152
+        "diversity@10": 0.170554,
+        "mrr@10": 0.3,
+        "ndcg@10": 0.337314,
+        "ndcg@5": 0.337314,
+        "precision@10": 0.05,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.695652,
+        "coverage@10": 0.913043
       },
       "perProfile": {
         "sport_fan_yaounde": {
-          "precision@10": 0.2,
-          "recall@10": 0.666667,
-          "ndcg@10": 0.830708
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.52302
         },
         "english_arts_limbe": {
-          "precision@10": 0.8,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.930398
+          "ndcg@10": 0.826235
         },
         "gala_professional_yaounde": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.909611
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.0
         },
         "weekend_kribi": {
-          "precision@10": 0.3,
-          "recall@10": 1.0,
-          "ndcg@10": 0.936763
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.0
         }
       }
     },
@@ -420,37 +420,37 @@
       "label": "E5 semantic",
       "split": "test",
       "metrics": {
-        "diversity@10": 0.158867,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.902739,
-        "ndcg@5": 0.975434,
-        "precision@10": 0.45,
-        "precision@5": 0.8,
-        "recall@10": 0.927083,
-        "recall@5": 0.864583,
-        "coverage@5": 0.272727,
-        "coverage@10": 0.484848
+        "diversity@10": 0.159808,
+        "mrr@10": 0.375,
+        "ndcg@10": 0.556773,
+        "ndcg@5": 0.457734,
+        "precision@10": 0.05,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.608696,
+        "coverage@10": 0.73913
       },
       "perProfile": {
         "sport_fan_yaounde": {
-          "precision@10": 0.3,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.872809
+          "ndcg@10": 0.959654
         },
         "english_arts_limbe": {
-          "precision@10": 0.7,
-          "recall@10": 0.875,
-          "ndcg@10": 0.931482
+          "precision@10": 0.1,
+          "recall@10": 1.0,
+          "ndcg@10": 0.521296
         },
         "gala_professional_yaounde": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.868537
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.315465
         },
         "weekend_kribi": {
-          "precision@10": 0.3,
-          "recall@10": 1.0,
-          "ndcg@10": 0.93813
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 0.430677
         }
       }
     },
@@ -459,37 +459,37 @@
       "label": "E5 + context",
       "split": "test",
       "metrics": {
-        "diversity@10": 0.166613,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.94163,
-        "ndcg@5": 0.960592,
-        "precision@10": 0.475,
-        "precision@5": 0.7,
-        "recall@10": 0.958333,
-        "recall@5": 0.739583,
-        "coverage@5": 0.287879,
-        "coverage@10": 0.515152
+        "diversity@10": 0.166049,
+        "mrr@10": 0.5,
+        "ndcg@10": 0.975314,
+        "ndcg@5": 0.952363,
+        "precision@10": 0.05,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.652174,
+        "coverage@10": 0.826087
       },
       "perProfile": {
         "sport_fan_yaounde": {
-          "precision@10": 0.3,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.941803
+          "ndcg@10": 0.983218
         },
         "english_arts_limbe": {
-          "precision@10": 0.8,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.978949
+          "ndcg@10": 0.918039
         },
         "gala_professional_yaounde": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.873754
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "weekend_kribi": {
-          "precision@10": 0.3,
-          "recall@10": 1.0,
-          "ndcg@10": 0.972016
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         }
       }
     },
@@ -498,37 +498,37 @@
       "label": "E5 + context + MMR",
       "split": "test",
       "metrics": {
-        "diversity@10": 0.167729,
-        "mrr@10": 1.0,
-        "ndcg@10": 0.935312,
-        "ndcg@5": 0.95819,
-        "precision@10": 0.475,
-        "precision@5": 0.7,
-        "recall@10": 0.958333,
-        "recall@5": 0.739583,
-        "coverage@5": 0.287879,
-        "coverage@10": 0.530303
+        "diversity@10": 0.169573,
+        "mrr@10": 0.5,
+        "ndcg@10": 0.982017,
+        "ndcg@5": 0.982017,
+        "precision@10": 0.05,
+        "precision@5": 0.1,
+        "recall@10": 0.5,
+        "recall@5": 0.5,
+        "coverage@5": 0.608696,
+        "coverage@10": 0.826087
       },
       "perProfile": {
         "sport_fan_yaounde": {
-          "precision@10": 0.3,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.93976
+          "ndcg@10": 0.983218
         },
         "english_arts_limbe": {
-          "precision@10": 0.8,
+          "precision@10": 0.1,
           "recall@10": 1.0,
-          "ndcg@10": 0.978949
+          "ndcg@10": 0.944848
         },
         "gala_professional_yaounde": {
-          "precision@10": 0.5,
-          "recall@10": 0.833333,
-          "ndcg@10": 0.869549
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         },
         "weekend_kribi": {
-          "precision@10": 0.3,
-          "recall@10": 1.0,
-          "ndcg@10": 0.952991
+          "precision@10": 0.0,
+          "recall@10": 0.0,
+          "ndcg@10": 1.0
         }
       }
     }

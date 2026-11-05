@@ -5,7 +5,7 @@ Rapport genere automatiquement par `scripts/run_benchmark.py`. Les valeurs provi
 - Version du dataset : `dataset-20261105-c8c944d938`
 - Modele : `intfloat/multilingual-e5-small` @ `614241f622f53c4eeff9890bdc4f31cfecc418b3`
 - Date de reference des evenements : `2026-11-05T00:00:00+01:00`
-- Effectifs : 10 profils, 66 evenements candidats, 231 jugements
+- Effectifs : 10 profils, 23 evenements candidats, 231 jugements
 - Seuil de pertinence binaire : `relevance >= 2`
 
 Les profils de test ne participent jamais au reglage des poids. Les annotations ont ete produites par un annotateur unique selon un guide ecrit ; il ne s'agit pas d'une verite terrain objective.
@@ -21,35 +21,35 @@ Les profils de test ne participent jamais au reglage des poids. Les annotations 
 
 | Methode | ndcg@10 | ndcg@5 | recall@10 | precision@10 | mrr@10 | coverage@10 | diversity@10 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Metadata baseline | 0.771 | 0.757 | 0.754 | 0.483 | 1.000 | 0.606 | 0.159 |
-| TF-IDF | 0.882 | 0.921 | 0.904 | 0.550 | 1.000 | 0.636 | 0.156 |
-| E5 semantic | 0.853 | 0.907 | 0.812 | 0.500 | 1.000 | 0.636 | 0.146 |
-| E5 + context | 0.860 | 0.848 | 0.850 | 0.533 | 1.000 | 0.606 | 0.152 |
-| E5 + context + MMR | 0.853 | 0.854 | 0.829 | 0.517 | 1.000 | 0.621 | 0.153 |
+| Metadata baseline | 0.779 | 0.768 | 0.500 | 0.067 | 0.306 | 1.000 | 0.173 |
+| TF-IDF | 0.532 | 0.445 | 0.500 | 0.067 | 0.228 | 0.957 | 0.166 |
+| E5 semantic | 0.744 | 0.681 | 0.500 | 0.067 | 0.271 | 0.870 | 0.161 |
+| E5 + context | 0.849 | 0.807 | 0.500 | 0.067 | 0.306 | 1.000 | 0.172 |
+| E5 + context + MMR | 0.844 | 0.802 | 0.500 | 0.067 | 0.306 | 1.000 | 0.172 |
 
 ## Resultats — Test
 
 | Methode | ndcg@10 | ndcg@5 | recall@10 | precision@10 | mrr@10 | coverage@10 | diversity@10 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Metadata baseline | 0.893 | 0.929 | 0.885 | 0.425 | 1.000 | 0.515 | 0.169 |
-| TF-IDF | 0.902 | 0.960 | 0.875 | 0.450 | 1.000 | 0.515 | 0.170 |
-| E5 semantic | 0.903 | 0.975 | 0.927 | 0.450 | 1.000 | 0.485 | 0.159 |
-| E5 + context | 0.942 | 0.961 | 0.958 | 0.475 | 1.000 | 0.515 | 0.167 |
-| E5 + context + MMR | 0.935 | 0.958 | 0.958 | 0.475 | 1.000 | 0.530 | 0.168 |
+| Metadata baseline | 0.820 | 0.820 | 0.500 | 0.050 | 0.375 | 0.783 | 0.166 |
+| TF-IDF | 0.337 | 0.337 | 0.500 | 0.050 | 0.300 | 0.913 | 0.171 |
+| E5 semantic | 0.557 | 0.458 | 0.500 | 0.050 | 0.375 | 0.739 | 0.160 |
+| E5 + context | 0.975 | 0.952 | 0.500 | 0.050 | 0.500 | 0.826 | 0.166 |
+| E5 + context + MMR | 0.982 | 0.982 | 0.500 | 0.050 | 0.500 | 0.826 | 0.170 |
 
 ## Reglage sur le split de developpement
 
 Objectif : `ndcg@10`. Grille de 108 combinaisons de poids.
 
-- Poids retenus (bruts) : `{'semantic': 0.7, 'category': 0.1, 'location': 0.05, 'budget': 0.05, 'temporal': 0.05}`
-- Poids normalises : `{'semantic': 0.7368421052631579, 'category': 0.10526315789473685, 'location': 0.052631578947368425, 'budget': 0.052631578947368425, 'temporal': 0.052631578947368425}`
+- Poids retenus (bruts) : `{'semantic': 0.5, 'category': 0.1, 'location': 0.1, 'budget': 0.1, 'temporal': 0.0}`
+- Poids normalises : `{'semantic': 0.625, 'category': 0.125, 'location': 0.125, 'budget': 0.125, 'temporal': 0.0}`
 - Lambda MMR retenu : `0.6`
 
 ## Lecture des resultats
 
-- E5 vs TF-IDF (NDCG@10, test) : +0.001 point.
-- Ajout du contexte vs E5 seul (NDCG@10, test) : +0.039 point.
-- MMR vs contexte (NDCG@10, test) : -0.006 point ; diversite intra-liste : +0.001 point.
+- E5 vs TF-IDF (NDCG@10, test) : +0.219 point.
+- Ajout du contexte vs E5 seul (NDCG@10, test) : +0.419 point.
+- MMR vs contexte (NDCG@10, test) : +0.007 point ; diversite intra-liste : +0.004 point.
 
 Avec un petit nombre de profils de test, ces ecarts ont une incertitude elevee et ne doivent pas etre interpretes comme des effets statistiquement etablis.
 

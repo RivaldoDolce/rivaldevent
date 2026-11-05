@@ -368,12 +368,21 @@ def mmr_rerank(
 
 
 def eligible_events(
-    events: Iterable[Event], reference: datetime, *, include_expired: bool = False
+    events: Iterable[Event],
+    reference: datetime,
+    *,
+    include_expired: bool = False,
+    exclude_event_ids: set[str] | None = None,
 ) -> list[Event]:
-    """Filtre les evenements expires avant tout calcul de score."""
+    """Filtre les evenements expires et exclus (ex: seeds) avant tout calcul de score."""
+    exclude = exclude_event_ids or set()
     if include_expired:
-        return list(events)
-    return [event for event in events if not event.is_expired(reference)]
+        return [event for event in events if event.event_id not in exclude]
+    return [
+        event
+        for event in events
+        if not event.is_expired(reference) and event.event_id not in exclude
+    ]
 
 
 def score_candidates(

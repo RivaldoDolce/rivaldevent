@@ -499,8 +499,16 @@ def main() -> int:
     )
 
     reference = datetime.fromisoformat(str(evaluation["reference_date"]))
+    # Collect all seed event IDs across all profiles to exclude from candidate pool
+    # (avoids circularity: profile vector = mean of seed vectors → cos(profile, seed) ≈ 1)
+    all_seed_ids: set[str] = set()
+    for profile in profiles:
+        all_seed_ids.update(profile.seed_event_ids)
     candidates = eligible_events(
-        events, reference, include_expired=not bool(evaluation.get("exclude_expired", True))
+        events,
+        reference,
+        include_expired=not bool(evaluation.get("exclude_expired", True)),
+        exclude_event_ids=all_seed_ids,
     )
     candidate_ids = {event.event_id for event in candidates}
 
