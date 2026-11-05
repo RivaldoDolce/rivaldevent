@@ -27,7 +27,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          clerk_user_id: string;
+          clerk_user_id?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;
@@ -35,7 +35,7 @@ export type Database = {
           is_seller?: boolean;
         };
         Update: {
-          clerk_user_id?: string;
+          clerk_user_id?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
           phone?: string | null;
