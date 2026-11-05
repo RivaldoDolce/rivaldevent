@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "dataset-20261105-c8c944d938",
+  "generatedAt": "2026-11-05T16:19:13Z",
+  "evaluationVersion": "v1",
+  "gitCommit": "d625c887528036df17b306c0c28cffe30281a349",
+  "model": {
+    "id": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "dimension": 384,
+    "normalized": true,
+    "textTemplateVersion": 1
+  },
+  "protocol": {
+    "referenceDate": "2026-11-05T00:00:00+01:00",
+    "relevanceThreshold": 2,
+    "kValues": [
+      5,
+      10
+    ],
+    "diversityK": 10,
+    "splitStrategy": "documented-profile-holdout",
+    "aggregation": "macro-average-per-profile",
+    "expiredEventsExcluded": true,
+    "annotationProtocol": "single-annotator-guided-rubric"
+  },
+  "sampleCounts": {
+    "profiles": 10,
+    "devProfiles": 6,
+    "testProfiles": 4,
+    "events": 66,
+    "catalogEvents": 72,
+    "judgments": 231,
+    "judgedProfileEventPairs": 223,
+    "expiredEvents": 6
+  },
+  "tuning": {
+    "objective": "ndcg@10",
+    "gridSize": 108,
+    "devProfiles": [
+      "music_fan_douala",
+      "tech_enthusiast_yaounde",
+      "culture_lover_douala",
+      "student_buea",
+      "family_bafoussam",
+      "entrepreneur_douala"
+    ],
+    "selectedWeights": {
+      "semantic": 0.7,
+      "category": 0.1,
+      "location": 0.05,
+      "budget": 0.05,
+      "temporal": 0.05
+    },
+    "selectedWeightsNormalized": {
+      "semantic": 0.7368421052631579,
+      "category": 0.10526315789473685,
+      "location": 0.052631578947368425,
+      "budget": 0.052631578947368425,
+      "temporal": 0.052631578947368425
+    },
+    "devScoreAtSelection": 0.860352,
+    "lambdaCandidates": {
+      "0.5": 0.844077,
+      "0.6": 0.853019,
+      "0.7": 0.853019,
+      "0.8": 0.852568,
+      "0.9": 0.852568
+    },
+    "selectedMmrLambda": 0.6,
+    "devScoreAtLambdaSelection": 0.853019
+  },
+  "runtimeConfig": {
+    "weights": {
+      "semantic": 0.7,
+      "category": 0.1,
+      "location": 0.05,
+      "budget": 0.05,
+      "temporal": 0.05
+    },
+    "mmr": {
+      "enabled": true,
+      "lambda": 0.6,
+      "poolSize": 30
+    },
+    "temporal": {
+      "nearDays": 45,
+      "midDays": 120,
+      "nearScore": 1.0,
+      "midScore": 0.6,
+      "farScore": 0.3
+    }
+  },
+  "results": [
+    {
+      "method": "metadata",
+      "label": "Metadata baseline",
+      "split": "dev",
+      "metrics": {
+        "diversity@10": 0.158906,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.771297,
+        "ndcg@5": 0.756512,
+        "precision@10": 0.483333,
+        "precision@5": 0.633333,
+        "recall@10": 0.75377,
+        "recall@5": 0.493254,
+        "coverage@5": 0.393939,
+        "coverage@10": 0.606061
+      },
+      "perProfile": {
+        "music_fan_douala": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.856127
+        },
+        "tech_enthusiast_yaounde": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.962009
+        },
+        "culture_lover_douala": {
+          "precision@10": 0.7,
+          "recall@10": 0.875,
+          "ndcg@10": 0.855916
+        },
+        "student_buea": {
+          "precision@10": 0.2,
+          "recall@10": 0.5,
+          "ndcg@10": 0.448615
+        },
+        "family_bafoussam": {
+          "precision@10": 0.3,
+          "recall@10": 0.6,
+          "ndcg@10": 0.70303
+        },
+        "entrepreneur_douala": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.802088
+        }
+      }
+    },
+    {
+      "method": "tfidf",
+      "label": "TF-IDF",
+      "split": "dev",
+      "metrics": {
+        "diversity@10": 0.156004,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.881517,
+        "ndcg@5": 0.921099,
+        "precision@10": 0.55,
+        "precision@5": 0.866667,
+        "recall@10": 0.90377,
+        "recall@5": 0.706151,
+        "coverage@5": 0.439394,
+        "coverage@10": 0.636364
+      },
+      "perProfile": {
+        "music_fan_douala": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.898761
+        },
+        "tech_enthusiast_yaounde": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.926743
+        },
+        "culture_lover_douala": {
+          "precision@10": 0.7,
+          "recall@10": 0.875,
+          "ndcg@10": 0.912023
+        },
+        "student_buea": {
+          "precision@10": 0.4,
+          "recall@10": 1.0,
+          "ndcg@10": 0.813022
+        },
+        "family_bafoussam": {
+          "precision@10": 0.5,
+          "recall@10": 1.0,
+          "ndcg@10": 0.810621
+        },
+        "entrepreneur_douala": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.927935
+        }
+      }
+    },
+    {
+      "method": "e5",
+      "label": "E5 semantic",
+      "split": "dev",
+      "metrics": {
+        "diversity@10": 0.145885,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.852959,
+        "ndcg@5": 0.907496,
+        "precision@10": 0.5,
+        "precision@5": 0.9,
+        "recall@10": 0.811905,
+        "recall@5": 0.739484,
+        "coverage@5": 0.454545,
+        "coverage@10": 0.636364
+      },
+      "perProfile": {
+        "music_fan_douala": {
+          "precision@10": 0.6,
+          "recall@10": 1.0,
+          "ndcg@10": 0.834646
+        },
+        "tech_enthusiast_yaounde": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.93498
+        },
+        "culture_lover_douala": {
+          "precision@10": 0.6,
+          "recall@10": 0.75,
+          "ndcg@10": 0.868346
+        },
+        "student_buea": {
+          "precision@10": 0.3,
+          "recall@10": 0.75,
+          "ndcg@10": 0.761388
+        },
+        "family_bafoussam": {
+          "precision@10": 0.4,
+          "recall@10": 0.8,
+          "ndcg@10": 0.847085
+        },
+        "entrepreneur_douala": {
+          "precision@10": 0.5,
+          "recall@10": 0.714286,
+          "ndcg@10": 0.87131
+        }
+      }
+    },
+    {
+      "method": "e5_context",
+      "label": "E5 + context",
+      "split": "dev",
+      "metrics": {
+        "diversity@10": 0.152135,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.860352,
+        "ndcg@5": 0.848253,
+        "precision@10": 0.533333,
+        "precision@5": 0.733333,
+        "recall@10": 0.849603,
+        "recall@5": 0.589087,
+        "coverage@5": 0.409091,
+        "coverage@10": 0.606061
+      },
+      "perProfile": {
+        "music_fan_douala": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.906607
+        },
+        "tech_enthusiast_yaounde": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.951294
+        },
+        "culture_lover_douala": {
+          "precision@10": 0.8,
+          "recall@10": 1.0,
+          "ndcg@10": 0.970745
+        },
+        "student_buea": {
+          "precision@10": 0.3,
+          "recall@10": 0.75,
+          "ndcg@10": 0.689661
+        },
+        "family_bafoussam": {
+          "precision@10": 0.4,
+          "recall@10": 0.8,
+          "ndcg@10": 0.826665
+        },
+        "entrepreneur_douala": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.817138
+        }
+      }
+    },
+    {
+      "method": "e5_context_mmr",
+      "label": "E5 + context + MMR",
+      "split": "dev",
+      "metrics": {
+        "diversity@10": 0.153265,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.853019,
+        "ndcg@5": 0.853594,
+        "precision@10": 0.516667,
+        "precision@5": 0.733333,
+        "recall@10": 0.82877,
+        "recall@5": 0.589087,
+        "coverage@5": 0.409091,
+        "coverage@10": 0.621212
+      },
+      "perProfile": {
+        "music_fan_douala": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.906607
+        },
+        "tech_enthusiast_yaounde": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.951294
+        },
+        "culture_lover_douala": {
+          "precision@10": 0.7,
+          "recall@10": 0.875,
+          "ndcg@10": 0.926924
+        },
+        "student_buea": {
+          "precision@10": 0.3,
+          "recall@10": 0.75,
+          "ndcg@10": 0.691903
+        },
+        "family_bafoussam": {
+          "precision@10": 0.4,
+          "recall@10": 0.8,
+          "ndcg@10": 0.825665
+        },
+        "entrepreneur_douala": {
+          "precision@10": 0.6,
+          "recall@10": 0.857143,
+          "ndcg@10": 0.815719
+        }
+      }
+    },
+    {
+      "method": "metadata",
+      "label": "Metadata baseline",
+      "split": "test",
+      "metrics": {
+        "diversity@10": 0.168911,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.89305,
+        "ndcg@5": 0.928561,
+        "precision@10": 0.425,
+        "precision@5": 0.65,
+        "recall@10": 0.885417,
+        "recall@5": 0.697917,
+        "coverage@5": 0.30303,
+        "coverage@10": 0.515152
+      },
+      "perProfile": {
+        "sport_fan_yaounde": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.914524
+        },
+        "english_arts_limbe": {
+          "precision@10": 0.7,
+          "recall@10": 0.875,
+          "ndcg@10": 0.919925
+        },
+        "gala_professional_yaounde": {
+          "precision@10": 0.4,
+          "recall@10": 0.666667,
+          "ndcg@10": 0.804673
+        },
+        "weekend_kribi": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.933078
+        }
+      }
+    },
+    {
+      "method": "tfidf",
+      "label": "TF-IDF",
+      "split": "test",
+      "metrics": {
+        "diversity@10": 0.169565,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.90187,
+        "ndcg@5": 0.959769,
+        "precision@10": 0.45,
+        "precision@5": 0.75,
+        "recall@10": 0.875,
+        "recall@5": 0.78125,
+        "coverage@5": 0.30303,
+        "coverage@10": 0.515152
+      },
+      "perProfile": {
+        "sport_fan_yaounde": {
+          "precision@10": 0.2,
+          "recall@10": 0.666667,
+          "ndcg@10": 0.830708
+        },
+        "english_arts_limbe": {
+          "precision@10": 0.8,
+          "recall@10": 1.0,
+          "ndcg@10": 0.930398
+        },
+        "gala_professional_yaounde": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.909611
+        },
+        "weekend_kribi": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.936763
+        }
+      }
+    },
+    {
+      "method": "e5",
+      "label": "E5 semantic",
+      "split": "test",
+      "metrics": {
+        "diversity@10": 0.158867,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.902739,
+        "ndcg@5": 0.975434,
+        "precision@10": 0.45,
+        "precision@5": 0.8,
+        "recall@10": 0.927083,
+        "recall@5": 0.864583,
+        "coverage@5": 0.272727,
+        "coverage@10": 0.484848
+      },
+      "perProfile": {
+        "sport_fan_yaounde": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.872809
+        },
+        "english_arts_limbe": {
+          "precision@10": 0.7,
+          "recall@10": 0.875,
+          "ndcg@10": 0.931482
+        },
+        "gala_professional_yaounde": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.868537
+        },
+        "weekend_kribi": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.93813
+        }
+      }
+    },
+    {
+      "method": "e5_context",
+      "label": "E5 + context",
+      "split": "test",
+      "metrics": {
+        "diversity@10": 0.166613,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.94163,
+        "ndcg@5": 0.960592,
+        "precision@10": 0.475,
+        "precision@5": 0.7,
+        "recall@10": 0.958333,
+        "recall@5": 0.739583,
+        "coverage@5": 0.287879,
+        "coverage@10": 0.515152
+      },
+      "perProfile": {
+        "sport_fan_yaounde": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.941803
+        },
+        "english_arts_limbe": {
+          "precision@10": 0.8,
+          "recall@10": 1.0,
+          "ndcg@10": 0.978949
+        },
+        "gala_professional_yaounde": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.873754
+        },
+        "weekend_kribi": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.972016
+        }
+      }
+    },
+    {
+      "method": "e5_context_mmr",
+      "label": "E5 + context + MMR",
+      "split": "test",
+      "metrics": {
+        "diversity@10": 0.167729,
+        "mrr@10": 1.0,
+        "ndcg@10": 0.935312,
+        "ndcg@5": 0.95819,
+        "precision@10": 0.475,
+        "precision@5": 0.7,
+        "recall@10": 0.958333,
+        "recall@5": 0.739583,
+        "coverage@5": 0.287879,
+        "coverage@10": 0.530303
+      },
+      "perProfile": {
+        "sport_fan_yaounde": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.93976
+        },
+        "english_arts_limbe": {
+          "precision@10": 0.8,
+          "recall@10": 1.0,
+          "ndcg@10": 0.978949
+        },
+        "gala_professional_yaounde": {
+          "precision@10": 0.5,
+          "recall@10": 0.833333,
+          "ndcg@10": 0.869549
+        },
+        "weekend_kribi": {
+          "precision@10": 0.3,
+          "recall@10": 1.0,
+          "ndcg@10": 0.952991
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Les profils sont des personas fictifs, pas des utilisateurs observes.",
+    "Les jugements de pertinence sont des annotations guidees par une seule personne, pas des clics ou des achats reels.",
+    "Les evenements du catalogue sont des fixtures de demonstration clairement identifiees (is_demo=true), pas des offres verifiees.",
+    "Le catalogue est petit : les ecarts entre methodes ne sont pas statistiquement significatifs.",
+    "Les embeddings E5 sont pre-entraines et ne sont pas fine-tunes sur Rivald'event.",
+    "Le systeme est content-based : il ne demontre ni gain de conversion ni performance en production."
+  ]
+}

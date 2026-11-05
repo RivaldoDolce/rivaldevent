@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "dataset-20261105-c8c944d938",
+  "generatedAt": "2026-11-05T16:19:26Z",
+  "profileCount": 10,
+  "profiles": [
+    {
+      "profileId": "music_fan_douala",
+      "displayName": "Amateur de musique — Douala",
+      "description": "Jeune actif de Douala qui sort le week-end pour des concerts afrobeat, makossa et des festivals de musique.",
+      "city": "Douala",
+      "budgetMin": 5000,
+      "budgetMax": 25000,
+      "preferredCategories": [
+        "music",
+        "festival",
+        "entertainment"
+      ],
+      "seedEventIds": [
+        "evt_001",
+        "evt_003",
+        "evt_010",
+        "evt_017",
+        "evt_002"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "tech_enthusiast_yaounde",
+      "displayName": "Passionne de tech — Yaounde",
+      "description": "Developpeur de Yaounde interesse par l'IA, les hackathons et les meetups techniques, avec un budget limite.",
+      "city": "Yaounde",
+      "budgetMin": 0,
+      "budgetMax": 15000,
+      "preferredCategories": [
+        "technology",
+        "conference",
+        "entrepreneurship"
+      ],
+      "seedEventIds": [
+        "evt_021",
+        "evt_022",
+        "evt_034",
+        "evt_023",
+        "evt_040"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "culture_lover_douala",
+      "displayName": "Amoureux de culture — Douala",
+      "description": "Habitué des expositions, du théâtre et des festivals culturels à Douala, curieux des traditions camerounaises.",
+      "city": "Douala",
+      "budgetMin": 0,
+      "budgetMax": 15000,
+      "preferredCategories": [
+        "culture",
+        "arts",
+        "theatre",
+        "festival"
+      ],
+      "seedEventIds": [
+        "evt_007",
+        "evt_013",
+        "evt_020",
+        "evt_024",
+        "evt_030"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "student_buea",
+      "displayName": "Etudiant — Buea",
+      "description": "Etudiant anglophone de Buea, petit budget, interesse par la tech, les rencontres et les sorties accessibles.",
+      "city": "Buea",
+      "budgetMin": 0,
+      "budgetMax": 5000,
+      "preferredCategories": [
+        "education",
+        "technology",
+        "entertainment"
+      ],
+      "seedEventIds": [
+        "evt_042",
+        "evt_046",
+        "evt_048",
+        "evt_041"
+      ],
+      "language": "en",
+      "isDemo": true
+    },
+    {
+      "profileId": "family_bafoussam",
+      "displayName": "Famille — Bafoussam",
+      "description": "Parent de deux enfants a Bafoussam qui cherche des sorties culturelles et familiales le week-end.",
+      "city": "Bafoussam",
+      "budgetMin": 0,
+      "budgetMax": 15000,
+      "preferredCategories": [
+        "festival",
+        "culture",
+        "arts",
+        "sport"
+      ],
+      "seedEventIds": [
+        "evt_055",
+        "evt_056",
+        "evt_062",
+        "evt_037"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "entrepreneur_douala",
+      "displayName": "Entrepreneur — Douala",
+      "description": "Fondateur d'une PME a Douala qui cherche du financement, du reseau et des formations business.",
+      "city": "Douala",
+      "budgetMin": 10000,
+      "budgetMax": 50000,
+      "preferredCategories": [
+        "entrepreneurship",
+        "conference",
+        "technology"
+      ],
+      "seedEventIds": [
+        "evt_009",
+        "evt_012",
+        "evt_019",
+        "evt_004",
+        "evt_027"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "sport_fan_yaounde",
+      "displayName": "Supporter de sport — Yaounde",
+      "description": "Passionne de football et de course a pied a Yaounde, qui suit aussi les competitions regionales.",
+      "city": "Yaounde",
+      "budgetMin": 2000,
+      "budgetMax": 25000,
+      "preferredCategories": [
+        "sport",
+        "entertainment"
+      ],
+      "seedEventIds": [
+        "evt_029",
+        "evt_036",
+        "evt_014",
+        "evt_045"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "english_arts_limbe",
+      "displayName": "Anglophone arts — Limbe",
+      "description": "Resident anglophone de Limbe interesse par la photographie, les festivals et les activites en plein air.",
+      "city": "Limbe",
+      "budgetMin": 0,
+      "budgetMax": 15000,
+      "preferredCategories": [
+        "arts",
+        "festival",
+        "music",
+        "education"
+      ],
+      "seedEventIds": [
+        "evt_049",
+        "evt_051",
+        "evt_052",
+        "evt_064",
+        "evt_047"
+      ],
+      "language": "en",
+      "isDemo": true
+    },
+    {
+      "profileId": "gala_professional_yaounde",
+      "displayName": "Cadre — Yaounde",
+      "description": "Cadre d'entreprise a Yaounde qui frequente les galas, les concerts premium et les conferences professionnelles.",
+      "city": "Yaounde",
+      "budgetMin": 50000,
+      "budgetMax": 150000,
+      "preferredCategories": [
+        "gala",
+        "culture",
+        "conference"
+      ],
+      "seedEventIds": [
+        "evt_032",
+        "evt_019",
+        "evt_023",
+        "evt_024",
+        "evt_039"
+      ],
+      "language": "fr",
+      "isDemo": true
+    },
+    {
+      "profileId": "weekend_kribi",
+      "displayName": "Week-end a Kribi",
+      "description": "Jeune professionnel qui planifie des week-ends a Kribi autour de la plage, de la musique et du bien-etre.",
+      "city": "Kribi",
+      "budgetMin": 5000,
+      "budgetMax": 40000,
+      "preferredCategories": [
+        "festival",
+        "entertainment",
+        "education",
+        "music"
+      ],
+      "seedEventIds": [
+        "evt_059",
+        "evt_060",
+        "evt_061",
+        "evt_054"
+      ],
+      "language": "fr",
+      "isDemo": true
+    }
+  ]
+}
