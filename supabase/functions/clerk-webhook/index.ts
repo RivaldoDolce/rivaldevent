@@ -40,8 +40,7 @@ Deno.serve(async (req) => {
   const email = data.email_addresses?.[0]?.email_address ?? null;
   const fullName = ([data.first_name, data.last_name].filter(Boolean).join(' ') || (email ? email.split('@')[0] : null)) ?? null;
   const avatar = data.image_url ?? null;
-  const phone = (data.unsafe_metadata?.phone as string | undefined) ?? data.phone_numbers?.[0]?.phone_number ?? null;
-  const isSeller = (data.unsafe_metadata?.is_seller as boolean | undefined) ?? false;
+  const phone = data.phone_numbers?.[0]?.phone_number ?? null;
 
   try {
     if (type === 'user.created') {
@@ -51,7 +50,7 @@ Deno.serve(async (req) => {
           full_name: fullName,
           avatar_url: avatar,
           phone: phone ? phone.replace('+237', '') : null,
-          is_seller: isSeller,
+          is_seller: false,
           role: 'client',
         },
         { onConflict: 'clerk_user_id' }
@@ -64,7 +63,6 @@ Deno.serve(async (req) => {
           full_name: fullName,
           avatar_url: avatar,
           phone: phone ? phone.replace('+237', '') : null,
-          is_seller: isSeller,
         })
         .eq('clerk_user_id', clerkId);
       if (error) throw error;
