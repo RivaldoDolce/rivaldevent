@@ -53,6 +53,46 @@ Objectif : `ndcg@10`. Grille de 108 combinaisons de poids.
 
 Avec un petit nombre de profils de test, ces ecarts ont une incertitude elevee et ne doivent pas etre interpretes comme des effets statistiquement etablis.
 
+## Analyse statistique (Bootstrap CI 95% + Test de permutation)
+
+Intervalle de confiance percentile (10 000 itérations) par méthode sur le split test. Test de permutation appariée (10 000 permutations) comparant E5+context+MMR vs E5+context.
+
+### NDCG@10
+
+| Méthode | Moyenne [IC 95%] |
+|---|---|
+| Metadata baseline | 0.820 [0.680, 0.955] |
+| TF-IDF | 0.337 [0.000, 0.675] |
+| E5 semantic | 0.557 [0.367, 0.827] |
+| E5 + context | 0.975 [0.939, 1.000] |
+| E5 + context + MMR | 0.982 [0.959, 1.000] |
+
+**Test de permutation (E5+context+MMR vs E5+context)** : différence moyenne = +0.007, p = 1.0000 (non significatif à α=0.05, 10000 permutations, alternative=two-sided).
+
+### RECALL@10
+
+| Méthode | Moyenne [IC 95%] |
+|---|---|
+| Metadata baseline | 0.500 [0.000, 1.000] |
+| TF-IDF | 0.500 [0.000, 1.000] |
+| E5 semantic | 0.500 [0.000, 1.000] |
+| E5 + context | 0.500 [0.000, 1.000] |
+| E5 + context + MMR | 0.500 [0.000, 1.000] |
+
+**Test de permutation (E5+context+MMR vs E5+context)** : différence moyenne = +0.000, p = 1.0000 (non significatif à α=0.05, 10000 permutations, alternative=two-sided).
+
+### MRR@10
+
+| Méthode | Moyenne [IC 95%] |
+|---|---|
+| Metadata baseline | 0.375 [0.000, 0.750] |
+| TF-IDF | 0.300 [0.000, 0.750] |
+| E5 semantic | 0.375 [0.000, 0.750] |
+| E5 + context | 0.500 [0.000, 1.000] |
+| E5 + context + MMR | 0.500 [0.000, 1.000] |
+
+**Test de permutation (E5+context+MMR vs E5+context)** : différence moyenne = +0.000, p = 1.0000 (non significatif à α=0.05, 10000 permutations, alternative=two-sided).
+
 ## Limites
 
 - Les profils sont des personas fictifs, pas des utilisateurs observes.

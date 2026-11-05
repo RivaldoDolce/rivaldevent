@@ -51,6 +51,12 @@ from rivaldevent_ml.recommenders import (
     rank_scores,
     semantic_scores,
 )
+from rivaldevent_ml.statistics import (
+    bootstrap_ci,
+    bootstrap_ci_per_profile,
+    format_ci_for_md,
+    paired_permutation_test,
+)
 
 METHODS: dict[str, str] = {
     "metadata": "Metadata baseline",
@@ -467,6 +473,50 @@ def build_report(
     )
     lines.append("")
 
+    # --- Statistiques ---
+    stats = benchmark.get("statistics", {})
+    if stats:
+        lines.append("## Analyse statistique (Bootstrap CI 95% + Test de permutation)")
+        lines.append("")
+        lines.append(
+            "Intervalle de confiance percentile (10 000 itérations) par méthode sur le split test. "
+            "Test de permutation appariée (10 000 permutations) comparant E5+context+MMR vs E5+context."
+        )
+        lines.append("")
+
+        for metric_name in ["ndcg@10", "recall@10", "mrr@10"]:
+            stat = stats.get(metric_name)
+            if not stat:
+                continue
+            lines.append(f"### {metric_name.upper()}")
+            lines.append("")
+
+            # Tableau Bootstrap CI
+            lines.append("| Méthode | Moyenne [IC 95%] |")
+            lines.append("|---|---|")
+            for ci in stat.get("bootstrapCI", []):
+                method = ci["method"]
+                mean = ci["mean"]
+                ci_lower = ci["ci_lower"]
+                ci_upper = ci["ci_upper"]
+                lines.append(f"| {method} | {mean:.3f} [{ci_lower:.3f}, {ci_upper:.3f}] |")
+            lines.append("")
+
+            # Test de permutation
+            perm = stat.get("permutationTest")
+            if perm:
+                p_val = perm["p_value"]
+                stat_val = perm["statistic"]
+                lines.append(
+                    f"**Test de permutation (E5+context+MMR vs E5+context)** : "
+                    f"différence moyenne = {stat_val:+.3f}, p = {p_val:.4f} "
+                    f"({'significatif' if p_val < 0.05 else 'non significatif'} à α=0.05, "
+                    f"{perm['n_permutations']} permutations, alternative={perm['alternative']})."
+                )
+            else:
+                lines.append("*Test de permutation non disponible pour cette métrique.*")
+            lines.append("")
+
     lines.append("## Limites")
     lines.append("")
     for limitation in benchmark.get("limitations", []):
@@ -604,12 +654,59 @@ def main() -> int:
                         profile_id: {
                             key: round(value, 6)
                             for key, value in metrics.items()
-                            if key in {"ndcg@10", "recall@10", "precision@10"}
+                            if key in {"ndcg@10", "recall@10", "precision@10", "mrr@10"}
                         }
                         for profile_id, metrics in per_profile.items()
                     },
                 }
             )
+
+    # --- Statistiques : Bootstrap CI et test de permutation ---
+    # Collecter les métriques par profil pour chaque méthode (split test uniquement)
+    test_results = [r for r in results if r["split"] == "test"]
+    method_labels = [r["label"] for r in test_results]
+
+    # Construire matrice [profils x méthodes] pour NDCG@10, Recall@10, MRR@10
+    metrics_for_stats = ["ndcg@10", "recall@10", "mrr@10"]
+    statistics_results: dict[str, dict] = {}
+
+    for metric_name in metrics_for_stats:
+        # Matrice : lignes = profils test, colonnes = méthodes
+        per_profile_matrix = []
+        for profile_id in test_ids:
+            row = []
+            for r in test_results:
+                row.append(r["perProfile"][profile_id][metric_name])
+            per_profile_matrix.append(row)
+
+        # Bootstrap CI 95% par méthode
+        ci_results = bootstrap_ci_per_profile(
+            per_profile_matrix, n_iterations=10_000, random_state=42
+        )
+
+        statistics_results[metric_name] = {
+            "bootstrapCI": [
+                {
+                    "method": method_labels[i],
+                    **ci_results[i].as_dict(),
+                }
+                for i in range(len(method_labels))
+            ],
+            "permutationTest": None,
+        }
+
+        # Test de permutation appariée : E5+context+MMR vs E5+context
+        if "E5 + context + MMR" in method_labels and "E5 + context" in method_labels:
+            idx_mmr = method_labels.index("E5 + context + MMR")
+            idx_ctx = method_labels.index("E5 + context")
+            values_mmr = [row[idx_mmr] for row in per_profile_matrix]
+            values_ctx = [row[idx_ctx] for row in per_profile_matrix]
+            perm = paired_permutation_test(
+                values_mmr, values_ctx, n_permutations=10_000, random_state=42
+            )
+            statistics_results[metric_name]["permutationTest"] = perm.as_dict()
+
+    # --- Fin statistiques ---
 
     benchmark = {
         "schemaVersion": 1,
@@ -661,6 +758,7 @@ def main() -> int:
             },
         },
         "results": results,
+        "statistics": statistics_results,
         "limitations": [
             "Les profils sont des personas fictifs, pas des utilisateurs observes.",
             "Les jugements de pertinence sont des annotations guidees par une seule personne, pas des clics ou des achats reels.",

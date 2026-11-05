@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "datasetVersion": "dataset-20261105-c8c944d938",
-  "generatedAt": "2026-11-05T18:14:57Z",
+  "generatedAt": "2026-11-05T18:38:45Z",
   "model": "intfloat/multilingual-e5-small",
   "modelRevision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
   "dimension": 384,
