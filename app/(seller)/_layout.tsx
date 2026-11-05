@@ -20,9 +20,11 @@
  *   - Icones passees comme composants (pas comme ReactNode)
  */
 
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 import { colors } from '@/lib/constants';
+import { useAuth } from '@/hooks/useAuth';
 import {
   HomeIcon,
   ExploreIcon,
@@ -64,6 +66,20 @@ const HIDDEN_TAB_ROUTES = [
 ] as const;
 
 export default function SellerLayout() {
+  const { profile, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (profile && profile.is_seller !== true) {
+      router.replace('/(client)/home');
+    }
+  }, [isLoading, profile, router]);
+
+  if (!isLoading && profile && profile.is_seller !== true) {
+    return null;
+  }
+
   return (
     <>
       <OfflineBanner />
