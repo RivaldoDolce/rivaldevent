@@ -9,22 +9,22 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-native.jpg",
-      "resizeMode": "cover",
-      "backgroundColor": "#0A0908"
+      "image": "./assets/images/app-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rivaldevent.app",
-      "backgroundColor": "#0A0908"
+      "backgroundColor": "#FFFFFF"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-icon.png",
-        "backgroundColor": "#0A0908"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.rivaldevent.app",
-      "backgroundColor": "#0A0908"
+      "backgroundColor": "#FFFFFF"
     },
     "web": {
       "bundler": "metro",
@@ -35,9 +35,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-native.jpg",
-          "resizeMode": "cover",
-          "backgroundColor": "#0A0908"
+          "image": "./assets/images/app-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "imageWidth": 200,
+          "dark": {
+            "image": "./assets/images/app-icon.png",
+            "backgroundColor": "#FFFFFF"
+          }
         }
       ],
       "expo-router",

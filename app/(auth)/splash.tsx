@@ -2,20 +2,23 @@
  * Ecran de demarrage - Rivald'event.
  *
  * Design « Noir & Or » premium :
- * - Degrade noir profond (gradients.noir)
- * - Halos dores animés (pulsation Animated natif)
+ * - Fond bg_splash (73 Ko) + voile noir pour la lisibilite
+ * - Halos dores animes (pulsation Animated natif)
  * - Medaillon or (Logo lg) avec pulsation + anneau de chargement rotatif dore
- * - Titre "Rivald'event" en Playfair Display 40px
+ * - Titre "Rivald'event" en Playfair Display (taille auto-ajustee, jamais tronque)
  * - Slogan en overline doree, filet gold hairline
  * - Apparition en fade + translateY
  *
- * Logique session (inchangée) :
- * - Etat auth Clerk (useAuth : isLoaded / isSignedIn)
- * - Si session active : home (mode depuis unsafeMetadata)
- * - Si pas de session : onboarding
+ * Performance (session + animation EN PARALLELE) :
+ * - Duree visuelle fixe ~1000 ms, jamais d'attente en serie.
+ * - La session Supabase (+ Apple via Clerk en fallback) est lue en
+ *   arriere-plan ; on navigue des que les DEUX sont prets
+ *   (animation minimale + session connue).
+ * - Garde-fou a 4000 ms : on sort du splash meme si la session est
+ *   injoignable (les donnees secondaires chargent sur l'ecran d'arrivee).
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -30,8 +33,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAppMode, type AppMode } from '@/stores/app-mode';
 
-const ANIMATION_DURATION = 2000;
-const SESSION_TIMEOUT = 10000;
+const MIN_SPLASH_MS = 1000;
+const MAX_SPLASH_MS = 4000;
 
 // ============================================================
 // Composant
@@ -45,6 +48,11 @@ export default function SplashScreen() {
   const [redirected, setRedirected] = useState(false);
   const [waitingNote, setWaitingNote] = useState(false);
 
+  const startRef = useRef(Date.now());
+  const redirectedRef = useRef(false);
+  const authRef = useRef({ isAuthenticated, isLoading });
+  authRef.current = { isAuthenticated, isLoading };
+
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
   const logoPulse = useRef(new Animated.Value(0)).current;
@@ -54,6 +62,10 @@ export default function SplashScreen() {
   const baselineOpacity = useRef(new Animated.Value(0)).current;
   const haloPulse = useRef(new Animated.Value(0)).current;
   const ringSpin = useRef(new Animated.Value(0)).current;
+
+  // Echelle de pulsation derivee : le medaillon respire entre 1 et 1.07
+  // (jamais 0 — un scale brut 0..1 rendrait le logo invisible).
+  const logoPulseScale = logoPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
 
   // Boucles décoratives : pulsation du medaillon, halos et rotation de l'anneau
   useEffect(() => {
@@ -109,14 +121,13 @@ export default function SplashScreen() {
     };
   }, [logoPulse, haloPulse, ringSpin]);
 
+  // Animation d'entree — joue UNE SEULE FOIS au montage (~900 ms).
+  // Independante de la session : pas de redemarrage quand l'auth se charge.
   useEffect(() => {
-    let cancelled = false;
-
-    // 1. Animation
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.spring(logoScale, {
@@ -126,79 +137,75 @@ export default function SplashScreen() {
         useNativeDriver: true,
       }),
       Animated.sequence([
-        Animated.delay(300),
+        Animated.delay(250),
         Animated.parallel([
           Animated.timing(titleOpacity, {
             toValue: 1,
-            duration: 500,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(titleTranslateY, {
             toValue: 0,
-            duration: 500,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
-        Animated.delay(200),
+        Animated.delay(150),
         Animated.timing(subtitleOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 350,
           useNativeDriver: true,
         }),
-        Animated.delay(200),
+        Animated.delay(150),
         Animated.timing(baselineOpacity, {
           toValue: 1,
-          duration: 300,
+          duration: 250,
           useNativeDriver: true,
         }),
       ]),
     ]).start();
+  }, [logoOpacity, logoScale, titleOpacity, titleTranslateY, subtitleOpacity, baselineOpacity]);
 
-    // 2. Naviguer apres l'animation (une seule fois)
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-
-      if (!isLoading) {
-        if (cancelled) return;
-        setRedirected(true);
-        logger.debug(`[Splash] session ${isAuthenticated ? 'valide' : 'absente'}`);
-        if (isAuthenticated) {
-          router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
-        } else {
-          router.replace('/(auth)/onboarding');
-        }
-      }
-    }, ANIMATION_DURATION);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [router, isAuthenticated, isLoading, mode, baselineOpacity, logoOpacity, logoScale, subtitleOpacity, titleOpacity, titleTranslateY]);
-
-  // Session Clerk qui ne se charge pas (hors ligne, serveur injoignable) :
-  // on informe l'utilisateur, puis on force la sortie plutot que d'attendre.
-  useEffect(() => {
-    if (!isLoading) return;
-    let cancelled = false;
-
-    const noteTimer = setTimeout(() => {
-      if (!cancelled) setWaitingNote(true);
-    }, ANIMATION_DURATION);
-
-    const forceTimer = setTimeout(() => {
-      if (cancelled) return;
-      logger.debug('[Splash] délai dépassé, session Clerk indisponible');
+  const navigate = useCallback(
+    (authenticated: boolean) => {
+      if (redirectedRef.current) return;
+      redirectedRef.current = true;
       setRedirected(true);
-      router.replace(isAuthenticated ? (mode === 'seller' ? '/(seller)/home' : '/(client)/home') : '/(auth)/onboarding');
-    }, ANIMATION_DURATION + SESSION_TIMEOUT);
+      logger.debug(`[Splash] session ${authenticated ? 'valide' : 'absente'}`);
+      if (authenticated) {
+        router.replace(mode === 'seller' ? '/(seller)/home' : '/(client)/home');
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    },
+    [router, mode],
+  );
 
+  // Session + animation en parallele : on navigue des que la session est
+  // connue ET que la duree visuelle minimale est ecoulee.
+  useEffect(() => {
+    if (redirectedRef.current || isLoading) return;
+    const elapsed = Date.now() - startRef.current;
+    const wait = Math.max(0, MIN_SPLASH_MS - elapsed);
+    const timer = setTimeout(() => navigate(isAuthenticated), wait);
+    return () => clearTimeout(timer);
+  }, [isLoading, isAuthenticated, navigate]);
+
+  // Garde-fou : note d'attente puis sortie forcee, jamais de splash infini.
+  useEffect(() => {
+    const noteTimer = setTimeout(() => {
+      if (!redirectedRef.current && authRef.current.isLoading) setWaitingNote(true);
+    }, MIN_SPLASH_MS);
+    const forceTimer = setTimeout(() => {
+      if (redirectedRef.current) return;
+      logger.debug('[Splash] délai dépassé, session indisponible');
+      navigate(authRef.current.isAuthenticated);
+    }, MAX_SPLASH_MS);
     return () => {
-      cancelled = true;
       clearTimeout(noteTimer);
       clearTimeout(forceTimer);
     };
-  }, [isLoading, isAuthenticated, mode, router]);
+  }, [navigate]);
 
   if (redirected) {
     // La navigation est en cours : on garde le splash affiche jusqu'au
@@ -207,7 +214,7 @@ export default function SplashScreen() {
 
   const logoAnimatedStyle = {
     opacity: logoOpacity,
-    transform: [{ scale: logoScale }, { scale: logoPulse }],
+    transform: [{ scale: logoScale }, { scale: logoPulseScale }],
   };
 
   const titleAnimatedStyle = {
@@ -226,6 +233,8 @@ export default function SplashScreen() {
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
         cachePolicy="memory-disk"
+        priority="high"
+        transition={150}
       />
       <LinearGradient
         colors={['rgba(10,9,8,0.42)', 'rgba(10,9,8,0.82)']}
@@ -253,16 +262,32 @@ export default function SplashScreen() {
         </View>
       </Animated.View>
 
-      {/* Titre */}
-      <Animated.View style={titleAnimatedStyle}>
+      {/* Titre — taille auto-ajustee sur une ligne, jamais tronque */}
+      <Animated.View style={[styles.titleWrap, titleAnimatedStyle]}>
         <View style={styles.hairline} />
-        <Text style={styles.title}>Rivald&apos;event</Text>
+        <Text
+          style={styles.title}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          maxFontSizeMultiplier={1.2}
+        >
+          Rivald&apos;event
+        </Text>
         <View style={styles.hairline} />
       </Animated.View>
 
       {/* Slogan overline */}
       <Animated.View style={[styles.overlineWrapper, { opacity: subtitleOpacity }]}>
-        <Text style={styles.overline}>Vivez. Reservez. Celebrez.</Text>
+        <Text
+          style={styles.overline}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          maxFontSizeMultiplier={1.2}
+        >
+          Vivez. Reservez. Celebrez.
+        </Text>
       </Animated.View>
 
       {/* Baseline */}
@@ -365,14 +390,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldMuted,
     alignSelf: 'center',
   },
+  titleWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
   title: {
     ...typography.display,
+    fontSize: 36,
     color: colors.text,
     textAlign: 'center',
+    width: '100%',
     paddingVertical: spacing.md,
   },
   overlineWrapper: {
     marginTop: spacing.sm,
+    width: '100%',
+    alignItems: 'center',
   },
   overline: {
     ...typography.overline,

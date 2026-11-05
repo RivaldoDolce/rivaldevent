@@ -2,7 +2,7 @@
  * Layout racine de l'application.
  *
  * Initialise tous les providers globaux :
- * - ClerkProvider (auth : email/password, OTP, Google OAuth)
+ * - ClerkProvider (auth Apple uniquement — email/Google/OTP = Supabase)
  * - QueryClientProvider (TanStack Query)
  * - SafeAreaProvider (insets)
  * - StatusBar (style light, fond noir)
@@ -16,7 +16,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { preventAutoHideAsync, hideAsync } from 'expo-splash-screen';
+import { preventAutoHideAsync, hideAsync, setOptions as setSplashOptions } from 'expo-splash-screen';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -29,7 +29,7 @@ import { queryClient, initQueryClientPersistence } from '@/lib/query-client';
 import { logger } from '@/lib/logger';
 import { colors } from '@/lib/constants';
 import { RouteTransitionLoader, RouteTransitionProvider } from '@/components/ui/RouteTransitionLoader';
-import { clientBackgrounds, authBackgrounds } from '@/lib/images';
+import { authBackgrounds, images } from '@/lib/images';
 
 // ============================================================
 // Configuration & Initialisation
@@ -37,16 +37,16 @@ import { clientBackgrounds, authBackgrounds } from '@/lib/images';
 
 const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
-if (!clerkPublishableKey) {
-  throw new Error('EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY est manquant (voir .env)');
-}
-
 LogBox.ignoreLogs(['[Layout children]', 'Unable to resolve manifest assets']);
 
 // Empêche le splash screen de se cacher automatiquement
 preventAutoHideAsync().catch(() => {
   /* Silent fail */
 });
+
+// Transition courte blanc -> splash RN (le natif est minimal : fond
+// blanc + icone centree, conforme Android 12+).
+setSplashOptions({ duration: 250, fade: true });
 
 // ============================================================
 // Composant Racine
@@ -80,38 +80,48 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    Asset.loadAsync([...Object.values(authBackgrounds), ...Object.values(clientBackgrounds)]).catch(() => {});
+    // Precharge UNIQUEMENT le fond du splash RN + le logo : le natif
+    // est deja masque, le RN doit s'afficher sans trou noir. Les autres
+    // fonds (login, home, vendeur...) sont charges a la demande par
+    // expo-image (cache memory-disk), pas au demarrage.
+    Asset.loadAsync([authBackgrounds.splash, images.logo]).catch(() => {});
   }, []);
 
   void fontsLoaded;
 
+  const root = (
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <RouteTransitionProvider>
+          <StatusBar style="light" backgroundColor={colors.background} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background },
+              animation: 'slide_from_right',
+              animationDuration: 250,
+              gestureEnabled: true,
+            }}
+          >
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="oauth-callback" />
+            <Stack.Screen name="(client)" />
+            <Stack.Screen name="(seller)" />
+            <Stack.Screen name="(shared)" options={{ headerShown: false, animation: 'slide_from_right' }} />
+            <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
+          </Stack>
+          <RouteTransitionLoader />
+        </RouteTransitionProvider>
+      </SafeAreaProvider>
+    </QueryClientProvider>
+  );
+
+  if (!clerkPublishableKey) return root;
+
   return (
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <RouteTransitionProvider>
-            <StatusBar style="light" backgroundColor={colors.background} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-                animation: 'slide_from_right',
-                animationDuration: 250,
-                gestureEnabled: true,
-              }}
-            >
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="oauth-callback" />
-              <Stack.Screen name="(client)" />
-              <Stack.Screen name="(seller)" />
-              <Stack.Screen name="(shared)" options={{ headerShown: false, animation: 'slide_from_right' }} />
-              <Stack.Screen name="(purchase)" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="(modal)" options={{ presentation: 'modal' }} />
-            </Stack>
-            <RouteTransitionLoader />
-          </RouteTransitionProvider>
-        </SafeAreaProvider>
-      </QueryClientProvider>
+      {root}
     </ClerkProvider>
   );
 }
