@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth as useClerkAuth, useUser } from '@clerk/expo';
+import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/expo';
+import type { User } from '@supabase/supabase-js';
 
 import { supabase, setSupabaseClerkToken } from '@/lib/supabase';
 import { useAppMode } from '@/stores/app-mode';
@@ -22,22 +23,51 @@ interface UseAuthReturn {
   readonly profile: Profile | null;
   readonly isLoading: boolean;
   readonly isAuthenticated: boolean;
+  readonly authSource: 'supabase' | 'clerk-apple' | null;
   readonly refreshProfile: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
-  const { isLoaded, isSignedIn, userId, getToken } = useClerkAuth();
-  const { user } = useUser();
+  const { isLoaded: clerkLoaded, isSignedIn: clerkSignedIn, userId: clerkUserId, getToken } = useClerkAuth();
+  const { user: clerkUser } = useClerkUser();
   const initializeFromProfile = useAppMode((s) => s.initializeFromProfile);
+
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
+  const [supabaseReady, setSupabaseReady] = useState(false);
   const [dbProfile, setDbProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const isAuthenticated = useMemo(() => isLoaded && isSignedIn && !!userId && !!user, [isLoaded, isSignedIn, userId, user]);
+  useEffect(() => {
+    let active = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (active) setSupabaseUser(data.session?.user ?? null);
+      })
+      .finally(() => {
+        if (active) setSupabaseReady(true);
+      });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) {
+        setSupabaseUser(session?.user ?? null);
+        setSupabaseReady(true);
+      }
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const useClerkApple = useMemo(
+    () => !supabaseUser && !!clerkLoaded && !!clerkSignedIn && !!clerkUserId && !!clerkUser,
+    [supabaseUser, clerkLoaded, clerkSignedIn, clerkUserId, clerkUser]
+  );
 
   useEffect(() => {
     let active = true;
-    async function syncToken() {
-      if (!isAuthenticated || !getToken) {
+    async function syncAppleToken() {
+      if (!useClerkApple || !getToken) {
         setSupabaseClerkToken(null);
         return;
       }
@@ -45,61 +75,113 @@ export function useAuth(): UseAuthReturn {
         const token = await getToken({ template: 'supabase' });
         if (active) setSupabaseClerkToken(token);
       } catch {
-        setSupabaseClerkToken(null);
+        if (active) setSupabaseClerkToken(null);
       }
     }
-    syncToken();
+    syncAppleToken();
     return () => {
       active = false;
     };
-  }, [isAuthenticated, getToken, userId]);
+  }, [useClerkApple, getToken, clerkUserId]);
 
-  const session: CompatSession | null = useMemo(
-    () =>
-      isAuthenticated
-        ? {
-            user: {
-              id: user!.id,
-              email: user!.primaryEmailAddress?.emailAddress ?? null,
-              user_metadata: { full_name: user!.fullName },
-            },
-          }
-        : null,
-    [isAuthenticated, user]
+  const isAuthenticated = useMemo(
+    () => !!supabaseUser || useClerkApple,
+    [supabaseUser, useClerkApple]
   );
 
+  const authSource: 'supabase' | 'clerk-apple' | null = supabaseUser
+    ? 'supabase'
+    : useClerkApple
+      ? 'clerk-apple'
+      : null;
+
+  const session: CompatSession | null = useMemo(() => {
+    if (supabaseUser) {
+      const meta = supabaseUser.user_metadata as { full_name?: string | null; fullName?: string | null } | undefined;
+      return {
+        user: {
+          id: supabaseUser.id,
+          email: supabaseUser.email ?? null,
+          user_metadata: { full_name: meta?.full_name ?? meta?.fullName ?? null },
+        },
+      };
+    }
+    if (useClerkApple && clerkUser) {
+      return {
+        user: {
+          id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+          user_metadata: { full_name: clerkUser.fullName },
+        },
+      };
+    }
+    return null;
+  }, [supabaseUser, useClerkApple, clerkUser]);
+
   const fallbackProfile: Profile | null = useMemo(() => {
-    if (!isAuthenticated || !user) return null;
-    const now = new Date().toISOString();
-    return {
-      id: user.id,
-      clerk_user_id: user.id,
-      full_name: user.fullName,
-      avatar_url: user.imageUrl,
-      phone: (user.unsafeMetadata?.phone as string | undefined) ?? null,
-      role: 'client',
-      is_seller: (user.unsafeMetadata?.is_seller as boolean | undefined) ?? false,
-      created_at: user.createdAt?.toISOString() ?? now,
-      updated_at: now,
-    };
-  }, [isAuthenticated, user]);
+    if (supabaseUser) {
+      const meta = supabaseUser.user_metadata as {
+        full_name?: string | null;
+        phone?: string | null;
+        is_seller?: boolean | null;
+      } | undefined;
+      const now = new Date().toISOString();
+      return {
+        id: supabaseUser.id,
+        clerk_user_id: null,
+        full_name: meta?.full_name ?? null,
+        avatar_url: (supabaseUser.user_metadata as { avatar_url?: string } | undefined)?.avatar_url ?? null,
+        phone: meta?.phone ?? null,
+        role: 'client',
+        is_seller: meta?.is_seller ?? false,
+        created_at: supabaseUser.created_at ?? now,
+        updated_at: now,
+      };
+    }
+    if (useClerkApple && clerkUser) {
+      const now = new Date().toISOString();
+      return {
+        id: clerkUser.id,
+        clerk_user_id: clerkUser.id,
+        full_name: clerkUser.fullName,
+        avatar_url: clerkUser.imageUrl,
+        phone: (clerkUser.unsafeMetadata?.phone as string | undefined) ?? null,
+        role: 'client',
+        is_seller: (clerkUser.unsafeMetadata?.is_seller as boolean | undefined) ?? false,
+        created_at: clerkUser.createdAt?.toISOString() ?? now,
+        updated_at: now,
+      };
+    }
+    return null;
+  }, [supabaseUser, useClerkApple, clerkUser]);
 
   const profile = dbProfile ?? fallbackProfile;
 
   const fetchProfile = useCallback(async () => {
-    if (!user) {
-      setDbProfile(null);
+    if (supabaseUser) {
+      setProfileLoading(true);
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle();
+        if (data) setDbProfile(data as Profile);
+        else setDbProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
       return;
     }
-    setProfileLoading(true);
-    try {
-      const { data } = await supabase.from('profiles').select('*').eq('clerk_user_id', user.id).maybeSingle();
-      if (data) setDbProfile(data as Profile);
-      else setDbProfile(null);
-    } finally {
-      setProfileLoading(false);
+    if (useClerkApple && clerkUser) {
+      setProfileLoading(true);
+      try {
+        const { data } = await supabase.from('profiles').select('*').eq('clerk_user_id', clerkUser.id).maybeSingle();
+        if (data) setDbProfile(data as Profile);
+        else setDbProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
+      return;
     }
-  }, [user]);
+    setDbProfile(null);
+  }, [supabaseUser, useClerkApple, clerkUser]);
 
   useEffect(() => {
     if (isAuthenticated) fetchProfile();
@@ -112,20 +194,23 @@ export function useAuth(): UseAuthReturn {
 
   const refreshProfile = useCallback(async () => {
     try {
-      await user?.reload();
+      await clerkUser?.reload?.();
     } catch {}
     await fetchProfile();
-  }, [user, fetchProfile]);
+  }, [clerkUser, fetchProfile]);
+
+  const isLoading = !supabaseReady || (isAuthenticated && profileLoading && !dbProfile && !fallbackProfile);
 
   return useMemo(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
-      isLoading: !isLoaded || (isAuthenticated && profileLoading && !dbProfile && !fallbackProfile),
+      isLoading,
       isAuthenticated,
+      authSource,
       refreshProfile,
     }),
-    [session, profile, isLoaded, isAuthenticated, refreshProfile, profileLoading, dbProfile, fallbackProfile]
+    [session, profile, isLoading, isAuthenticated, authSource, refreshProfile]
   );
 }
