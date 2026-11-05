@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "app/recommendation-demo.tsx",
+    "components/recommendations/**/*.tsx",
+    "hooks/useRecommendationDemo.ts",
+    "services/recommendations/**/*.ts",
+    "data/recommendations/**/*.ts",
+    "types/recommendations.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase",
+    "services/recommendations/__tests__"
+  ]
+}
