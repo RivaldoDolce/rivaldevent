@@ -33,6 +33,9 @@
     "node_modules",
     "babel.config.js",
     "metro.config.js",
-    "tailwind.config.js"
+    "tailwind.config.js",
+    "supabase/functions",
+    "dist-web",
+    "app/(client)/explore"
   ]
 }
