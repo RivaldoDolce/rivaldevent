@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { StyleSheet, Animated, Easing, InteractionManager } from 'react-native';
+import { Platform, StyleSheet, Animated, Easing, InteractionManager } from 'react-native';
 import { useNavigation, usePathname } from 'expo-router';
 
 import { LoadingScreen } from './LoadingScreen';
@@ -39,8 +39,10 @@ export function RouteTransitionProvider({ children }: RouteTransitionProviderPro
   const nextToken = useRef(1);
   const activeTokens = useRef(new Set<number>());
 
+  const isWeb = Platform.OS === 'web';
+
   const hideIfIdle = useCallback(() => {
-    if (activeTokens.current.size > 0) return;
+    if (isWeb || activeTokens.current.size > 0) return;
 
     Animated.timing(opacity, {
       toValue: 0,
@@ -64,6 +66,7 @@ export function RouteTransitionProvider({ children }: RouteTransitionProviderPro
   }, [finishLoading]);
 
   const startLoading = useCallback(() => {
+    if (isWeb) return 0;
     const token = nextToken.current;
     nextToken.current += 1;
     activeTokens.current.add(token);
@@ -88,7 +91,7 @@ export function RouteTransitionProvider({ children }: RouteTransitionProviderPro
   return (
     <RouteTransitionContext.Provider value={value}>
       {children}
-      {visible ? (
+      {!isWeb && visible ? (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.overlay, { opacity }]}>
           <LoadingScreen />
         </Animated.View>
