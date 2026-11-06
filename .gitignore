@@ -83,3 +83,4 @@ ml/.ruff_cache/
 
 # Suivi de progression (local, ignoré par git)
 progression/
+dist-web/
