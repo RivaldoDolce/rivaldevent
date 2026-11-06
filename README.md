@@ -122,6 +122,18 @@ Configuration Supabase (RLS, webhook, JWT template `supabase`) : voir `AUDIT_SEC
 
 `lib/constants.ts` : fond `#0A0908`, or `#D8B45A`, titres `PlayfairDisplay`, UI `Inter`, tokens `glass`, `gradients.gold`.
 
+## Recommandeur ML (branche `feature/recommendation-intelligente`)
+
+Système de recommandation d'evenements content-based et contextuel, sans historique de transactions, sans filtrage collaboratif et sans appel réseau au runtime.
+
+Pipeline Python (`ml/`) : constitution du dataset (72 fixtures, 10 personas, 231 jugements), encodage `intfloat/multilingual-e5-small` (384 dimensions), baselines metadata et TF-IDF, ranking contextuel, MMR, benchmark avec intervalles de confiance bootstrap et test de permutation appariée, export JSON versionné vers l'application Expo.
+
+Runtime TypeScript : 6 services purs (similarite, profil vecteur, signaux contextuels, MMR, explications, moteur), hook d'etat local, composants de demarrage (selecteur de personas, cartes avec score decompose, panneau benchmark), route publique `/recommendation-demo` accessible sans authentification.
+
+Resultats (dataset `dataset-20261105-c8c944d938`, split test) : NDCG@10 E5 + context + MMR = 0.982, MRR@10 = 0.500. Limites declarees : annoteur unique, catalogue de fixtures, pas de preuve business.
+
+Documentation : `docs/ml-recommender/IMPLEMENTATION_PLAN.md` (plan directeur), `progression/` (suivi en continu, ignore par git), `ml/README.md`.
+
 ## Feuille de route
 
 - [x] Auth hybride Clerk + Supabase (RLS, webhook, JWT)
@@ -131,7 +143,8 @@ Configuration Supabase (RLS, webhook, JWT template `supabase`) : voir `AUDIT_SEC
 - [ ] Paiement Mobile Money reel (Edge Functions MTN, Orange, Moov)
 - [ ] Tests automatises et CI
 - [ ] Generation des types Supabase (remplacement du stub)
-- [ ] Observabilite (Sentry, ErrorBoundary)
+- Observabilite (Sentry, ErrorBoundary)
+- [x] Recommandeur ML : pipeline Python (dataset, embeddings E5, benchmark, export), runtime TypeScript, route publique `/recommendation-demo`, 54 tests Jest, 55 tests Python, export web statique
 
 ## Contribution
 
