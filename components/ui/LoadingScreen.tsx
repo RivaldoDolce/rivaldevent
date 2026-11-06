@@ -1,0 +1,173 @@
+/**
+ * LoadingScreen — design system « Noir & Or ».
+ *
+ * Écran de chargement plein écran premium :
+ * - Dégradé noir profond + halos dorés décoratifs
+ * - Logo médaille or avec pulsation douce
+ * - Anneau de chargement doré animé
+ * - Message optionnel en texte tamisé
+ */
+
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Animated, Easing, StyleSheet, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+
+import { Logo } from '@/components/icons/Logo';
+import { colors, spacing } from '@/lib/constants';
+import { clientBackgrounds } from '@/lib/images';
+
+// ============================================================
+// Types
+// ============================================================
+
+interface LoadingScreenProps {
+  readonly message?: string;
+  readonly testID?: string;
+}
+
+// ============================================================
+// Composant
+// ============================================================
+
+export const LoadingScreen = React.memo(function LoadingScreen({
+  message,
+  testID,
+}: LoadingScreenProps) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const spin = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulseAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1100,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1100,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const spinAnim = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    const fadeAnim = Animated.timing(fade, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    });
+
+    pulseAnim.start();
+    spinAnim.start();
+    fadeAnim.start();
+
+    return () => {
+      pulseAnim.stop();
+      spinAnim.stop();
+      fadeAnim.stop();
+    };
+  }, [pulse, spin, fade]);
+
+  const ringRotation = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const logoScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.06] });
+  const logoGlow = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.55] });
+
+  const dot1 = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+  const dot2 = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
+
+  return (
+    <View style={styles.bgScreen}>
+      <Image source={clientBackgrounds.fallback} style={StyleSheet.absoluteFillObject} contentFit="cover" blurRadius={10} cachePolicy="memory-disk" />
+      <LinearGradient colors={['rgba(10,9,8,0.58)', 'rgba(10,9,8,0.88)']} style={StyleSheet.absoluteFillObject} pointerEvents="none" />
+      <View style={styles.container} testID={testID}>
+        <Animated.View pointerEvents="none" style={[styles.glowTop, { opacity: logoGlow }]} />
+        <View pointerEvents="none" style={styles.glowBottom} />
+        <Animated.View style={{ opacity: fade, alignItems: 'center' }}>
+          <View style={styles.logoWrap}>
+            <Animated.View style={[styles.ring, { transform: [{ rotate: ringRotation }] }]} />
+            <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+              <Logo size="lg" withBackground />
+            </Animated.View>
+          </View>
+          {message ? <Text style={styles.message}>{message}</Text> : null}
+          <View style={styles.dotsRow}>
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot2 }]} />
+            <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+          </View>
+        </Animated.View>
+      </View>
+    </View>
+  );
+});
+
+// ============================================================
+// Styles
+// ============================================================
+
+const styles = {
+  bgScreen: { flex: 1, backgroundColor: colors.background } as ViewStyle,
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  } as ViewStyle,
+  glowTop: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(216,180,90,0.14)',
+  } as ViewStyle,
+  glowBottom: {
+    position: 'absolute',
+    bottom: -140,
+    left: -100,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    backgroundColor: 'rgba(216,180,90,0.08)',
+  } as ViewStyle,
+  logoWrap: {
+    width: 96,
+    height: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  ring: {
+    position: 'absolute',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    borderTopColor: colors.goldBright,
+    borderRightColor: colors.goldMuted,
+  } as ViewStyle,
+  message: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Inter_500Medium',
+    marginTop: spacing.lg,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  dotsRow: { flexDirection: 'row', gap: 8, marginTop: spacing.lg, alignItems: 'center' } as ViewStyle,
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.goldBright } as ViewStyle,
+} as const;

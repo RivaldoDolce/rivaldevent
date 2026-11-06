@@ -1,0 +1,56 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  presets: [require('nativewind/preset')],
+  content: [
+    './app/**/*.{js,jsx,ts,tsx}',
+    './components/**/*.{js,jsx,ts,tsx}',
+    './hooks/**/*.{js,jsx,ts,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: '#0A0908',
+        surface: '#131110',
+        surfaceAlt: '#181512',
+        elevated: '#1E1A16',
+        raised: '#26211B',
+        gold: '#D8B45A',
+        goldBright: '#F2DC9B',
+        goldDeep: '#9A7528',
+        text: '#F5F0E6',
+        textSecondary: '#B5AC9C',
+        textMuted: '#7C7466',
+        terracotta: '#C9603F',
+        forest: '#4C9A6E',
+        indigo: '#7FA7CE',
+        mango: '#E8B64C',
+        danger: '#FF6B5E',
+        success: '#5BC48B',
+        border: 'rgba(255,255,255,0.09)',
+        borderGold: 'rgba(216,180,90,0.35)',
+      },
+      borderRadius: {
+        sm: '10px',
+        md: '16px',
+        lg: '20px',
+        xl: '28px',
+        xxl: '36px',
+        full: '9999px',
+      },
+      spacing: {
+        xs: '4px',
+        sm: '8px',
+        md: '16px',
+        lg: '24px',
+        xl: '32px',
+        '2xl': '48px',
+        '3xl': '64px',
+      },
+      fontFamily: {
+        serif: ['PlayfairDisplay_700Bold', 'PlayfairDisplay_600SemiBold'],
+        sans: ['Inter_400Regular', 'Inter_500Medium', 'Inter_600SemiBold'],
+      },
+    },
+  },
+  plugins: [],
+};
